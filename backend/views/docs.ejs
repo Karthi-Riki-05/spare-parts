@@ -1,0 +1,36 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="app-main docs-page fade-up">
+  <h2>Documentation</h2>
+  <h3>Supported Excel Formats</h3>
+  <ul>
+    <li><strong>Format A</strong> — Correctly structured file with separate columns</li>
+    <li><strong>Format B</strong> — All data in one column (messy, may include Swedish)</li>
+    <li><strong>Format C</strong> — Incomplete file (missing manufacturer column)</li>
+  </ul>
+  <h3>Output Columns</h3>
+  <table class="docs-table">
+    <thead><tr><th>#</th><th>Column</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>Internal Item Number</td><td>Client reference — never modified</td></tr>
+      <tr><td>1</td><td>Description</td><td>Official English product name</td></tr>
+      <tr><td>2</td><td>Manufacturer</td><td>Standardized brand name</td></tr>
+      <tr><td>3</td><td>Item Number</td><td>Primary part number</td></tr>
+      <tr><td>4</td><td>Type Designation</td><td>Type code if different from #3</td></tr>
+      <tr><td>5</td><td>Supplementary</td><td>Internal notes — preserved carefully</td></tr>
+      <tr><td>6</td><td>Verified Source</td><td>"Manufacturer website" / "Distributor: X" / "Not found"</td></tr>
+      <tr><td>7</td><td>Score</td><td>0–100 confidence</td></tr>
+      <tr><td>8</td><td>Website ID</td><td>Direct URL to product page</td></tr>
+      <tr><td>9</td><td>Source Type</td><td>official / external / inferred / not_found</td></tr>
+    </tbody>
+  </table>
+  <h3>Score Guide</h3>
+  <ul>
+    <li><span class="score-hi">95–100</span> — Confirmed on manufacturer's official website</li>
+    <li><span class="score-md">70–89</span> — Found on distributor site</li>
+    <li><span class="score-lo">50–69</span> — Inferred, not directly confirmed</li>
+    <li><span class="score-vl">Below 50</span> — Uncertain, manual review recommended</li>
+  </ul>
+  <a href="/" class="btn btn-cyan">Back to App</a>
+</main>
+<%- include('partials/scripts') %>

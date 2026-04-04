@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: #222838; border-radius: 3px; }
+
+.score-hi { color: #34d399 !important; }
+.score-md { color: #fbbf24 !important; }
+.score-lo { color: #f97316 !important; }
+.score-vl { color: #ef4444 !important; }
+.score-na { color: #5c6578 !important; }
+.source-web { color: #22d3ee !important; font-weight: 500; }
+.cell-empty { color: rgba(255,255,255,0.25) !important; font-style: italic; font-size: 12px; }
+
+/* Touch targets */
+button, select, input { min-height: 44px; }
+
+/* Mobile overrides */
+@media (max-width: 640px) {
+  .stat-value { font-size: 20px; }
+  .stat-label { font-size: 10px; }
+  .format-badge { word-break: break-word; max-width: 100%; }
+}

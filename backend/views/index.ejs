@@ -1,0 +1,100 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="app-main">
+  <section id="upload-zone" class="upload-zone fade-up">
+    <div class="upload-inner" id="drop-area">
+      <div class="upload-icon">&#128193;</div>
+      <h2 class="upload-title">Upload your Excel file</h2>
+      <p class="upload-sub">.xlsx or .xls — supports any format (correct, messy, or incomplete)</p>
+      <input type="file" id="file-input" accept=".xlsx,.xls" hidden>
+      <button class="btn btn-cyan" onclick="document.getElementById('file-input').click()">Choose File</button>
+      <div id="upload-error" class="error-msg hidden"></div>
+    </div>
+  </section>
+
+  <section id="sheet-selector" class="card hidden fade-up">
+    <label class="field-label">Select sheet to process:</label>
+    <select id="sheet-select" class="select-input"></select>
+    <button class="btn btn-cyan" onclick="App.confirmSheet()">Continue</button>
+  </section>
+
+  <section id="format-section" class="card hidden fade-up">
+    <div class="flex-row gap-8">
+      <span id="format-badge" class="badge"></span>
+      <span id="format-confidence" class="text-muted small"></span>
+      <button id="btn-manual-map" class="btn btn-ghost small hidden" onclick="App.openMapping()">Manual Mapping</button>
+    </div>
+    <div id="row-count-info" class="text-muted small mt-4"></div>
+  </section>
+
+  <div id="large-file-modal" class="modal-overlay hidden">
+    <div class="modal-box fade-up">
+      <h3 class="modal-title">Large File Detected</h3>
+      <p id="large-file-msg" class="modal-body"></p>
+      <p id="large-file-hint" class="modal-hint hidden">For best results, consider splitting this file.</p>
+      <div class="modal-actions">
+        <button class="btn btn-cyan" onclick="App.confirmLargeFile()">Continue</button>
+        <button class="btn btn-ghost" onclick="App.cancelLargeFile()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mapping-modal" class="modal-overlay hidden">
+    <div class="modal-box modal-wide fade-up">
+      <h3 class="modal-title">Manual Column Mapping</h3>
+      <p class="modal-body">Auto-detection confidence was low. Assign columns manually:</p>
+      <div class="mapping-grid" id="mapping-grid"></div>
+      <div class="modal-actions">
+        <button class="btn btn-cyan" onclick="App.applyManualMapping()">Apply Mapping</button>
+        <button class="btn btn-ghost" onclick="App.closeMapping()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <section id="app-workspace" class="hidden">
+    <div class="stats-grid fade-up">
+      <div class="stat-card"><div class="stat-number cyan" id="stat-total">0</div><div class="stat-label">Total Rows</div></div>
+      <div class="stat-card"><div class="stat-number teal" id="stat-verified">0</div><div class="stat-label">Web Verified</div></div>
+      <div class="stat-card"><div class="stat-number red" id="stat-empty">0</div><div class="stat-label">Empty Cells</div></div>
+      <div class="stat-card"><div class="stat-number green" id="stat-score90">0</div><div class="stat-label">Score &ge;90</div></div>
+      <div class="stat-card"><div class="stat-number yellow" id="stat-score50">0</div><div class="stat-label">Score 50&ndash;89</div></div>
+      <div class="stat-card"><div class="stat-number orange" id="stat-score-low">0</div><div class="stat-label">Score &lt;50</div></div>
+      <div class="stat-card"><div class="stat-number teal" id="stat-official">0</div><div class="stat-label">Official Site</div></div>
+      <div class="stat-card"><div class="stat-number blue" id="stat-external">0</div><div class="stat-label">Distributor</div></div>
+      <div class="stat-card"><div class="stat-number muted" id="stat-notfound">0</div><div class="stat-label">Not Found</div></div>
+    </div>
+
+    <div class="action-bar fade-up">
+      <div class="action-left">
+        <button id="btn-verify" class="btn btn-cyan" onclick="App.startVerification()">&#127758; Web Verify All</button>
+        <button id="btn-stop" class="btn btn-red hidden" onclick="App.cancelVerification()">&#10005; Stop</button>
+        <button class="btn btn-ghost" onclick="App.reset()">&#8635; New File</button>
+      </div>
+      <div class="action-right">
+        <span id="action-filename" class="text-muted small"></span>
+        <span id="action-format-badge" class="badge small"></span>
+        <span id="action-rowcount" class="text-muted small"></span>
+        <span class="edit-hint text-muted small">Click any cell to edit</span>
+      </div>
+    </div>
+
+    <div id="progress-section" class="progress-section hidden fade-up">
+      <div id="progress-message" class="progress-msg"></div>
+      <div id="progress-submsg" class="progress-submsg"></div>
+      <div class="progress-bar-track"><div id="progress-bar-fill" class="progress-bar-fill" style="width:0%"></div></div>
+    </div>
+
+    <div id="log-section" class="log-section hidden fade-up">
+      <div class="log-header">Verification Log</div>
+      <div id="log-entries" class="log-entries"></div>
+    </div>
+
+    <div id="table-section" class="table-section hidden fade-up">
+      <div class="table-wrapper">
+        <table id="data-table"><thead id="table-head"></thead><tbody id="table-body"></tbody></table>
+      </div>
+      <div class="table-footer"><span id="table-showing" class="text-muted small"></span></div>
+    </div>
+  </section>
+</main>
+<%- include('partials/scripts') %>

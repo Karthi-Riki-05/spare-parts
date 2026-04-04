@@ -1,0 +1,334 @@
+===============================================================================
+ SPARE PARTS WEB VERIFIER — PROJECT WORKFLOW
+ Complete guide: setup, run, test, deploy
+===============================================================================
+
+
+===============================================================================
+ 1. PROJECT STRUCTURE
+===============================================================================
+
+spare-parts-verifier/
+  backend/          Express.js API server (port 3001) — JS + EJS views
+  frontend/         Next.js 14 App Router (port 3000) — TypeScript + Tailwind
+  shared/types/     TypeScript interfaces shared by frontend
+  e2e/              Playwright E2E browser tests
+  docker-compose.yml    Dev Docker (both services)
+  docker-compose.prod.yml   Production Docker
+
+
+===============================================================================
+ 2. PREREQUISITES
+===============================================================================
+
+- Node.js 20+
+- npm 10+
+- Docker Desktop (for containerized runs)
+- Git
+
+
+===============================================================================
+ 3. FIRST-TIME SETUP
+===============================================================================
+
+# Clone and enter project
+cd spare-parts-verifier
+
+# Install ALL dependencies (root + backend + frontend)
+npm run install:all
+
+# Or install individually:
+npm install                     # root (concurrently, playwright)
+npm install --prefix backend    # backend dependencies
+npm install --prefix frontend   # frontend dependencies
+
+# Install Playwright browsers (for E2E tests)
+npx playwright install chromium webkit
+
+# Generate test fixture Excel files
+cd backend && node tests/fixtures/create-fixtures.js
+node tests/fixtures/create-large-fixtures.js
+cd ..
+
+# Configure environment
+# Backend .env is at: backend/.env
+# Frontend .env is at: frontend/.env.local
+# MOCK_MODE=true means no real AI API keys needed
+
+
+===============================================================================
+ 4. RUNNING THE PROJECT
+===============================================================================
+
+--- Option A: Run both frontend + backend together ---
+
+npm run dev
+
+  This starts:
+  - Backend on http://localhost:3001 (Express + EJS)
+  - Frontend on http://localhost:3000 (Next.js)
+  - Frontend proxies /api/* requests to backend automatically
+
+
+--- Option B: Run backend only (EJS UI included) ---
+
+npm run dev:backend
+
+  Opens at: http://localhost:3001
+  The backend serves its own EJS-based UI at the root URL.
+  All API endpoints available at /api/*
+
+
+--- Option C: Run frontend only (needs backend running separately) ---
+
+npm run dev:frontend
+
+  Opens at: http://localhost:3000
+  Requires backend running on port 3001 for API calls.
+
+
+--- Option D: Run with Docker ---
+
+# Development (both services)
+docker compose up --build
+
+  Backend: http://localhost:3001
+  Frontend: http://localhost:3000
+
+# Stop Docker
+docker compose down
+
+# Production
+docker compose -f docker-compose.prod.yml up --build -d
+
+
+===============================================================================
+ 5. ENVIRONMENT VARIABLES (backend/.env)
+===============================================================================
+
+PORT=3001                       Server port
+NODE_ENV=development            Environment (development/production/test)
+CORS_ORIGIN=http://localhost:3000   Allowed CORS origin
+
+# AI API Keys (not needed when MOCK_MODE=true)
+OPENAI_API_KEY=your_key_here    GPT-4o-mini for format detection
+GEMINI_API_KEY=your_key_here    Gemini 2.5 Flash for web verification
+ANTHROPIC_API_KEY=your_key_here Claude Sonnet for rule enforcement
+
+# Mock Mode — set true to develop without real API keys
+MOCK_MODE=true                  Master switch (all AI services use mocks)
+OPENAI_MOCK_MODE=false          Override: OpenAI only
+GEMINI_MOCK_MODE=false          Override: Gemini only
+CLAUDE_MOCK_MODE=false          Override: Claude only
+
+# Processing
+MAX_ROWS_WARNING=5000           Show warning dialog above this
+MAX_ROWS_LIMIT=10000            Hard limit
+BATCH_SIZE=5                    Rows per verification batch
+MAX_CONCURRENCY=5               Parallel AI calls
+REQUEST_TIMEOUT_MS=30000        API call timeout
+MAX_RETRIES=3                   Retry count on failure
+RETRY_DELAY_MS=1000             Initial retry delay (exponential backoff)
+CACHE_TTL_SECONDS=86400         Cache duration (24 hours)
+
+# Rate limiting
+RATE_LIMIT_WINDOW_MS=900000     Window (15 minutes)
+RATE_LIMIT_MAX=100              Max requests per window
+
+# Logging
+LOG_LEVEL=info                  Winston log level
+
+
+===============================================================================
+ 6. API ENDPOINTS
+===============================================================================
+
+GET  /api/health          Health check
+POST /api/get-sheets      Get Excel sheet names        { fileData: base64 }
+POST /api/detect-format   Detect format (A/B/C)        { fileData, sheetIndex }
+POST /api/normalize       Normalize Excel data         { fileData, sheetIndex, format }
+POST /api/manual-map      Apply manual column mapping   { fileData, sheetIndex, mapping }
+POST /api/verify          Verify parts (SSE stream)    { rows, batchSize }
+POST /api/export          Export verified Excel         { results, originalData, fileName }
+
+
+===============================================================================
+ 7. TESTING — COMPLETE GUIDE
+===============================================================================
+
+--- 7.1 Backend Unit + Integration Tests (Vitest) ---
+
+cd backend && npm test
+
+  Runs: 82 tests across 10 test files
+  Includes:
+    tests/unit/deduplication.test.js    R2a, R2b deduplication rules
+    tests/unit/verify.test.js           R3 two-call pattern, R4 manufacturer inference
+    tests/unit/normalize.test.js        R5 Format B, R7 Swedish, R8 ERS removal
+    tests/unit/urlValidator.test.js     R26 URL HEAD validation
+    tests/unit/supplementaryLogger.test.js  R24 change log classification
+    tests/unit/cache.test.js            Cache hit/miss/key generation
+    tests/unit/retry.test.js            Exponential backoff retry logic
+    tests/unit/services-mock.test.js    AI service mock mode paths
+    tests/integration/api.test.js       All 7 API endpoints
+    tests/performance/stress.test.js    Response times, memory, concurrency
+
+
+--- 7.2 Backend Tests with Coverage ---
+
+cd backend && npm run test:coverage
+
+  Coverage targets:
+    deduplicationService    95%  (actual: 100%)
+    urlValidatorService     90%  (actual: 100%)
+    supplementaryLogger     90%  (actual: 100%)
+    cacheService            85%  (actual: 100%)
+    Overall backend         75%  (actual: 77%)
+
+
+--- 7.3 Frontend Unit Tests (Vitest) ---
+
+cd frontend && npm test
+
+  Runs: 39 tests across 5 test files
+  Includes:
+    __tests__/utils.test.ts             Score classes, labels, formatters
+    __tests__/useEditState.test.ts      Edit state hook (start, commit, cancel)
+    __tests__/Badge.test.tsx            Badge variants (Format A/B/C)
+    __tests__/ProgressBar.test.tsx      Progress bar fill and clamping
+    __tests__/StatsDashboard.test.tsx   All 9 stat cards render correctly
+
+
+--- 7.4 E2E Tests (Playwright CLI — NOT MCP) ---
+
+Playwright runs as CLI only. Config auto-starts both servers.
+
+npx playwright test
+
+  Runs: 87 tests across 3 projects, 11 spec files
+  Playwright auto-starts backend (port 3001) and frontend (port 3000).
+
+  Projects:
+    Backend EJS - Desktop        21 tests (e2e/*.spec.js)
+    Frontend Next.js - Desktop   33 tests (e2e/frontend/*.spec.js)
+    Frontend Next.js - Mobile    33 tests (e2e/frontend/*.spec.js on iPhone 12)
+
+  Backend EJS specs (port 3001):
+    e2e/upload.spec.js     File upload, format detection, R18 multi-sheet
+    e2e/verify.spec.js     Verification pipeline, R13 progress, stats update
+    e2e/edit.spec.js       R12 inline editing (Enter/Escape/col 0 protection)
+    e2e/export.spec.js     R14 two-sheet Excel download
+    e2e/mobile.spec.js     Mobile responsive, touch targets, docs page
+
+  Frontend Next.js specs (port 3000):
+    e2e/frontend/upload.spec.js       File upload, format badge, sheet selector
+    e2e/frontend/verify.spec.js       Verify flow, stats, download, reset
+    e2e/frontend/edit.spec.js         R12 inline editing in React components
+    e2e/frontend/export.spec.js       R14 Excel download from Next.js UI
+    e2e/frontend/mobile.spec.js       Responsive layout, docs, navigation
+    e2e/frontend/navigation.spec.js   Routing, dark theme, page titles
+
+  Run specific project only:
+    npm run test:e2e:backend      # Backend EJS only (21 tests)
+    npm run test:e2e:frontend     # Frontend Next.js Desktop only (33 tests)
+    npm run test:e2e:mobile       # Frontend Next.js Mobile only (33 tests)
+
+
+--- 7.5 Run ALL Tests at Once ---
+
+npm run test:all
+
+  Runs: backend (82) + frontend (39) + E2E (87) = 208 total tests
+
+# Or run each suite separately:
+npm run test:backend        # 82 backend tests (Vitest)
+npm run test:frontend       # 39 frontend tests (Vitest)
+npm run test:e2e            # 87 E2E tests (Playwright CLI)
+npm run test:e2e:backend    # 21 backend E2E only
+npm run test:e2e:frontend   # 33 frontend E2E Desktop only
+npm run test:e2e:mobile     # 33 frontend E2E Mobile only
+
+
+--- 7.6 Generate Test Fixtures ---
+
+cd backend
+node tests/fixtures/create-fixtures.js        # Standard fixtures (4 files)
+node tests/fixtures/create-large-fixtures.js   # Large fixtures (1100 + 5100 rows)
+
+  Generates:
+    company-a-sample.xlsx      Format A — correct columns, 5 rows
+    company-b-sample.xlsx      Format B — messy single column, Swedish
+    company-c-sample.xlsx      Format C — no manufacturer column
+    multi-sheet-sample.xlsx    2 sheets for R18 testing
+    large-sample.xlsx          1,100 rows (triggers R22 progress detail)
+    huge-sample.xlsx           5,100 rows (triggers R23 warning dialog)
+
+
+===============================================================================
+ 8. QUICK REFERENCE — MOST USED COMMANDS
+===============================================================================
+
+npm run dev                     Start both frontend + backend
+npm run dev:backend             Start backend only (port 3001)
+npm run dev:frontend            Start frontend only (port 3000)
+npm run test:backend            Run 82 backend tests (Vitest)
+npm run test:frontend           Run 39 frontend tests (Vitest)
+npm run test:e2e                Run 87 E2E tests (Playwright CLI)
+npm run test:e2e:backend        Run 21 backend E2E only
+npm run test:e2e:frontend       Run 33 frontend E2E Desktop only
+npm run test:e2e:mobile         Run 33 frontend E2E Mobile only
+npm run test:all                Run all 208 tests
+docker compose up --build       Start with Docker
+docker compose down             Stop Docker
+
+
+===============================================================================
+ 9. DEPLOYMENT
+===============================================================================
+
+# Build for production
+docker compose -f docker-compose.prod.yml build
+
+# Deploy (uses GitHub Actions on push to prod branch)
+git push origin prod
+
+# GitHub Actions workflow: .github/workflows/deploy.yml
+# Runs tests -> builds Docker images -> deploys to AWS Lightsail
+
+# Required GitHub Secrets:
+#   AWS_ACCESS_KEY_ID
+#   AWS_SECRET_ACCESS_KEY
+#   ECR_BACKEND (ECR repository URI)
+#   ECR_FRONTEND (ECR repository URI)
+
+
+===============================================================================
+ 10. TROUBLESHOOTING
+===============================================================================
+
+Problem: "Too many requests" error during E2E tests
+Fix:     Start backend with RATE_LIMIT_MAX=10000 node src/server.js
+
+Problem: AI API calls fail
+Fix:     Set MOCK_MODE=true in backend/.env (no real API keys needed)
+
+Problem: Frontend can't reach backend API
+Fix:     Ensure backend is running on port 3001
+         Check CORS_ORIGIN=http://localhost:3000 in backend/.env
+
+Problem: Docker build fails
+Fix:     Run docker compose down && docker compose up --build
+
+Problem: Playwright tests fail with "browser not found"
+Fix:     Run npx playwright install chromium webkit
+
+Problem: Test fixtures missing
+Fix:     cd backend && node tests/fixtures/create-fixtures.js
+
+Problem: Port already in use
+Fix:     lsof -i :3001 (or :3000) then kill the process
+
+
+===============================================================================
+ END OF WORKFLOW
+===============================================================================

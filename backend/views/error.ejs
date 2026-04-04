@@ -1,0 +1,10 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="app-main">
+  <section class="error-page fade-up">
+    <div class="error-code"><%= code %></div>
+    <h2 class="error-title"><%= message %></h2>
+    <a href="/" class="btn btn-cyan">Back to Home</a>
+  </section>
+</main>
+<%- include('partials/scripts') %>

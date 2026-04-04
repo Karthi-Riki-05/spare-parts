@@ -1,0 +1,557 @@
+================================================================================
+        SPARE PARTS WEB VERIFIER — COMPLETE PROJECT ANALYSIS REPORT
+================================================================================
+  Prepared by: Senior Developer / Code Reviewer (25+ years experience)
+  Date: 2026-04-04
+  Project: Spare Parts Web Verifier
+  Stack: Next.js 14 (Frontend) + Express.js (Backend)
+================================================================================
+
+
+================================================================================
+  SECTION 1: EXCEL DATA FETCHING & TABLE DISPLAY
+================================================================================
+
+1.1  HOW IS EXCEL DATA FETCHED?
+--------------------------------------------------------------------------------
+
+  Method:        File upload (drag-and-drop or file browser click)
+  Library:       ExcelJS 4.3.0 (server-side parsing)
+  Processing:    Server-side (Express.js backend)
+  File Types:    .xlsx and .xls (validated via regex: /\.xlsx?$/i)
+
+  DATA FLOW FROM FILE SELECTION TO TABLE DISPLAY:
+
+  Step 1 — User drops/selects an Excel file
+           Location: frontend/components/FileUpload.tsx (lines 17-28)
+           Action:   Validates file extension, converts to base64
+
+  Step 2 — Sheet Detection
+           API Call:  POST /api/get-sheets { fileData: base64 }
+           Backend:   backend/src/services/excelService.js (lines 21-26)
+           Library:   ExcelJS Workbook().xlsx.load(buffer)
+           Returns:   Array of sheet names [{index, name}, ...]
+
+  Step 3 — Sheet Selection (if multiple sheets)
+           Location:  frontend/components/SheetSelector.tsx
+           Action:    User selects which sheet to process
+
+  Step 4 — Format Detection
+           API Call:  POST /api/detect-format { fileData, sheetIndex }
+           AI Used:   OpenAI gpt-4o-mini (temperature 0.1)
+           Returns:   { format: A|B|C, confidence, suggestedMapping, rowCount }
+
+  Step 5 — Manual Mapping (if confidence < 80%)
+           Location:  frontend/components/ManualMappingDialog.tsx
+           Action:    User manually maps Excel columns to fields
+
+  Step 6 — Data Normalization
+           API Call:  POST /api/normalize { fileData, sheetIndex, format, mapping }
+           Backend:   backend/src/controllers/normalizeController.js
+           Returns:   { rows: NormalizedRow[], originalData, rawRows }
+
+  Step 7 — Table Display
+           Location:  frontend/components/DataTable.tsx
+           Library:   react-window (FixedSizeList) for virtual scrolling
+
+
+1.2  HOW IS DATA SHOWN IN THE TABLE?
+--------------------------------------------------------------------------------
+
+  Table Component:    Custom DataTable using react-window (FixedSizeList)
+  Location:           frontend/components/DataTable.tsx (183 lines)
+  Virtual Scrolling:  YES — react-window 1.8.10
+  Pagination:         NO — uses virtual scrolling instead
+  Sorting:            NO
+  Filtering:          NO
+  Row Height:         36px (constant)
+  Table Height:       600px max (dynamic: Math.min(600, rows * 36))
+  Inline Editing:     YES — click any editable cell
+                      Enter to save, Escape to cancel, blur to auto-save
+
+
+1.3  KEY CODE SNIPPETS
+--------------------------------------------------------------------------------
+
+  EXCEL UPLOAD HANDLER:
+  File: frontend/components/FileUpload.tsx (lines 17-28)
+  - Validates extension: /\.xlsx?$/i
+  - Converts to base64 via lib/utils.ts:fileToBase64() (lines 32-42)
+  - Calls onFileSelected callback
+
+  PARSER CONFIGURATION:
+  File: backend/src/services/excelService.js (lines 3-17)
+  - Buffer.from(base64, 'base64') → ExcelJS Workbook.xlsx.load(buffer)
+  - sheet.eachRow({ includeEmpty: false }) for row iteration
+  - Prioritizes cell.text over cell.value to preserve formatting
+  - Columns: col_0, col_1, col_2, etc. (0-indexed)
+
+  DATA TRANSFORMATION:
+  File: backend/src/controllers/normalizeController.js
+  - Format A: Direct column mapping (lines 12-28)
+  - Format B: OpenAI gpt-4o-mini parses single-column data (lines 79-89)
+  - Format C: Hybrid — direct + AI for missing manufacturer (lines 31-65)
+  - Deduplication applied to all formats (deduplicationService.js)
+
+  TABLE RENDERING:
+  File: frontend/components/DataTable.tsx (lines 160-180)
+  - FixedSizeList from react-window
+  - itemSize={36}, height={Math.min(600, rows.length * 36)}
+  - Horizontal scroll wrapper with minWidth = sum of all column widths
+
+
+================================================================================
+  SECTION 2: EXCEL COLUMNS vs WEB COLUMNS
+================================================================================
+
+2.1  COLUMN MAPPING: EXCEL → WEB (NORMALIZED VIEW)
+--------------------------------------------------------------------------------
+
+  | Excel Column Name      | Taken to Web? | Web Column Name       | Additional Functionality        |
+  |------------------------|---------------|-----------------------|---------------------------------|
+  | Internal Item Number   | Yes           | Internal Item #       | NOT editable, NOT sent to AI    |
+  | Description            | Yes           | Description           | Editable, sent to AI            |
+  | Manufacturer           | Yes           | Manufacturer          | Editable, sent to AI            |
+  | Item Number            | Yes           | Item Number           | Editable, sent to AI            |
+  | Type Designation       | Yes           | Type Designation      | Editable, sent to AI            |
+  | Supplementary Info     | Yes           | Supplementary         | Editable, conditionally sent    |
+
+  Column Widths (px):
+  - Internal Item #:  110
+  - Description:      200
+  - Manufacturer:     130
+  - Item Number:      160
+  - Type Designation:  150
+  - Supplementary:    180
+
+2.2  ADDITIONAL WEB-ONLY COLUMNS (After Verification)
+--------------------------------------------------------------------------------
+
+  | Web Column Name    | Source      | Purpose                         | How Calculated                           |
+  |--------------------|------------|----------------------------------|--------------------------------------------|
+  | Verified Source    | AI (Gemini) | Shows verification source label  | "Manufacturer website" / "Distributor: X"  |
+  | Score              | AI (Gemini) | Confidence score 0-100           | AI assigns based on match quality          |
+  | Website ID         | AI (Gemini) | URL to verified product page     | AI searches web, validated via HEAD request|
+  | Source Type        | AI (Gemini) | Classification of source         | official / external / not_found            |
+
+  Column Widths (px):
+  - Verified Source:  150
+  - Score:            70  (color-coded: green >=90, yellow 70-89, orange 50-69, red <50)
+  - Website ID:       200 (clickable link, opens in new tab)
+  - Source Type:      100
+
+2.3  FUNCTIONALITY BEYOND RAW EXCEL DISPLAY
+--------------------------------------------------------------------------------
+
+  [x] Inline Cell Editing (description, manufacturer, itemNumber, typeDesignation, supplementary)
+  [x] Export to Excel (verified + original data in 2 sheets)
+  [x] Validation Highlighting (score-based color coding)
+  [x] Virtual Scrolling (react-window for large datasets)
+  [x] Real-time Progress (SSE streaming during verification)
+  [x] Statistics Dashboard (9 stat cards)
+  [x] Verification Log (real-time activity log with color-coded entries)
+  [x] Large File Warning (for >5000 rows with ETA)
+  [x] Multi-sheet Selection
+  [x] Manual Column Mapping (when auto-detection confidence < 80%)
+  [ ] Search/Filter — NOT implemented
+  [ ] Sort by column — NOT implemented
+  [ ] Column visibility toggle — NOT implemented
+  [ ] Batch edit — NOT implemented
+
+
+================================================================================
+  SECTION 3: AI ROLE IN THE PROJECT
+================================================================================
+
+3.1  AI FEATURES IMPLEMENTED
+--------------------------------------------------------------------------------
+
+  [x] Format Detection — Detects Excel structure (Format A/B/C)
+  [x] Data Normalization — Parses unstructured single-column data
+  [x] Manufacturer Website Verification — Searches web for product pages
+  [x] Part Number Identification — Verifies item numbers against web sources
+  [x] Data Enrichment — Adds verified source, score, website URL, source type
+  [x] Rule Enforcement — Applies data quality rules on low-confidence results
+  [x] Supplementary Classification — Classifies as internal_instruction vs part_specification
+  [x] Manufacturer Inference — Infers manufacturer when empty
+  [x] Swedish Translation — Translates Swedish terms to English
+  [x] Deduplication — Removes duplicate itemNumber/typeDesignation
+
+3.2  HOW AI PROCESSES EXCEL DATA
+--------------------------------------------------------------------------------
+
+  DATA SENT TO AI:
+  - description, manufacturer, itemNumber, typeDesignation
+  - supplementary (only on retry when score < 70 and type = part_specification)
+  - NEVER sends: internalItemNumber (Rule R1)
+
+  WHAT AI RETURNS:
+  - Verified/corrected: description, manufacturer, item_number, type_designation
+  - New fields: verified_source, verification_score (0-100), website_id, source_type
+  - Metadata: manufacturer_website, manufacturer_inferred
+  - Supplementary: supplementary_used, supplementary_changed, supplementary_original
+
+  FALLBACK CHAIN:
+  1. Gemini 2.5-Flash (primary) — web search verification
+  2. If score < 70 AND supplementary is part_specification:
+     → Re-verify WITH supplementary using Gemini
+  3. If score still < 70:
+     → Claude Sonnet 4.6 for rule enforcement
+  4. Cache result for future lookups
+
+  RATE LIMITING / BATCHING:
+  - Concurrency: 5 simultaneous verifications (p-limit)
+  - Batch size: 5 rows per progress update
+  - Max rows: 10,000 hard limit
+  - Request timeout: 30 seconds per AI call
+  - Retry: 3 attempts with exponential backoff (1s, 2s, 4s)
+  - Cache: SHA256(manufacturer|itemNumber|typeDesignation), TTL 24 hours
+
+3.3  AI PERFORMANCE METRICS
+--------------------------------------------------------------------------------
+
+  Average Response Time:   ~2-5 seconds per row (Gemini with web search)
+  Claude Fallback Time:    ~1-3 seconds per row (no web search)
+  OpenAI Normalization:    ~0.5-1 second per row
+
+  Success Rate:            Dependent on data quality; cache improves repeat runs
+  Cost per 1000 rows:      Varies by provider pricing
+                           - Gemini: ~$0.10-0.30 per 1000 rows (flash pricing)
+                           - Claude fallback: only triggered for score < 70
+                           - OpenAI: only for format detection + Format B/C rows
+
+  Cache Hit Rate:          Tracked via cacheService.getStats()
+                           Reported in SSE 'complete' event
+
+3.4  AI CODE IMPLEMENTATION
+--------------------------------------------------------------------------------
+
+  PROVIDER 1: OpenAI (gpt-4o-mini) — Format Detection & Normalization
+  File: backend/src/services/openaiService.js
+  - Model: gpt-4o-mini
+  - Temperature: 0.1 (deterministic)
+  - Response format: JSON mode
+  - Used for: detectFormat(), normalizeRow()
+
+  PROVIDER 2: Google Gemini (gemini-2.5-flash) — Web Verification (PRIMARY)
+  File: backend/src/services/geminiService.js
+  - Model: gemini-2.5-flash
+  - Tools: [{ googleSearch: {} }] — built-in Google Search
+  - Search sequence: manufacturer website → Octopart → Mouser → RS Online → PLCHardware
+  - Post-processing: URL validation via HEAD request (5s timeout)
+  - URL status: valid | redirected | broken | timeout
+  - Broken/timeout → clears websiteId and sourceType
+
+  PROVIDER 3: Anthropic Claude (claude-sonnet-4-6) — Rule Enforcement Fallback
+  File: backend/src/services/claudeService.js
+  - Model: claude-sonnet-4-6-20250514
+  - Triggered: When Gemini score < 70
+  - Rules enforced:
+    1. Deduplicate itemNumber == typeDesignation
+    2. Infer manufacturer if empty (50% confidence threshold)
+    3. Remove ERS. prefixes
+    4. Translate Swedish
+    5. Don't modify supplementary unless incorrect part data
+    6. Don't invent URLs
+
+  URL VALIDATION:
+  File: backend/src/services/urlValidatorService.js
+  - Validates every website_id returned by Gemini
+  - Method: HEAD request with 5-second timeout
+  - If broken/timeout: clears URL, downgrades source type
+
+  MOCK MODE:
+  File: backend/src/services/mocks/
+  - MOCK_MODE=true in .env → returns sample data without real API calls
+  - Per-provider toggles: OPENAI_MOCK_MODE, GEMINI_MOCK_MODE, CLAUDE_MOCK_MODE
+
+
+================================================================================
+  SECTION 4: DATA FLOW DIAGRAM
+================================================================================
+
+  [Excel File Selected by User (.xlsx / .xls)]
+       |
+       v
+  [FileUpload.tsx: Validate extension, convert to Base64]
+       |
+       v
+  [POST /api/get-sheets → ExcelJS: Extract sheet names]
+       |
+       v
+  [SheetSelector.tsx: User selects sheet (if multiple)]
+       |
+       v
+  [POST /api/detect-format → OpenAI gpt-4o-mini: Detect Format A/B/C]
+       |
+       +--- Confidence >= 80% ---> Auto-map columns
+       |
+       +--- Confidence < 80% ----> [ManualMappingDialog: User maps columns]
+       |
+       v
+  [POST /api/normalize OR /api/manual-map]
+       |
+       +--- Format A: Direct column mapping
+       +--- Format B: OpenAI gpt-4o-mini parses single-column text
+       +--- Format C: Hybrid (direct + AI for missing fields)
+       |
+       v
+  [Deduplication Service: Clean itemNumber/typeDesignation duplicates]
+       |
+       v
+  [DataTable.tsx: Display normalized rows with virtual scrolling]
+       |
+       v
+  [User clicks "Verify All"]
+       |
+       v
+  [POST /api/verify → SSE Stream begins]
+       |
+       v
+  [For each row (5 concurrent via p-limit):]
+       |
+       +--- Cache hit? ---> Return cached result immediately
+       |
+       +--- Cache miss:
+       |       |
+       |       v
+       |    [Gemini 2.5-Flash: Web search verification]
+       |       |
+       |       +--- Score >= 70 ---> Done
+       |       |
+       |       +--- Score < 70 AND supplementary is part_specification:
+       |       |       |
+       |       |       v
+       |       |    [Re-verify WITH supplementary (Gemini)]
+       |       |
+       |       +--- Score still < 70:
+       |               |
+       |               v
+       |            [Claude Sonnet 4.6: Rule enforcement]
+       |
+       v
+  [URL Validation: HEAD request on website_id (5s timeout)]
+       |
+       v
+  [Cache result (SHA256 key, 24h TTL)]
+       |
+       v
+  [SSE Events: progress → row_complete → ... → complete]
+       |
+       v
+  [DataTable.tsx: Display verified results (10 columns)]
+  [StatsDashboard.tsx: Show 9 stat cards]
+  [VerificationLog.tsx: Real-time activity log]
+       |
+       v
+  [User clicks "Download Excel"]
+       |
+       v
+  [POST /api/export → ExcelJS: Generate .xlsx]
+       |
+       +--- Sheet 1: "Verified Data" (styled, score-colored)
+       +--- Sheet 2: "Original Data" (raw audit trail)
+       |
+       v
+  [Browser downloads: verified_[originalName].xlsx]
+
+
+================================================================================
+  SECTION 5: CODE QUALITY ASSESSMENT
+================================================================================
+
+5.1  RATINGS
+--------------------------------------------------------------------------------
+
+  | Aspect              | Rating | Comments                                                |
+  |----------------------|--------|---------------------------------------------------------|
+  | Code Readability     | 8/10   | Clean structure, clear naming, good separation          |
+  | Error Handling       | 8/10   | Zod validation, retry logic, correlation IDs            |
+  | Performance          | 7/10   | Virtual scrolling good; no search/filter/sort           |
+  | Security             | 9/10   | Helmet, CSP, internalItemNumber never sent to AI        |
+  | Maintainability      | 8/10   | Good separation of concerns, shared types               |
+
+  OVERALL: 8.0 / 10
+
+5.2  ISSUES FOUND
+--------------------------------------------------------------------------------
+
+  | # | Issue                              | Severity | Location                        | Suggested Fix                              |
+  |---|--------------------------------------|----------|----------------------------------|--------------------------------------------|
+  | 1 | No search/filter on data table       | Medium   | frontend/components/DataTable.tsx | Add column filter/search bar               |
+  | 2 | No column sorting                    | Medium   | frontend/components/DataTable.tsx | Add click-to-sort on column headers        |
+  | 3 | prod docker-compose used curl        | High     | docker-compose.prod.yml          | FIXED: Now uses Node fetch                 |
+  | 4 | Rate limiter blocked healthcheck     | High     | backend/src/server.js            | FIXED: Health route before rate limiter    |
+  | 5 | No frontend dev hot-reload in Docker | Medium   | docker-compose.yml               | FIXED: Volume mounts + next dev            |
+  | 6 | No input sanitization for XSS        | Low      | frontend/components/DataTable.tsx | Sanitize cell values before rendering      |
+  | 7 | 50MB JSON body limit is very high    | Low      | backend/src/server.js:26-27      | Consider lowering or adding file size check|
+  | 8 | No request timeout middleware        | Low      | backend/src/server.js            | Add connect-timeout middleware             |
+  | 9 | node-cache is in-memory only         | Low      | backend/src/services/cacheService| Cache lost on restart; consider Redis      |
+  |10 | No pagination/lazy load for export   | Low      | backend/src/controllers/export   | Stream large exports instead of buffering  |
+
+
+================================================================================
+  SECTION 6: RECOMMENDATIONS FOR IMPROVEMENT
+================================================================================
+
+6.1  EXCEL PROCESSING
+--------------------------------------------------------------------------------
+  - Add client-side file size validation before upload (reject > 50MB early)
+  - Support CSV files in addition to .xlsx/.xls
+  - Add progress indicator during file parsing (large files can take seconds)
+  - Consider streaming Excel parsing for very large files (>10K rows)
+
+6.2  AI INTEGRATION
+--------------------------------------------------------------------------------
+  - Add cost tracking per verification run (token usage from each provider)
+  - Implement AI response quality monitoring (log score distributions)
+  - Add user feedback loop: allow marking AI results as correct/incorrect
+  - Consider batch API for OpenAI normalization (Format B/C) for cost savings
+  - Add circuit breaker pattern for AI provider failures
+
+6.3  TABLE PERFORMANCE
+--------------------------------------------------------------------------------
+  - Add column sorting (click header to sort asc/desc)
+  - Add search/filter bar for quick row lookup
+  - Add column visibility toggle (hide/show columns)
+  - Consider react-virtual or TanStack Table for richer features
+  - Add row selection for batch operations
+
+6.4  USER EXPERIENCE
+--------------------------------------------------------------------------------
+  - Add keyboard shortcuts (Ctrl+S to save edits, Ctrl+E to export)
+  - Add undo/redo for cell edits
+  - Add row-level status indicators (verified/pending/error)
+  - Add tooltip on score cells showing verification details
+  - Add dark/light theme toggle
+  - Add column resize by dragging
+  - Show estimated cost before starting verification
+
+
+================================================================================
+  SECTION 7: SUMMARY STATISTICS
+================================================================================
+
+  | Metric                            | Value                                   |
+  |-----------------------------------|-----------------------------------------|
+  | Total Excel columns processed     | 6 (internalItemNumber, description,     |
+  |                                   |   manufacturer, itemNumber,              |
+  |                                   |   typeDesignation, supplementary)        |
+  | Additional web-only columns       | 4 (verifiedSource, score, websiteId,    |
+  |                                   |   sourceType)                            |
+  | Max rows per upload               | 10,000 (hard limit)                     |
+  | Warning threshold                 | 5,000 rows                              |
+  | AI calls per row                  | 1-3 (Gemini primary, optional retry     |
+  |                                   |   with supplementary, optional Claude)   |
+  | Concurrent AI calls               | 5 (via p-limit)                         |
+  | Cache TTL                         | 24 hours (86400 seconds)                |
+  | AI providers used                 | 3 (OpenAI, Gemini, Claude)              |
+  | Total frontend components         | 17 (11 feature + 6 UI primitives)       |
+  | Total backend services            | 8                                       |
+  | Total API endpoints               | 7                                       |
+  | Shared TypeScript interfaces      | 12                                      |
+  | Shared TypeScript types           | 7                                       |
+  | Frontend LOC (approx)             | ~1,200                                  |
+  | Backend LOC (approx)              | ~1,500                                  |
+  | Shared types LOC                  | ~120                                    |
+  | Total project LOC (approx)        | ~2,800                                  |
+
+
+================================================================================
+  SECTION 8: TECHNOLOGY STACK SUMMARY
+================================================================================
+
+  FRONTEND:
+  - Next.js 14.2.3 (App Router)
+  - React 18.3.1
+  - TypeScript 5.4.5
+  - Tailwind CSS 3.4.3
+  - react-window 1.8.10 (virtual scrolling)
+  - ExcelJS 4.3.0 (export only)
+  - clsx 2.1.1 (conditional classnames)
+
+  BACKEND:
+  - Express.js 4.18.2
+  - ExcelJS 4.3.0 (parse + generate)
+  - OpenAI SDK 4.47.0 (gpt-4o-mini)
+  - Google Generative AI SDK 0.7.0 (gemini-2.5-flash)
+  - Anthropic SDK 0.20.0 (claude-sonnet-4-6)
+  - node-cache 5.1.2 (in-memory cache)
+  - p-limit 5.0.0 (concurrency control)
+  - Zod (input validation)
+  - Winston 3.11.0 (logging)
+  - Helmet.js (security headers)
+  - express-rate-limit 7.1.5
+
+  INFRASTRUCTURE:
+  - Docker (docker-compose for dev + prod)
+  - Node.js 20 Alpine
+
+
+================================================================================
+  SECTION 9: FILE STRUCTURE
+================================================================================
+
+  spare-parts-verifier/
+  ├── frontend/
+  │   ├── app/
+  │   │   ├── page.tsx              (Home page)
+  │   │   ├── docs/page.tsx         (Documentation page)
+  │   │   ├── layout.tsx            (Root layout)
+  │   │   └── globals.css           (Global styles + score colors)
+  │   ├── components/
+  │   │   ├── SparePartsApp.tsx     (Main app container)
+  │   │   ├── FileUpload.tsx        (Drag-and-drop upload)
+  │   │   ├── SheetSelector.tsx     (Sheet selection dropdown)
+  │   │   ├── FormatDetector.tsx    (Format badge + manual mapping trigger)
+  │   │   ├── ManualMappingDialog.tsx (Column mapping modal)
+  │   │   ├── DataTable.tsx         (Virtual scrolling table)
+  │   │   ├── ActionBar.tsx         (Control buttons)
+  │   │   ├── ProgressSection.tsx   (Progress bar + ETA)
+  │   │   ├── VerificationLog.tsx   (Real-time log)
+  │   │   ├── StatsDashboard.tsx    (9 stat cards)
+  │   │   ├── LargeFileWarning.tsx  (File size warning modal)
+  │   │   └── ui/                   (Button, Badge, Modal, Card, StatCard, ProgressBar)
+  │   ├── hooks/
+  │   │   ├── useVerification.ts    (Main state management)
+  │   │   ├── useSSE.ts            (Server-sent events)
+  │   │   └── useEditState.ts      (Inline cell editing)
+  │   ├── lib/
+  │   │   ├── api.ts               (API client)
+  │   │   └── utils.ts             (Helper functions)
+  │   ├── next.config.mjs          (API rewrites to backend)
+  │   ├── tailwind.config.ts       (Dark theme + custom colors)
+  │   └── package.json
+  │
+  ├── backend/
+  │   ├── src/
+  │   │   ├── server.js            (Express app setup)
+  │   │   ├── config.js            (Zod-validated env config)
+  │   │   ├── routes/              (health, detect, sheets, normalize, manualMap, verify, export, views)
+  │   │   ├── controllers/         (detectController, sheetsController, normalizeController,
+  │   │   │                         manualMapController, verifyController, exportController)
+  │   │   ├── services/            (excelService, openaiService, geminiService, claudeService,
+  │   │   │                         cacheService, deduplicationService, supplementaryLogger,
+  │   │   │                         urlValidatorService)
+  │   │   ├── middleware/          (validation, rateLimiter, errorHandler)
+  │   │   ├── utils/               (logger, retry)
+  │   │   └── services/mocks/     (Mock implementations for testing)
+  │   ├── views/                   (EJS templates — legacy)
+  │   ├── public/                  (Static assets)
+  │   ├── tests/                   (Vitest tests + fixtures)
+  │   ├── Dockerfile               (Production image)
+  │   └── package.json
+  │
+  ├── shared/
+  │   └── types/index.ts           (12 interfaces + 7 type aliases)
+  │
+  ├── docker-compose.yml           (Development: volume mounts + hot reload)
+  ├── docker-compose.prod.yml      (Production: built images)
+  ├── CLAUDE.md                    (Development guidelines)
+  ├── DECISIONS.md                 (Architectural decisions D-001 to D-010)
+  └── README.md                    (Project overview)
+
+
+================================================================================
+  END OF REPORT
+================================================================================

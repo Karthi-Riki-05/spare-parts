@@ -1,0 +1,65 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop, production]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+      - name: Run backend tests
+        run: cd backend && npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/production' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push backend image
+        run: |
+          docker build -t ${{ secrets.ECR_REPO }}:latest ./backend
+          docker push ${{ secrets.ECR_REPO }}:latest
+      - name: Build and push frontend image
+        run: |
+          docker build -t ${{ secrets.ECR_REPO }}-frontend:latest -f frontend/Dockerfile .
+          docker push ${{ secrets.ECR_REPO }}-frontend:latest
+      - name: Deploy to Lightsail
+        run: |
+          aws lightsail create-container-service-deployment \
+            --service-name spare-parts-verifier \
+            --containers '{
+              "app": {
+                "image": "${{ secrets.ECR_REPO }}:latest",
+                "ports": { "3001": "HTTP" },
+                "environment": {
+                  "NODE_ENV": "production",
+                  "PORT": "3001"
+                }
+              }
+            }' \
+            --public-endpoint '{
+              "containerName": "app",
+              "containerPort": 3001,
+              "healthCheck": { "path": "/api/health" }
+            }'
