@@ -38,6 +38,10 @@ async function handleVerify(req, res, next) {
     const results = [];
     const changeLogs = [];
     let cacheHits = 0;
+    let geminiCalls = 0;
+    let fallbackCalls = 0;
+    let mockCalls = 0;
+    let errorCount = 0;
     let completed = 0;
     const total = rows.length;
     const totalBatches = Math.ceil(total / actualBatchSize);
@@ -53,6 +57,7 @@ async function handleVerify(req, res, next) {
       if (cached) {
         cacheHits++;
         completed++;
+        logger.info(`[WEB VERIFY] Row ${correlationId} → CACHE HIT (no API call)`);
         const result = { ...cached, rowIndex: row.rowIndex, internalItemNumber };
         results.push(result);
         send({ type: 'row_complete', result });
@@ -60,15 +65,20 @@ async function handleVerify(req, res, next) {
         return;
       }
       try {
+        if (config.geminiMockMode) mockCalls++; else geminiCalls++;
         let result = await verifyRow(deduped, false, correlationId);
         if (result.verificationScore < 70 && deduped.supplementary.trim()) {
           const suppType = classifySupplementary(deduped.supplementary);
           if (suppType === 'part_specification') {
+            if (config.geminiMockMode) mockCalls++; else geminiCalls++;
             result = await verifyRow(deduped, true, correlationId);
             result.supplementaryUsed = true;
           }
         }
-        if (result.verificationScore < 70) result = await enforceRules(deduped, result, correlationId);
+        if (result.verificationScore < 70) {
+          if (config.claudeMockMode) mockCalls++; else fallbackCalls++;
+          result = await enforceRules(deduped, result, correlationId);
+        }
         result = deduplicateVerified(result);
         result.rowIndex = row.rowIndex;
         result.internalItemNumber = internalItemNumber;
@@ -82,6 +92,7 @@ async function handleVerify(req, res, next) {
         send({ type: 'progress', batch: Math.ceil(completed / actualBatchSize), totalBatches, completed, total, elapsedSeconds: Math.round((Date.now() - startTime) / 1000) });
       } catch (error) {
         completed++;
+        errorCount++;
         send({ type: 'error', rowIndex: row.rowIndex, message: error.message || 'Unknown error' });
       }
     }));
@@ -100,6 +111,22 @@ async function handleVerify(req, res, next) {
       );
       cacheService.flush();
     }
+
+    const totalMs = Date.now() - startTime;
+    const summary = [
+      '─────────────────────────────────────────',
+      ' VERIFICATION SUMMARY',
+      '─────────────────────────────────────────',
+      ` Total rows processed : ${total}`,
+      ` Gemini API calls     : ${geminiCalls} (web verify)`,
+      ` Gemini fallback calls: ${fallbackCalls} (rule enforce)`,
+      ` Cache hits           : ${cacheHits}`,
+      ` Mock calls           : ${mockCalls} (should be 0)`,
+      ` Errors               : ${errorCount}`,
+      ` Total time           : ${totalMs}ms`,
+      '─────────────────────────────────────────',
+    ];
+    for (const l of summary) logger.info(l);
 
     send({ type: 'complete', response: { results, changeLogs, stats: computeStats(results), cacheHits } });
     res.end();

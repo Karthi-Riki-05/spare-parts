@@ -2,6 +2,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { config } = require('../config');
 const { withRetry } = require('../utils/retry');
 const { logger } = require('../utils/logger');
+const { logAiError } = require('../utils/aiErrorLogger');
 const { validateUrl } = require('./urlValidatorService');
 const { mockVerificationResult } = require('./mocks/geminiMock');
 
@@ -42,37 +43,43 @@ function mapResult(raw, rowIndex) {
 
 async function verifyRow(row, useSupplementary, correlationId) {
   if (config.geminiMockMode) {
-    logger.info('Gemini mock: verifyRow', { correlationId, rowIndex: row.rowIndex });
+    logger.warn(`[WEB VERIFY] Row ${correlationId} → MOCK MODE (no real API call)`);
     return mockVerificationResult(row.rowIndex, row);
   }
+  logger.info(`[WEB VERIFY] Row ${correlationId} → calling Gemini 2.5-flash with Google Search (real API)`);
 
   return withRetry(async () => {
     const start = Date.now();
-    const prompt = buildPrompt(row, useSupplementary);
-    const model = getClient().getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      tools: [{ googleSearch: {} }],
-    });
-    const genResult = await model.generateContent(prompt);
-    const text = genResult.response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('No JSON found in Gemini response');
+    try {
+      const prompt = buildPrompt(row, useSupplementary);
+      const model = getClient().getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        tools: [{ googleSearch: {} }],
+      });
+      const genResult = await model.generateContent(prompt);
+      const text = genResult.response.text();
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('No JSON found in Gemini response');
 
-    let result = mapResult(JSON.parse(jsonMatch[0]), row.rowIndex);
+      let result = mapResult(JSON.parse(jsonMatch[0]), row.rowIndex);
 
-    if (result.websiteId) {
-      const urlCheck = await validateUrl(result.websiteId);
-      result.urlValidationStatus = urlCheck.status;
-      if (urlCheck.status === 'broken' || urlCheck.status === 'timeout') {
-        result.websiteId = '';
-        result.sourceType = 'not_found';
-      } else if (urlCheck.status === 'redirected' && urlCheck.finalUrl) {
-        result.websiteId = urlCheck.finalUrl;
+      if (result.websiteId) {
+        const urlCheck = await validateUrl(result.websiteId);
+        result.urlValidationStatus = urlCheck.status;
+        if (urlCheck.status === 'broken' || urlCheck.status === 'timeout') {
+          result.websiteId = '';
+          result.sourceType = 'not_found';
+        } else if (urlCheck.status === 'redirected' && urlCheck.finalUrl) {
+          result.websiteId = urlCheck.finalUrl;
+        }
       }
-    }
 
-    logger.info('Gemini verifyRow complete', { correlationId, rowIndex: row.rowIndex, score: result.verificationScore, durationMs: Date.now() - start });
-    return result;
+      logger.info(`[WEB VERIFY] Row ${correlationId} → done in ${Date.now() - start}ms | score: ${result.verificationScore} | source: ${result.sourceType}`);
+      return result;
+    } catch (error) {
+      logAiError('WEB VERIFY', correlationId, error);
+      throw error;
+    }
   }, config.maxRetries, config.retryDelayMs, correlationId);
 }
 

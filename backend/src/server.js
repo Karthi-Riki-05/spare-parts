@@ -37,8 +37,9 @@ app.use((req, _res, next) => {
 
 app.use('/', require('./routes/views'));
 
-// Health check before rate limiter so Docker healthcheck never gets blocked
+// Health + ai-status before rate limiter so they're always reachable
 app.use('/api', require('./routes/health'));
+app.use('/api', require('./routes/aiStatus'));
 
 app.use(rateLimiter);
 app.use('/api', require('./routes/detect'));
@@ -57,9 +58,32 @@ app.use(errorHandler);
 
 const isTestEnv = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
 
+function logAiConfigBanner() {
+  const key = config.geminiApiKey || '';
+  const keyLine = key
+    ? `SET (...${key.slice(-4)})`
+    : 'MISSING ⚠️';
+  const lines = [
+    '─────────────────────────────────',
+    ' SPARE PARTS VERIFIER — AI CONFIG',
+    '─────────────────────────────────',
+    ` MOCK_MODE        : ${config.mockMode}`,
+    ` OPENAI_MOCK_MODE : ${config.openaiMockMode}`,
+    ` GEMINI_MOCK_MODE : ${config.geminiMockMode}`,
+    ` CLAUDE_MOCK_MODE : ${config.claudeMockMode}`,
+    ` GEMINI_API_KEY   : ${keyLine}`,
+    ' AI PROVIDER      : Google Gemini (single provider)',
+    '─────────────────────────────────',
+  ];
+  for (const l of lines) {
+    if (!key) logger.warn(l); else logger.info(l);
+  }
+}
+
 if (!isTestEnv) {
   const server = app.listen(config.port, () => {
     logger.info(`Server running on http://localhost:${config.port}`, { nodeEnv: config.nodeEnv, mockMode: config.mockMode });
+    logAiConfigBanner();
   });
 
   process.on('SIGTERM', () => {
