@@ -14,7 +14,20 @@ import LargeFileWarning from './LargeFileWarning';
 export default function SparePartsApp() {
   const v = useVerification();
   const hasData = v.normalizedRows.length > 0 || v.results.length > 0;
-  const displayRows = v.results.length > 0 ? v.results : v.normalizedRows;
+
+  // While verifying, keep all rows visible and merge in verified results as they arrive.
+  // After done, show only verified results.
+  const isVerifyingPhase = v.phase === 'verifying';
+  let displayRows;
+  if (v.phase === 'done' && v.results.length > 0) {
+    displayRows = v.results;
+  } else if (isVerifyingPhase && v.results.length > 0) {
+    const byIndex = new Map(v.results.map((r) => [r.rowIndex, r]));
+    displayRows = v.normalizedRows.map((n) => byIndex.get(n.rowIndex) ?? n);
+  } else {
+    displayRows = v.normalizedRows;
+  }
+  const verifiedRowIndexes = new Set(v.results.map((r) => r.rowIndex));
 
   return (
     <>
@@ -40,7 +53,7 @@ export default function SparePartsApp() {
 
       {/* Sheet selector */}
       {v.showSheetSelector && (
-        <SheetSelector sheets={v.sheetNames} onSelect={v.selectSheet} />
+        <SheetSelector key="sheet-selector" sheets={v.sheetNames} onSelect={v.selectSheet} />
       )}
 
       {/* Loading indicator during detect/normalize */}
@@ -90,8 +103,9 @@ export default function SparePartsApp() {
 
           <DataTable
             rows={displayRows}
-            isVerified={v.results.length > 0}
+            isVerified={v.results.length > 0 || isVerifyingPhase}
             onUpdateRow={v.updateRow}
+            pendingRowIndexes={isVerifyingPhase ? new Set(v.normalizedRows.map((n) => n.rowIndex).filter((i) => !verifiedRowIndexes.has(i))) : undefined}
           />
         </>
       )}

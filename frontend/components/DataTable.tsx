@@ -11,6 +11,19 @@ interface DataTableProps {
   rows: RowData[];
   isVerified: boolean;
   onUpdateRow: (rowIndex: number, col: string, value: string) => void;
+  pendingRowIndexes?: Set<number>;
+}
+
+function PendingPulse() {
+  return (
+    <span
+      style={{
+        display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
+        background: '#22d3ee', animation: 'sp-pulse 1s ease-in-out infinite',
+      }}
+      aria-label="verifying"
+    />
+  );
 }
 
 const COLUMNS_NORMALIZED = [
@@ -70,7 +83,7 @@ function WebsiteLink({ url }: { url: string }) {
   );
 }
 
-export default function DataTable({ rows, isVerified, onUpdateRow }: DataTableProps) {
+export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowIndexes }: DataTableProps) {
   const columns = isVerified ? COLUMNS_VERIFIED : COLUMNS_NORMALIZED;
   const { startEdit, commitEdit, cancelEdit, isEditing, getEditedValue } = useEditState();
   const [, forceRender] = useState(0);
@@ -165,15 +178,16 @@ export default function DataTable({ rows, isVerified, onUpdateRow }: DataTablePr
             const editing = isEditing(rowIndex, col.key);
             const isSticky = colIdx === 0;
 
-            // Score badge
+            // Score badge (or pulse while pending)
             if (col.key === 'verificationScore') {
+              const isPending = pendingRowIndexes?.has(rowIndex);
               return (
                 <div
                   key={col.key}
                   className="flex-shrink-0 h-full flex items-center justify-center"
                   style={{ width: col.width }}
                 >
-                  <ScoreBadge score={Number(value)} />
+                  {isPending ? <PendingPulse /> : <ScoreBadge score={Number(value)} />}
                 </div>
               );
             }
@@ -249,6 +263,12 @@ export default function DataTable({ rows, isVerified, onUpdateRow }: DataTablePr
 
   return (
     <div className="bg-bg-surface rounded-[10px] overflow-hidden mb-3 border border-border">
+      <style jsx>{`
+        @keyframes sp-pulse {
+          0%, 100% { opacity: 0.3; transform: scale(0.85); }
+          50%      { opacity: 1;   transform: scale(1.15); }
+        }
+      `}</style>
       {/* Scrollable container for both header and body */}
       <div style={{ overflowX: 'auto', width: '100%' }}>
         {/* Header */}

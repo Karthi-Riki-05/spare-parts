@@ -4,6 +4,8 @@ services:
     ports:
       - "3001:3001"
     env_file: ./backend/.env
+    volumes:
+      - ./backend/logs:/app/logs
     environment:
       - NODE_ENV=production
     restart: always

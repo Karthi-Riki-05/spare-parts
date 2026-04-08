@@ -166,31 +166,56 @@ export function useVerification() {
     if (normalizedRows.length === 0) return;
     setPhase('verifying');
     setResults([]);
+    setStats({
+      totalRows: normalizedRows.length,
+      webVerified: 0, emptyCells: 0,
+      scoreAbove90: 0, score50to89: 0, scoreBelow50: 0,
+      officialSourceFound: 0, externalSourceFound: 0, notFound: 0,
+    });
     setChangeLogs([]);
     setLogEntries([]);
     setProgress(0);
     setProgressMessage('Starting verification...');
+    const startedAt = Date.now();
 
     const controller = connectSSE('/api/verify', { rows: normalizedRows }, {
       onProgress: (e) => {
         const pct = Math.round((e.completed / e.total) * 100);
         setProgress(pct);
-        setProgressMessage(`Verifying batch ${e.batch}/${e.totalBatches}`);
-        if (e.total > 1000) {
-          const eta = e.elapsedSeconds > 0
-            ? ((e.elapsedSeconds / e.completed) * (e.total - e.completed))
-            : 0;
-          const mins = Math.floor(eta / 60);
-          const secs = Math.ceil(eta % 60);
-          setProgressSubMessage(
-            `Row ${e.completed}/${e.total} | ~${mins}m ${secs}s remaining`,
-          );
-        } else {
-          setProgressSubMessage(`Row ${e.completed}/${e.total}`);
-        }
+        const elapsedSec = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+        const rowsPerMin = Math.round((e.completed / elapsedSec) * 60);
+        const remaining = e.total - e.completed;
+        const etaSec = e.completed > 0 ? Math.round((elapsedSec / e.completed) * remaining) : 0;
+        const mins = Math.floor(etaSec / 60);
+        const secs = etaSec % 60;
+        setProgressMessage(`Verifying row ${e.completed} of ${e.total} — ${rowsPerMin} rows/min`);
+        setProgressSubMessage(remaining > 0 ? `~${mins}m ${secs}s remaining` : 'Finalizing...');
       },
       onRowComplete: (e) => {
-        setResults(prev => [...prev, e.result]);
+        setResults(prev => {
+          const next = [...prev, e.result];
+          // Recompute stats live from accumulated results
+          const s = {
+            totalRows: normalizedRows.length,
+            webVerified: 0, emptyCells: 0,
+            scoreAbove90: 0, score50to89: 0, scoreBelow50: 0,
+            officialSourceFound: 0, externalSourceFound: 0, notFound: 0,
+          };
+          for (const r of next) {
+            if (r.verificationScore > 0) s.webVerified++;
+            if (r.verificationScore >= 90) s.scoreAbove90++;
+            else if (r.verificationScore >= 50) s.score50to89++;
+            else s.scoreBelow50++;
+            const st = String(r.sourceType);
+            if (st === 'official') s.officialSourceFound++;
+            else if (st === 'external' || st === 'distributor') s.externalSourceFound++;
+            else if (st === 'not_found') s.notFound++;
+            s.emptyCells += [r.description, r.manufacturer, r.itemNumber, r.websiteId].filter(f => !f || String(f).trim() === '').length;
+          }
+          setStats(s);
+          return next;
+        });
+
         const score = e.result.verificationScore;
         const label = e.result.manufacturer
           ? `${e.result.manufacturer} ${e.result.itemNumber}`

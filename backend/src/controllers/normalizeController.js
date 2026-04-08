@@ -3,6 +3,7 @@ const { normalizeRow } = require('../services/openaiService');
 const { applyAllDeduplication } = require('../services/deduplicationService');
 const { handleErsPrefix } = require('../utils/ersHandler');
 const { logger } = require('../utils/logger');
+const { config } = require('../config');
 
 function extractVal(row, key) {
   const val = row[key];
@@ -92,24 +93,21 @@ async function handleNormalize(req, res, next) {
     if (format === 'A') {
       normalized = normalizeFormatA(rawRows, mapping, 'A');
     } else if (format === 'B') {
-      // Process each row independently — send ONLY col_1 to AI (not col_0 which is internal item number)
-      const results = [];
-      for (let index = 0; index < rawRows.length; index++) {
-        const row = rawRows[index];
+      // Process rows in parallel (p-limit) — send ONLY col_1 to AI (not col_0 which is internal item number)
+      const pLimit = (await import('p-limit')).default;
+      const limit = pLimit(config.maxConcurrency);
+      normalized = await Promise.all(rawRows.map((row, index) => limit(async () => {
         const internalItemNumber = extractVal(row, 'col_0');
-        // col_1 contains the spare part description text; col_0 is the internal ID
         const rawText = cleanFormatBNoise(extractVal(row, 'col_1'));
         if (!rawText) {
-          // Skip empty rows
-          results.push(handleErsPrefix(applyAllDeduplication({
+          return handleErsPrefix(applyAllDeduplication({
             internalItemNumber, description: '', manufacturer: '',
             itemNumber: '', typeDesignation: '', supplementary: '',
             _originalFormat: 'B', rowIndex: index,
-          })));
-          continue;
+          }));
         }
         const result = await normalizeRow(rawText, req.correlationId);
-        const raw = {
+        return handleErsPrefix(applyAllDeduplication({
           internalItemNumber,
           description: result.description,
           manufacturer: result.manufacturer,
@@ -118,10 +116,8 @@ async function handleNormalize(req, res, next) {
           supplementary: result.supplementary,
           _originalFormat: 'B',
           rowIndex: index,
-        };
-        results.push(handleErsPrefix(applyAllDeduplication(raw)));
-      }
-      normalized = results;
+        }));
+      })));
     } else {
       normalized = await normalizeFormatC(rawRows, req.correlationId, 'C');
     }

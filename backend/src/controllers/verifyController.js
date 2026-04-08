@@ -2,7 +2,7 @@ const { config } = require('../config');
 const { logger } = require('../utils/logger');
 const { verifyRow } = require('../services/geminiService');
 const { enforceRules } = require('../services/claudeService');
-const { applyAllDeduplication, deduplicateVerified } = require('../services/deduplicationService');
+const { applyAllDeduplication, deduplicateVerified, mirrorOriginalLayout } = require('../services/deduplicationService');
 const cacheService = require('../services/cacheService');
 const { classifySupplementary, createChangeLog } = require('../services/supplementaryLogger');
 
@@ -47,6 +47,15 @@ async function handleVerify(req, res, next) {
     const totalBatches = Math.ceil(total / actualBatchSize);
     const startTime = Date.now();
 
+    const ROW_HARD_TIMEOUT_MS = 45000;
+    const withRowTimeout = (promise, rowIndex) => Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(
+        () => reject(Object.assign(new Error('Row hard timeout (45s)'), { __rowTimeout: true, rowIndex })),
+        ROW_HARD_TIMEOUT_MS,
+      )),
+    ]);
+
     const tasks = rows.map(row => limit(async () => {
       if (res.destroyed) return;
       const deduped = applyAllDeduplication(row);
@@ -66,20 +75,41 @@ async function handleVerify(req, res, next) {
       }
       try {
         if (config.geminiMockMode) mockCalls++; else geminiCalls++;
-        let result = await verifyRow(deduped, false, correlationId);
-        if (result.verificationScore < 70 && deduped.supplementary.trim()) {
-          const suppType = classifySupplementary(deduped.supplementary);
-          if (suppType === 'part_specification') {
-            if (config.geminiMockMode) mockCalls++; else geminiCalls++;
-            result = await verifyRow(deduped, true, correlationId);
-            result.supplementaryUsed = true;
+        let result = await withRowTimeout((async () => {
+          let r = await verifyRow(deduped, false, correlationId);
+          if (r.verificationScore < 70 && deduped.supplementary.trim()) {
+            const suppType = classifySupplementary(deduped.supplementary);
+            if (suppType === 'part_specification') {
+              if (config.geminiMockMode) mockCalls++; else geminiCalls++;
+              r = await verifyRow(deduped, true, correlationId);
+              r.supplementaryUsed = true;
+            }
           }
+          // Req 4: if Manufacturer is still empty, force rule-enforce fallback to infer it
+          const needsManufacturerInference = !r.manufacturer || !r.manufacturer.trim();
+          if (r.verificationScore < 70 || needsManufacturerInference) {
+            if (config.claudeMockMode) mockCalls++; else fallbackCalls++;
+            r = await enforceRules(deduped, r, correlationId);
+          }
+          return r;
+        })(), row.rowIndex);
+        // URL validation note: if URL was unreachable, AI's score/source_type still stand
+        if (result.urlValidationStatus === 'broken' || result.urlValidationStatus === 'timeout') {
+          logger.info(`[VERIFY] Row ${correlationId} → URL validation failed (${result.urlValidationStatus}) but score=${result.verificationScore} kept. Part was confirmed by AI, URL unreachable.`);
         }
-        if (result.verificationScore < 70) {
-          if (config.claudeMockMode) mockCalls++; else fallbackCalls++;
-          result = await enforceRules(deduped, result, correlationId);
+        // Block score/source_type inconsistency from reaching frontend
+        if (result.verificationScore >= 70 && result.sourceType === 'not_found') {
+          const vs = (result.verifiedSource || '').toLowerCase();
+          let newSourceType;
+          if (vs.includes('manufacturer')) newSourceType = 'official';
+          else if (vs.includes('distributor') || vs.includes('store') || vs.includes('reseller')) newSourceType = 'distributor';
+          else newSourceType = 'unknown';
+          logger.info(`[VERIFY] Row ${correlationId} → source_type corrected from not_found to ${newSourceType} based on verified_source`);
+          result.sourceType = newSourceType;
         }
         result = deduplicateVerified(result);
+        // Req 2b: keep verified C/D layout aligned with the original input
+        result = mirrorOriginalLayout(result, deduped);
         result.rowIndex = row.rowIndex;
         result.internalItemNumber = internalItemNumber;
         if (result.supplementaryChanged && result.supplementaryOriginal !== result.supplementary) {
@@ -92,8 +122,36 @@ async function handleVerify(req, res, next) {
         send({ type: 'progress', batch: Math.ceil(completed / actualBatchSize), totalBatches, completed, total, elapsedSeconds: Math.round((Date.now() - startTime) / 1000) });
       } catch (error) {
         completed++;
-        errorCount++;
-        send({ type: 'error', rowIndex: row.rowIndex, message: error.message || 'Unknown error' });
+        if (error && error.__rowTimeout) {
+          // Hard 45s timeout — return a placeholder result so the queue keeps moving
+          logger.warn(`[VERIFY] Row ${correlationId} → row ${row.rowIndex} hit 45s hard timeout, marking timeout and continuing`);
+          const timeoutResult = {
+            rowIndex: row.rowIndex,
+            internalItemNumber,
+            description: deduped.description || '',
+            manufacturer: deduped.manufacturer || '',
+            itemNumber: deduped.itemNumber || '',
+            typeDesignation: deduped.typeDesignation || '',
+            supplementary: deduped.supplementary || '',
+            verifiedSource: 'Verification timed out',
+            verificationScore: 0,
+            websiteId: '',
+            sourceType: 'timeout',
+            manufacturerWebsite: '',
+            manufacturerInferred: false,
+            supplementaryUsed: false,
+            supplementaryChanged: false,
+            supplementaryOriginal: '',
+            supplementaryType: 'unknown',
+            urlValidationStatus: 'unchecked',
+          };
+          results.push(timeoutResult);
+          send({ type: 'row_complete', result: timeoutResult });
+          send({ type: 'progress', batch: Math.ceil(completed / actualBatchSize), totalBatches, completed, total, elapsedSeconds: Math.round((Date.now() - startTime) / 1000) });
+        } else {
+          errorCount++;
+          send({ type: 'error', rowIndex: row.rowIndex, message: error.message || 'Unknown error' });
+        }
       }
     }));
 

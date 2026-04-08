@@ -27,4 +27,21 @@ function applyAllDeduplication(row) {
   return result;
 }
 
-module.exports = { deduplicateOriginal, deduplicateVerified, normalizeCanonicalField, applyAllDeduplication };
+// Req 2b: enforce original C/D layout on verified result.
+// If the model duplicated the same value into both itemNumber and typeDesignation,
+// keep only the field that was populated in the original input data.
+function mirrorOriginalLayout(verified, original) {
+  const origItem = (original.itemNumber || '').trim();
+  const origType = (original.typeDesignation || '').trim();
+  const verItem = (verified.itemNumber || '').trim();
+  const verType = (verified.typeDesignation || '').trim();
+
+  if (verItem && verType && verItem.toLowerCase() === verType.toLowerCase()) {
+    if (origItem && !origType) return { ...verified, typeDesignation: '' };
+    if (!origItem && origType) return { ...verified, itemNumber: '' };
+    return { ...verified, typeDesignation: '' };
+  }
+  return verified;
+}
+
+module.exports = { deduplicateOriginal, deduplicateVerified, normalizeCanonicalField, applyAllDeduplication, mirrorOriginalLayout };

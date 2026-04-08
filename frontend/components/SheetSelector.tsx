@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Button from './ui/Button';
 
 interface SheetSelectorProps {
@@ -9,10 +9,10 @@ interface SheetSelectorProps {
 }
 
 const DATA_SHEET_PATTERNS = [
-  /sample data/i,
-  /company [abc]/i,
-  /data sheet/i,
-  /spare parts/i,
+  /^sample data$/i,
+  /^data sheet$/i,
+  /^spare parts$/i,
+  /^sheet\d+$/i,
 ];
 const SKIP_SHEET_PATTERNS = [
   /explanation/i,
@@ -34,12 +34,17 @@ function selectDefaultSheet(sheets: { index: number; name: string }[]): number {
   );
   if (nonMetaSheet) return nonMetaSheet.index;
 
-  return sheets.length > 1 ? sheets[1].index : sheets[0].index;
+  return sheets[0]?.index ?? 0;
 }
 
 export default function SheetSelector({ sheets, onSelect }: SheetSelectorProps) {
   const defaultIdx = useMemo(() => selectDefaultSheet(sheets), [sheets]);
   const [selected, setSelected] = useState(defaultIdx);
+
+  // Sync local selection if defaultIdx changes (e.g., parent reuses component with new sheets)
+  useEffect(() => {
+    setSelected(defaultIdx);
+  }, [defaultIdx]);
 
   return (
     <div className="bg-bg-surface rounded-[10px] border border-border p-4 mb-3 animate-fade-up">
@@ -52,11 +57,11 @@ export default function SheetSelector({ sheets, onSelect }: SheetSelectorProps) 
       <div className="flex items-center gap-3">
         <select
           className="bg-border text-text-primary border border-border-hover rounded px-3 py-2 text-[13px] font-sans"
-          value={selected}
+          value={String(selected)}
           onChange={(e) => setSelected(Number(e.target.value))}
         >
           {sheets.map((s) => (
-            <option key={s.index} value={s.index}>
+            <option key={s.index} value={String(s.index)}>
               {s.name}
             </option>
           ))}

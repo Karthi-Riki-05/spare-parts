@@ -1,11 +1,17 @@
+const { logger } = require('../utils/logger');
+
 async function validateUrl(url) {
   if (!url || url.trim() === '') return { status: 'broken', finalUrl: null };
   try {
-    const res = await fetch(url, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(5000) });
+    const res = await fetch(url, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(15000) });
     if (res.status === 200) return { status: 'valid', finalUrl: url };
     if (res.status >= 300 && res.status < 400) return { status: 'redirected', finalUrl: res.headers.get('location') || url };
+    logger.info(`[URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: ${url}`);
     return { status: 'broken', finalUrl: null };
-  } catch { return { status: 'timeout', finalUrl: null }; }
+  } catch {
+    logger.info(`[URL VALIDATOR] URL timeout — keeping URL as unverified: ${url}`);
+    return { status: 'unverified', finalUrl: url };
+  }
 }
 
 async function validateBatch(urls) {
