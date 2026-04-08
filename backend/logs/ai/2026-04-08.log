@@ -817,3 +817,39 @@
 2026-04-08 15:04:55.893 INFO  GEMINI_API_KEY   : SET (...G7NU)
 2026-04-08 15:04:55.894 INFO  AI PROVIDER      : Google Gemini (single provider)
 2026-04-08 15:04:55.894 INFO ─────────────────────────────────
+2026-04-08 16:22:57.198 INFO Shutting down...
+2026-04-08 16:24:03.979 INFO Server running on http://localhost:3001 {"nodeEnv":"production","mockMode":false}
+2026-04-08 16:24:03.980 INFO ─────────────────────────────────
+2026-04-08 16:24:03.980 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 16:24:03.980 INFO ─────────────────────────────────
+2026-04-08 16:24:03.980 INFO  MOCK_MODE        : false
+2026-04-08 16:24:03.980 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 16:24:03.980 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 16:24:03.980 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 16:24:03.981 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 16:24:03.981 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 16:24:03.981 INFO ─────────────────────────────────
+2026-04-08 16:25:37.668 INFO Shutting down...
+2026-04-08 16:26:34.160 INFO Server running on http://localhost:3001 {"nodeEnv":"production","mockMode":false}
+2026-04-08 16:26:34.160 INFO ─────────────────────────────────
+2026-04-08 16:26:34.160 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 16:26:34.160 INFO ─────────────────────────────────
+2026-04-08 16:26:34.161 INFO  MOCK_MODE        : false
+2026-04-08 16:26:34.161 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 16:26:34.161 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 16:26:34.161 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 16:26:34.161 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 16:26:34.161 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 16:26:34.161 INFO ─────────────────────────────────
+2026-04-08 16:28:00.655 INFO Shutting down...
+2026-04-08 16:28:51.685 INFO Server running on http://localhost:3001 {"nodeEnv":"production","mockMode":false}
+2026-04-08 16:28:51.686 INFO ─────────────────────────────────
+2026-04-08 16:28:51.686 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 16:28:51.686 INFO ─────────────────────────────────
+2026-04-08 16:28:51.686 INFO  MOCK_MODE        : false
+2026-04-08 16:28:51.686 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 16:28:51.686 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 16:28:51.686 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 16:28:51.687 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 16:28:51.687 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 16:28:51.687 INFO ─────────────────────────────────

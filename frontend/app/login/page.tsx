@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { login, getUser } from '@/lib/auth';
+import { login } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,19 +11,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
-
-  // Check if already logged in
-  useEffect(() => {
-    const checkAuth = async () => {
-      const user = await getUser();
-      if (user) {
-        router.push('/');
-      }
-      setIsChecking(false);
-    };
-    checkAuth();
-  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,14 +25,6 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
-
-  if (isChecking) {
-    return (
-      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
-        <div className="animate-pulse text-text-secondary">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-bg-primary flex items-center justify-center px-4">
