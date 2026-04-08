@@ -135,3 +135,32 @@ export type SSEEvent =
   | SSERowCompleteEvent
   | SSECompleteEvent
   | SSEErrorEvent;
+
+export interface JobStats {
+  totalRows: number;
+  webVerified: number;
+  emptyCells: number;
+  scoreAbove90: number;
+  score50to89: number;
+  scoreBelow50: number;
+  officialSourceFound: number;
+  externalSourceFound: number;
+  notFound: number;
+}
+
+export interface JobStatus {
+  success: boolean;
+  job: {
+    id: string;
+    status: string;
+    fileName: string;
+    totalRows: number;
+    processedRows: number;
+    progress: number;
+    createdAt: string;
+    startedAt: string | null;
+    completedAt: string | null;
+    errorMessage: string | null;
+    stats: JobStats | null;
+  };
+}

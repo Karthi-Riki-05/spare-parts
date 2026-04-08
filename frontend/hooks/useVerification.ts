@@ -282,10 +282,7 @@ export function useVerification() {
       setLogEntries([]);
       setProgressMessage('Submitting job to background queue...');
 
-      const response = await api.submitJob({
-        rows: normalizedRows,
-        fileName,
-      });
+      const response = await api.submitJob(normalizedRows, fileName);
 
       setPendingJobId(response.jobId);
       setJobTrackingMode(true);

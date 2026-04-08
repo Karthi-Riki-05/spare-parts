@@ -3,15 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/api';
-import type { JobStatus, JobStats } from '@spare-parts/types';
+import type { JobStatus } from '@/lib/api';
 
 export default function JobTrackingPage() {
   const router = useRouter();
   const params = useParams();
   const jobId = (params?.jobId || typeof window !== 'undefined' ? window.location.pathname.split('/').pop() : '') as string;
 
-  const [job, setJob] = useState<JobStatus | null>(null);
-  const [stats, setStats] = useState<JobStats | null>(null);
+  const [job, setJob] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
