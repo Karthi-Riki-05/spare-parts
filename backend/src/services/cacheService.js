@@ -2,7 +2,7 @@ const NodeCache = require('node-cache');
 const { createHash } = require('crypto');
 const { config } = require('../config');
 const { logger } = require('../utils/logger');
-const { sqliteGet, sqliteSet, sqliteGetStats } = require('./sqliteCacheService');
+const { sqliteGet, sqliteSet, sqliteGetStats, sqliteClear } = require('./sqliteCacheService');
 
 const cache = new NodeCache({ stdTTL: config.cacheTtlSeconds, checkperiod: Math.floor(config.cacheTtlSeconds / 10), useClones: true });
 let hits = 0;
@@ -86,6 +86,14 @@ function getStats() {
   };
 }
 
-function flush() { cache.flushAll(); hits = 0; misses = 0; l1Hits = 0; l2Hits = 0; logger.info('[Cache] Flushed all entries'); }
+function flush() { 
+  cache.flushAll(); 
+  sqliteClear();
+  hits = 0; 
+  misses = 0; 
+  l1Hits = 0; 
+  l2Hits = 0; 
+  logger.info('[Cache] Flushed all entries (L1 + L2)'); 
+}
 
 module.exports = { makeCacheKey, get, set, getStats, flush };

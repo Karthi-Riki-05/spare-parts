@@ -211,4 +211,16 @@ function sqliteGetStats() {
   }
 }
 
-module.exports = { sqliteGet, sqliteSet, sqliteGetStats, getDb };
+function sqliteClear() {
+  try {
+    const database = getDb();
+    if (!database) return;
+    
+    database.prepare('DELETE FROM verification_cache').run();
+    logger.info('[SQLITE] Cleared all cached entries');
+  } catch (err) {
+    logger.error('[SQLITE] CLEAR error: ' + err.message);
+  }
+}
+
+module.exports = { sqliteGet, sqliteSet, sqliteGetStats, sqliteClear, getDb };
