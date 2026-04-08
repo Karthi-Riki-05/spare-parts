@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const API_URL = 'http://backend:3001';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -24,9 +24,14 @@ export async function middleware(request: NextRequest) {
       // Not authenticated, redirect to login
       return NextResponse.redirect(new URL('/login', request.url));
     }
+
+    if (!res.ok) {
+      // Other auth errors, redirect to login
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
   } catch (err) {
-    // Network error, allow request to continue (client-side will handle)
-    return NextResponse.next();
+    // Network error or other issues, redirect to login for security
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   return NextResponse.next();
