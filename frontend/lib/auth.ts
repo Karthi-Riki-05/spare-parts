@@ -23,7 +23,7 @@ export async function getUser(): Promise<User | null> {
 
 export async function login(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/api/auth/login`, {
+    const res = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -42,7 +42,7 @@ export async function login(email: string, password: string): Promise<{ success:
 
 export async function logout(): Promise<void> {
   try {
-    await fetch(`${API_URL}/api/auth/logout`, {
+    await fetch(`${API_URL}/auth/logout`, {
       method: 'POST',
       credentials: 'include',
     });
