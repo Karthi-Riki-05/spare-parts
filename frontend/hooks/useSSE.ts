@@ -16,17 +16,20 @@ interface SSEHandlers {
 
 export function useSSE() {
   function connect(
-    url: string,
+    path: string,
     body: unknown,
     handlers: SSEHandlers,
   ): AbortController {
     const controller = new AbortController();
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+    const url = `${backendUrl}${path}`;
 
     (async () => {
       try {
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(body),
           signal: controller.signal,
           cache: 'no-store',

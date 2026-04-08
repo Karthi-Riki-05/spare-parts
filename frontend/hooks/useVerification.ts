@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import type {
   AppPhase,
   FormatDetectionResult,
@@ -43,6 +44,9 @@ export function useVerification() {
   const [showLargeFileWarning, setShowLargeFileWarning] = useState(false);
   const [showMappingDialog, setShowMappingDialog] = useState(false);
   const [rowCount, setRowCount] = useState(0);
+  const [showBackgroundModal, setShowBackgroundModal] = useState(false);
+  const [pendingJobId, setPendingJobId] = useState<string | null>(null);
+  const [jobTrackingMode, setJobTrackingMode] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const { connect: connectSSE } = useSSE();
 
@@ -162,7 +166,7 @@ export function useVerification() {
     [fileBase64, selectedSheet],
   );
 
-  const startVerification = useCallback(() => {
+  const doSSEVerification = useCallback(() => {
     if (normalizedRows.length === 0) return;
     setPhase('verifying');
     setResults([]);
@@ -252,6 +256,17 @@ export function useVerification() {
     abortRef.current = controller;
   }, [normalizedRows, connectSSE, addLog]);
 
+  const startVerification = useCallback(() => {
+    if (normalizedRows.length === 0) return;
+    // For >100 rows, show background job modal
+    if (normalizedRows.length > 100) {
+      setShowBackgroundModal(true);
+    } else {
+      // For smaller files, use SSE real-time verification
+      doSSEVerification();
+    }
+  }, [normalizedRows, doSSEVerification]);
+
   const cancelVerification = useCallback(() => {
     abortRef.current?.abort();
     setPhase('idle');
@@ -259,6 +274,38 @@ export function useVerification() {
     setProgress(0);
     addLog('Cancelled by user', 'fail');
   }, [addLog]);
+
+  const submitBackgroundJob = useCallback(async () => {
+    try {
+      setShowBackgroundModal(false);
+      setPhase('verifying');
+      setLogEntries([]);
+      setProgressMessage('Submitting job to background queue...');
+
+      const response = await api.submitJob({
+        rows: normalizedRows,
+        fileName,
+      });
+
+      setPendingJobId(response.jobId);
+      setJobTrackingMode(true);
+      addLog(`Background job submitted: ${response.jobId}`, 'success');
+      setProgressMessage('Job queued. You can now close this browser window.');
+      setProgressSubMessage('Tracking link sent via email after completion.');
+
+      return response.jobId;
+    } catch (err) {
+      setPhase('error');
+      setError((err as Error).message);
+      addLog(`Failed to submit background job: ${(err as Error).message}`, 'fail');
+      throw err;
+    }
+  }, [normalizedRows, fileName, addLog]);
+
+  const continueSSEVerification = useCallback(() => {
+    setShowBackgroundModal(false);
+    doSSEVerification();
+  }, [doSSEVerification]);
 
   const exportData = useCallback(async () => {
     try {
@@ -370,5 +417,11 @@ export function useVerification() {
     updateRow,
     setShowLargeFileWarning,
     setShowMappingDialog,
+    showBackgroundModal,
+    setShowBackgroundModal,
+    pendingJobId,
+    jobTrackingMode,
+    submitBackgroundJob,
+    continueSSEVerification,
   };
 }

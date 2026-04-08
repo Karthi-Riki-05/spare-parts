@@ -5,11 +5,20 @@ const { logger } = require('../utils/logger');
 const { logAiError } = require('../utils/aiErrorLogger');
 const { validateUrl } = require('./urlValidatorService');
 const { mockVerificationResult } = require('./mocks/geminiMock');
+const geminiPool = require('./geminiPool');
 
-let genAI = null;
-function getClient() {
-  if (!genAI) genAI = new GoogleGenerativeAI(config.geminiApiKey);
-  return genAI;
+const clients = new Map(); // Cache clients by API key
+
+function getClient(apiKey) {
+  const keyToUse = apiKey || config.geminiApiKey;
+  if (!keyToUse) {
+    throw new Error('No Gemini API key configured');
+  }
+  
+  if (!clients.has(keyToUse)) {
+    clients.set(keyToUse, new GoogleGenerativeAI(keyToUse));
+  }
+  return clients.get(keyToUse);
 }
 
 function buildPrompt(row, useSupplementary) {
@@ -114,13 +123,16 @@ async function verifyRow(row, useSupplementary, correlationId) {
     logger.warn(`[WEB VERIFY] Row ${correlationId} → MOCK MODE (no real API call)`);
     return mockVerificationResult(row.rowIndex, row);
   }
-  logger.info(`[WEB VERIFY] Row ${correlationId} → calling Gemini 2.5-flash with Google Search (real API)`);
+  
+  const apiKey = geminiPool.getNextKey();
+  const keyNum = geminiPool.getKeyIndex();
+  logger.info(`[WEB VERIFY] Row ${correlationId} → calling Gemini 2.5-flash with Google Search [KEY ${keyNum}/${geminiPool.getKeyCount()}]`);
 
   return withRetry(async () => {
     const start = Date.now();
     try {
       const prompt = buildPrompt(row, useSupplementary);
-      const model = getClient().getGenerativeModel({
+      const model = getClient(apiKey).getGenerativeModel({
         model: 'gemini-2.5-flash',
         tools: [{ googleSearch: {} }],
       });

@@ -6,6 +6,7 @@ services:
     env_file: ./backend/.env
     volumes:
       - ./backend/logs:/app/logs
+      - ./backend/data:/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r=>{if(!r.ok)throw r;process.exit(0)}).catch(()=>process.exit(1))"]

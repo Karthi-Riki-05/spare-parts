@@ -6,6 +6,7 @@ services:
     env_file: ./backend/.env
     volumes:
       - ./backend/logs:/app/logs
+      - ./backend/data:/app/data
     environment:
       - NODE_ENV=production
     restart: always

@@ -1,0 +1,807 @@
+2026-04-08 12:43:38.974 INFO [SQLITE] Cache database ready at /Users/webronicdesigner/Webronic/Docker/projects/spare-parts-verifier/backend/data/cache.db
+2026-04-08 12:43:38.974 INFO [SQLITE] SET key=aaaaaaaa... score=95 re_verify_after=never
+2026-04-08 12:43:38.974 INFO [SQLITE] HIT key=aaaaaaaa... score=95 verified 0 days ago hits=1
+2026-04-08 12:44:00.881 INFO Server running on http://localhost:3099 {"nodeEnv":"development","mockMode":false}
+2026-04-08 12:44:00.882 INFO ─────────────────────────────────
+2026-04-08 12:44:00.882 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 12:44:00.882 INFO ─────────────────────────────────
+2026-04-08 12:44:00.882 INFO  MOCK_MODE        : false
+2026-04-08 12:44:00.882 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 12:44:00.882 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 12:44:00.882 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 12:44:00.882 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 12:44:00.882 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 12:44:00.882 INFO ─────────────────────────────────
+2026-04-08 12:44:02.628 INFO [SQLITE] Cache database ready at /Users/webronicdesigner/Webronic/Docker/projects/spare-parts-verifier/backend/data/cache.db
+2026-04-08 12:44:02.636 INFO Shutting down...
+2026-04-08 12:44:15.588 ERROR [SQLITE] Failed to init DB: ENOENT: no such file or directory, mkdir '/nonexistent/forbidden/path'
+2026-04-08 12:44:15.588 ERROR [SQLITE] Failed to init DB: ENOENT: no such file or directory, mkdir '/nonexistent/forbidden/path'
+2026-04-08 12:44:15.588 ERROR [SQLITE] Failed to init DB: ENOENT: no such file or directory, mkdir '/nonexistent/forbidden/path'
+2026-04-08 07:40:55.319 INFO Server running on http://localhost:3001 {"nodeEnv":"production","mockMode":false}
+2026-04-08 07:40:55.320 INFO ─────────────────────────────────
+2026-04-08 07:40:55.320 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 07:40:55.320 INFO ─────────────────────────────────
+2026-04-08 07:40:55.320 INFO  MOCK_MODE        : false
+2026-04-08 07:40:55.320 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 07:40:55.320 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 07:40:55.321 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 07:40:55.321 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 07:40:55.321 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 07:40:55.321 INFO ─────────────────────────────────
+2026-04-08 07:44:48.194 INFO Shutting down...
+2026-04-08 07:46:25.907 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 07:46:25.907 INFO ─────────────────────────────────
+2026-04-08 07:46:25.907 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 07:46:25.907 INFO ─────────────────────────────────
+2026-04-08 07:46:25.907 INFO  MOCK_MODE        : false
+2026-04-08 07:46:25.908 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 07:46:25.908 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 07:46:25.908 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 07:46:25.908 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 07:46:25.908 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 07:46:25.908 INFO ─────────────────────────────────
+2026-04-08 08:17:53.234 INFO Shutting down...
+2026-04-08 08:18:07.345 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 08:18:07.346 INFO ─────────────────────────────────
+2026-04-08 08:18:07.346 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 08:18:07.346 INFO ─────────────────────────────────
+2026-04-08 08:18:07.346 INFO  MOCK_MODE        : false
+2026-04-08 08:18:07.346 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 08:18:07.346 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 08:18:07.346 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 08:18:07.346 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 08:18:07.346 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 08:18:07.346 INFO ─────────────────────────────────
+2026-04-08 08:18:45.606 INFO [SQLITE] Cache database ready at /app/data/cache.db
+2026-04-08 08:21:31.205 INFO Shutting down...
+2026-04-08 08:21:31.563 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 08:21:31.564 INFO ─────────────────────────────────
+2026-04-08 08:21:31.564 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 08:21:31.564 INFO ─────────────────────────────────
+2026-04-08 08:21:31.564 INFO  MOCK_MODE        : false
+2026-04-08 08:21:31.564 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 08:21:31.564 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 08:21:31.564 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 08:21:31.564 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 08:21:31.564 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 08:21:31.564 INFO ─────────────────────────────────
+2026-04-08 08:22:07.220 INFO [1eca0c18-81bf-43f2-8fe3-fdf080e89a12] Detecting format {"totalRows":20}
+2026-04-08 08:22:07.220 INFO [FORMAT DETECT] Row 1eca0c18-81bf-43f2-8fe3-fdf080e89a12 → calling Gemini 2.0-flash (real API)
+2026-04-08 08:22:11.877 INFO [FORMAT DETECT] Row 1eca0c18-81bf-43f2-8fe3-fdf080e89a12 → response received in 4657ms | format: A
+2026-04-08 08:22:11.909 INFO [7d77f885-fd2f-4ddb-bc4e-7d999b4f3d7b] Normalizing data {"format":"A","rowCount":20}
+2026-04-08 08:22:11.918 INFO [ba41dbbd-cc68-4805-944a-6bc82c8a0863] Starting verification {"rowCount":20}
+2026-04-08 08:22:11.924 INFO [SQLITE] Cache database ready at /app/data/cache.db
+2026-04-08 08:22:11.925 INFO [CACHE] MISS key=746da27f...
+2026-04-08 08:22:11.925 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:22:11.925 INFO [CACHE] MISS key=5076e9db...
+2026-04-08 08:22:11.925 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:22:18.888 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://support.industry.siemens.com/cs/document/46884639/data-sheet-6es7953-8ll31-0aa0?lc=en-WW
+2026-04-08 08:22:18.888 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 6963ms | score: 95 | source: official
+2026-04-08 08:22:18.889 INFO [VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → URL validation failed (broken) but score=95 kept. Part was confirmed by AI, URL unreachable.
+2026-04-08 08:22:18.891 INFO [SQLITE] SET key=746da27f... score=95 re_verify_after=never
+2026-04-08 08:22:18.892 INFO [CACHE] MISS key=5f174e08...
+2026-04-08 08:22:18.892 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:22:34.813 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 22888ms | score: 60 | source: distributor
+2026-04-08 08:22:34.814 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:22:54.742 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.sew-eurodrive.com/products/gearmotors/helical-gearmotors/r-series/
+2026-04-08 08:22:54.742 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 35850ms | score: 90 | source: official
+2026-04-08 08:22:54.742 INFO [VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → URL validation failed (broken) but score=90 kept. Part was confirmed by AI, URL unreachable.
+2026-04-08 08:22:54.744 INFO [SQLITE] SET key=5f174e08... score=90 re_verify_after=never
+2026-04-08 08:22:54.745 INFO [CACHE] MISS key=84be17ed...
+2026-04-08 08:22:54.745 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:22:56.927 WARN [VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → row 1 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 08:22:56.928 INFO [CACHE] MISS key=9d9c4c57...
+2026-04-08 08:22:56.928 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:22:59.621 INFO [URL VALIDATOR] URL timeout — keeping URL as unverified: https://dbr-automation.com/en/product/r911318478-fwa-indrv-mpb-05vrs-d5-1-nnn-tf
+2026-04-08 08:22:59.621 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 24807ms | score: 65 | source: distributor
+2026-04-08 08:22:59.622 INFO [RULE ENFORCE] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 08:23:08.607 INFO [RULE ENFORCE] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 8983ms | score improved: 65 → 65
+2026-04-08 08:23:11.994 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 17248ms | score: 1 | source: not_found
+2026-04-08 08:23:11.994 INFO [RULE ENFORCE] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 08:23:20.889 INFO [RULE ENFORCE] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 8895ms | score improved: 1 → 1
+2026-04-08 08:23:20.892 INFO [SQLITE] SET key=84be17ed... score=1 re_verify_after=2026-04-15
+2026-04-08 08:23:20.892 INFO [CACHE] MISS key=4844dc15...
+2026-04-08 08:23:20.892 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:23:34.410 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 13518ms | score: 95 | source: official
+2026-04-08 08:23:34.413 INFO [SQLITE] SET key=4844dc15... score=95 re_verify_after=never
+2026-04-08 08:23:34.413 INFO [CACHE] MISS key=75b339dd...
+2026-04-08 08:23:34.413 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:23:41.935 WARN [VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → row 4 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 08:23:41.937 INFO [CACHE] MISS key=1e28de11...
+2026-04-08 08:23:41.937 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:23:43.482 WARN [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 08:23:43.483 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 9069ms | score: 0 | source: unknown
+2026-04-08 08:23:43.483 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:23:47.594 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 50666ms | score: 95 | source: official
+2026-04-08 08:23:53.918 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 10435ms | score: 0 | source: not_found
+2026-04-08 08:23:53.918 INFO [RULE ENFORCE] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 08:23:59.532 INFO [RULE ENFORCE] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 5614ms | score improved: 0 → 0
+2026-04-08 08:23:59.534 INFO [SQLITE] SET key=75b339dd... score=0 re_verify_after=2026-04-15
+2026-04-08 08:23:59.535 INFO [CACHE] MISS key=12633bd9...
+2026-04-08 08:23:59.535 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:24:24.677 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.marposs.com/eng/product/p5
+2026-04-08 08:24:24.677 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 25142ms | score: 60 | source: official
+2026-04-08 08:24:24.678 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:24:26.940 WARN [VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → row 7 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 08:24:26.942 INFO [CACHE] MISS key=71679fbb...
+2026-04-08 08:24:26.942 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:24:29.378 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.br-automation.com/en/products/panel-systems/automation-panels/5dlsdl1000-00/
+2026-04-08 08:24:29.378 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 47441ms | score: 95 | source: official
+2026-04-08 08:24:30.785 WARN [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 08:24:30.785 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 3843ms | score: 0 | source: unknown
+2026-04-08 08:24:30.785 INFO [RULE ENFORCE] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 08:24:37.107 INFO [RULE ENFORCE] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 6322ms | score improved: 0 → 0
+2026-04-08 08:24:37.110 INFO [SQLITE] SET key=71679fbb... score=0 re_verify_after=2026-04-15
+2026-04-08 08:24:37.111 INFO [CACHE] MISS key=085f793c...
+2026-04-08 08:24:37.111 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:24:44.539 WARN [VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → row 8 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 08:24:44.541 INFO [CACHE] MISS key=c3298143...
+2026-04-08 08:24:44.541 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:24:45.537 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 8426ms | score: 95 | source: official
+2026-04-08 08:24:45.539 INFO [SQLITE] SET key=085f793c... score=95 re_verify_after=never
+2026-04-08 08:24:45.540 INFO [CACHE] MISS key=ee9d33b4...
+2026-04-08 08:24:45.540 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:24:45.546 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.marposs.com/eng/product/p5
+2026-04-08 08:24:45.546 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 20868ms | score: 60 | source: official
+2026-04-08 08:24:45.546 INFO [RULE ENFORCE] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 08:24:49.546 WARN [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 08:24:49.546 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 4006ms | score: 0 | source: unknown
+2026-04-08 08:24:49.546 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:24:50.827 INFO [RULE ENFORCE] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 5281ms | score improved: 60 → 60
+2026-04-08 08:24:55.026 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.radwell.com/Shop?source=GoogleShopping&part=18205968
+2026-04-08 08:24:55.026 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 10485ms | score: 65 | source: distributor
+2026-04-08 08:24:55.026 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:25:05.873 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 10847ms | score: 95 | source: official
+2026-04-08 08:25:05.875 INFO [SQLITE] SET key=c3298143... score=95 re_verify_after=never
+2026-04-08 08:25:05.876 INFO [CACHE] MISS key=bd3b3685...
+2026-04-08 08:25:05.876 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:25:11.875 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.sew-eurodrive.com/en/service/life_cycle_services/spare_parts_service/spare_parts_service.html
+2026-04-08 08:25:11.875 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 22329ms | score: 95 | source: official
+2026-04-08 08:25:11.875 INFO [VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → URL validation failed (broken) but score=95 kept. Part was confirmed by AI, URL unreachable.
+2026-04-08 08:25:11.877 INFO [SQLITE] SET key=ee9d33b4... score=95 re_verify_after=never
+2026-04-08 08:25:11.878 INFO [CACHE] MISS key=5881a8d1...
+2026-04-08 08:25:11.878 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:25:27.452 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.festo.com/us/en/p/proximity-sensor-id_SMT_10M_NS_24V_E_0_3_L_M8D/
+2026-04-08 08:25:27.453 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 15575ms | score: 95 | source: official
+2026-04-08 08:25:27.453 INFO [VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → URL validation failed (broken) but score=95 kept. Part was confirmed by AI, URL unreachable.
+2026-04-08 08:25:27.455 INFO [SQLITE] SET key=5881a8d1... score=95 re_verify_after=never
+2026-04-08 08:25:27.456 INFO [CACHE] MISS key=a65a8998...
+2026-04-08 08:25:27.456 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:25:34.552 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://rgbautomatyka.pl/sew-eurodrive-dfr63l4-tf-induction-motor
+2026-04-08 08:25:34.553 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 28676ms | score: 65 | source: distributor
+2026-04-08 08:25:34.553 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:25:37.943 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 10487ms | score: 95 | source: official
+2026-04-08 08:25:37.946 INFO [SQLITE] SET key=a65a8998... score=95 re_verify_after=never
+2026-04-08 08:25:37.947 INFO [CACHE] MISS key=0b38005b...
+2026-04-08 08:25:37.947 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:25:45.348 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.balluff.com/en-us/products/details/BAM00R9
+2026-04-08 08:25:45.348 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 7401ms | score: 95 | source: official
+2026-04-08 08:25:45.348 INFO [VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → URL validation failed (broken) but score=95 kept. Part was confirmed by AI, URL unreachable.
+2026-04-08 08:25:45.350 INFO [SQLITE] SET key=0b38005b... score=95 re_verify_after=never
+2026-04-08 08:25:45.351 INFO [CACHE] MISS key=3eb8d05d...
+2026-04-08 08:25:45.351 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:25:50.881 WARN [VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → row 13 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 08:25:50.883 INFO [CACHE] MISS key=00544d8d...
+2026-04-08 08:25:50.883 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:26:02.550 WARN [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 08:26:02.551 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 17200ms | score: 0 | source: unknown
+2026-04-08 08:26:02.551 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:26:03.017 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.radwell.com/Shop?item=DFR63L4%2FBR
+2026-04-08 08:26:03.017 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 28464ms | score: 65 | source: distributor
+2026-04-08 08:26:03.017 INFO [RULE ENFORCE] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 08:26:04.572 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 13689ms | score: 95 | source: official
+2026-04-08 08:26:04.575 INFO [SQLITE] SET key=00544d8d... score=95 re_verify_after=never
+2026-04-08 08:26:04.575 INFO [CACHE] MISS key=e7b9471d...
+2026-04-08 08:26:04.576 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:26:11.754 INFO [RULE ENFORCE] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 8737ms | score improved: 65 → 65
+2026-04-08 08:26:12.304 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 7727ms | score: 95 | source: official
+2026-04-08 08:26:12.306 INFO [SQLITE] SET key=e7b9471d... score=95 re_verify_after=never
+2026-04-08 08:26:30.355 WARN [VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → row 17 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 08:26:30.356 INFO ─────────────────────────────────────────
+2026-04-08 08:26:30.356 INFO  VERIFICATION SUMMARY
+2026-04-08 08:26:30.356 INFO ─────────────────────────────────────────
+2026-04-08 08:26:30.356 INFO  Total rows processed : 20
+2026-04-08 08:26:30.356 INFO  Gemini API calls     : 27 (web verify)
+2026-04-08 08:26:30.356 INFO  Gemini fallback calls: 6 (rule enforce)
+2026-04-08 08:26:30.356 INFO  Cache hits           : 0
+2026-04-08 08:26:30.356 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 08:26:30.356 INFO  Errors               : 0
+2026-04-08 08:26:30.356 INFO  Total time           : 258436ms
+2026-04-08 08:26:30.356 INFO ─────────────────────────────────────────
+2026-04-08 08:26:39.430 INFO [WEB VERIFY] Row ba41dbbd-cc68-4805-944a-6bc82c8a0863 → done in 36878ms | score: 95 | source: official
+2026-04-08 08:26:45.722 INFO [078c9998-614c-49aa-8b36-a3b2d780ed29] Detecting format {"totalRows":20}
+2026-04-08 08:26:45.722 INFO [FORMAT DETECT] Row 078c9998-614c-49aa-8b36-a3b2d780ed29 → calling Gemini 2.0-flash (real API)
+2026-04-08 08:26:50.206 INFO [FORMAT DETECT] Row 078c9998-614c-49aa-8b36-a3b2d780ed29 → response received in 4482ms | format: A
+2026-04-08 08:26:50.236 INFO [88647c4a-2ba8-41e5-90c9-bcd6a0ed67b0] Normalizing data {"format":"A","rowCount":20}
+2026-04-08 08:26:50.240 INFO [9ed68999-cc75-4332-aacf-3c4a0d697026] Starting verification {"rowCount":20}
+2026-04-08 08:26:50.241 INFO [CACHE] L1 HIT key=746da27f...
+2026-04-08 08:26:50.241 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:26:50.241 INFO [CACHE] MISS key=5076e9db...
+2026-04-08 08:26:50.241 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:26:50.241 INFO [CACHE] L1 HIT key=5f174e08...
+2026-04-08 08:26:50.241 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:26:50.242 INFO [CACHE] L1 HIT key=84be17ed...
+2026-04-08 08:26:50.242 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:26:50.242 INFO [CACHE] MISS key=9d9c4c57...
+2026-04-08 08:26:50.242 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:27:00.174 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 9932ms | score: 95 | source: official
+2026-04-08 08:27:00.177 INFO [SQLITE] SET key=9d9c4c57... score=95 re_verify_after=never
+2026-04-08 08:27:00.177 INFO [CACHE] L1 HIT key=4844dc15...
+2026-04-08 08:27:00.177 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:27:00.178 INFO [CACHE] L1 HIT key=75b339dd...
+2026-04-08 08:27:00.178 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:27:00.178 INFO [CACHE] MISS key=1e28de11...
+2026-04-08 08:27:00.178 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:27:05.821 WARN [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 08:27:05.822 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 5644ms | score: 0 | source: unknown
+2026-04-08 08:27:05.822 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:27:20.550 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.br-automation.com/en-us/products/industrial-pcs/5dlsdl1000-00/
+2026-04-08 08:27:20.550 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 14728ms | score: 85 | source: official
+2026-04-08 08:27:20.550 INFO [VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → URL validation failed (broken) but score=85 kept. Part was confirmed by AI, URL unreachable.
+2026-04-08 08:27:20.552 INFO [SQLITE] SET key=1e28de11... score=85 re_verify_after=2026-07-07
+2026-04-08 08:27:20.552 INFO [CACHE] MISS key=12633bd9...
+2026-04-08 08:27:20.552 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:27:22.783 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.lsa-control.com/en/firmware/fwa-indrv-mpb-05vrs-d5-1-nnn-nn-firmware/
+2026-04-08 08:27:22.784 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 32543ms | score: 60 | source: distributor
+2026-04-08 08:27:22.784 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:27:35.248 WARN [VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → row 1 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 08:27:35.249 INFO [CACHE] L1 HIT key=71679fbb...
+2026-04-08 08:27:35.249 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:27:35.250 INFO [CACHE] L1 HIT key=085f793c...
+2026-04-08 08:27:35.250 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:27:35.250 INFO [CACHE] L1 HIT key=c3298143...
+2026-04-08 08:27:35.250 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:27:35.250 INFO [CACHE] L1 HIT key=ee9d33b4...
+2026-04-08 08:27:35.251 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:27:35.251 INFO [CACHE] MISS key=bd3b3685...
+2026-04-08 08:27:35.251 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:27:45.250 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 24698ms | score: 60 | source: official
+2026-04-08 08:27:45.251 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:27:51.253 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 28469ms | score: 65 | source: distributor
+2026-04-08 08:27:51.253 INFO [RULE ENFORCE] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 08:28:05.559 WARN [VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → row 8 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 08:28:05.560 INFO [CACHE] L1 HIT key=5881a8d1...
+2026-04-08 08:28:05.560 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:28:05.561 INFO [CACHE] L1 HIT key=a65a8998...
+2026-04-08 08:28:05.561 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:28:05.561 INFO [CACHE] L1 HIT key=0b38005b...
+2026-04-08 08:28:05.561 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:28:05.561 INFO [CACHE] MISS key=3eb8d05d...
+2026-04-08 08:28:05.561 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:28:08.797 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.marposs.com/eng/display/other-products/products-not-present-in-the-website_282.htm
+2026-04-08 08:28:08.798 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 23547ms | score: 60 | source: unknown
+2026-04-08 08:28:08.798 INFO [RULE ENFORCE] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 08:28:12.109 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.radwell.com/Shop?source=GoogleShopping&part=DFR63L4/BR
+2026-04-08 08:28:12.109 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 36858ms | score: 65 | source: distributor
+2026-04-08 08:28:12.110 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:28:15.102 WARN [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 08:28:15.102 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 9540ms | score: 0 | source: unknown
+2026-04-08 08:28:15.102 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:28:15.416 INFO [RULE ENFORCE] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 6618ms | score improved: 60 → 60
+2026-04-08 08:28:20.258 WARN [VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → row 13 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 08:28:20.258 INFO [CACHE] L1 HIT key=00544d8d...
+2026-04-08 08:28:20.258 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:28:20.259 INFO [CACHE] L1 HIT key=e7b9471d...
+2026-04-08 08:28:20.259 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 08:28:45.446 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.radwell.com/Products/DFR63L4/BR
+2026-04-08 08:28:45.446 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 33336ms | score: 60 | source: distributor
+2026-04-08 08:28:45.446 INFO [RULE ENFORCE] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 08:28:50.565 WARN [VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → row 17 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 08:28:50.566 INFO ─────────────────────────────────────────
+2026-04-08 08:28:50.566 INFO  VERIFICATION SUMMARY
+2026-04-08 08:28:50.567 INFO ─────────────────────────────────────────
+2026-04-08 08:28:50.567 INFO  Total rows processed : 20
+2026-04-08 08:28:50.567 INFO  Gemini API calls     : 11 (web verify)
+2026-04-08 08:28:50.567 INFO  Gemini fallback calls: 3 (rule enforce)
+2026-04-08 08:28:50.567 INFO  Cache hits           : 14
+2026-04-08 08:28:50.567 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 08:28:50.567 INFO  Errors               : 0
+2026-04-08 08:28:50.567 INFO  Total time           : 120326ms
+2026-04-08 08:28:50.567 INFO ─────────────────────────────────────────
+2026-04-08 08:28:54.253 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.turck.com/en/products/sensors/
+2026-04-08 08:28:54.254 INFO [WEB VERIFY] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 39151ms | score: 95 | source: official
+2026-04-08 08:28:58.070 INFO [RULE ENFORCE] Row 9ed68999-cc75-4332-aacf-3c4a0d697026 → done in 12623ms | score improved: 60 → 60
+2026-04-08 08:29:04.395 INFO Shutting down...
+2026-04-08 08:29:04.766 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 08:29:04.766 INFO ─────────────────────────────────
+2026-04-08 08:29:04.766 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 08:29:04.766 INFO ─────────────────────────────────
+2026-04-08 08:29:04.766 INFO  MOCK_MODE        : false
+2026-04-08 08:29:04.767 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 08:29:04.767 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 08:29:04.767 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 08:29:04.767 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 08:29:04.767 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 08:29:04.767 INFO ─────────────────────────────────
+2026-04-08 08:29:09.831 INFO [bf1142c5-501f-48ff-a546-7fb6c0fab231] Detecting format {"totalRows":20}
+2026-04-08 08:29:09.832 INFO [FORMAT DETECT] Row bf1142c5-501f-48ff-a546-7fb6c0fab231 → calling Gemini 2.0-flash (real API)
+2026-04-08 08:29:14.017 INFO [FORMAT DETECT] Row bf1142c5-501f-48ff-a546-7fb6c0fab231 → response received in 4185ms | format: A
+2026-04-08 08:29:14.058 INFO [6e2772b3-b63d-4f82-ba78-68c6b24d2ca5] Normalizing data {"format":"A","rowCount":20}
+2026-04-08 08:29:14.065 INFO [8986aacf-e4ec-4429-a3ce-453aafdcca72] Starting verification {"rowCount":20}
+2026-04-08 08:29:14.080 INFO [SQLITE] Cache database ready at /app/data/cache.db
+2026-04-08 08:29:14.081 INFO [SQLITE] HIT key=746da27f... score=95 verified 0 days ago hits=1
+2026-04-08 08:29:14.081 INFO [CACHE] L2 HIT key=746da27f... (written to L1)
+2026-04-08 08:29:14.081 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:14.081 INFO [CACHE] MISS key=5076e9db...
+2026-04-08 08:29:14.081 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:29:14.082 INFO [SQLITE] HIT key=5f174e08... score=90 verified 0 days ago hits=1
+2026-04-08 08:29:14.082 INFO [CACHE] L2 HIT key=5f174e08... (written to L1)
+2026-04-08 08:29:14.082 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:14.083 INFO [SQLITE] HIT key=84be17ed... score=1 verified 0 days ago hits=1
+2026-04-08 08:29:14.083 INFO [CACHE] L2 HIT key=84be17ed... (written to L1)
+2026-04-08 08:29:14.083 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:14.083 INFO [SQLITE] HIT key=9d9c4c57... score=95 verified 0 days ago hits=1
+2026-04-08 08:29:14.083 INFO [CACHE] L2 HIT key=9d9c4c57... (written to L1)
+2026-04-08 08:29:14.083 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:14.083 INFO [SQLITE] HIT key=4844dc15... score=95 verified 0 days ago hits=1
+2026-04-08 08:29:14.083 INFO [CACHE] L2 HIT key=4844dc15... (written to L1)
+2026-04-08 08:29:14.083 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:14.084 INFO [SQLITE] HIT key=75b339dd... score=0 verified 0 days ago hits=1
+2026-04-08 08:29:14.084 INFO [CACHE] L2 HIT key=75b339dd... (written to L1)
+2026-04-08 08:29:14.084 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:14.084 INFO [SQLITE] HIT key=1e28de11... score=85 verified 0 days ago hits=1
+2026-04-08 08:29:14.084 INFO [CACHE] L2 HIT key=1e28de11... (written to L1)
+2026-04-08 08:29:14.084 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:14.084 INFO [CACHE] MISS key=12633bd9...
+2026-04-08 08:29:14.084 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:29:37.177 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.marposs.com/eng/product/p5-electronic-unit-for-process-control-on-grinders
+2026-04-08 08:29:37.177 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → done in 23093ms | score: 95 | source: official
+2026-04-08 08:29:37.177 INFO [VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → URL validation failed (broken) but score=95 kept. Part was confirmed by AI, URL unreachable.
+2026-04-08 08:29:37.179 INFO [SQLITE] SET key=12633bd9... score=95 re_verify_after=never
+2026-04-08 08:29:37.180 INFO [SQLITE] HIT key=71679fbb... score=0 verified 0 days ago hits=1
+2026-04-08 08:29:37.180 INFO [CACHE] L2 HIT key=71679fbb... (written to L1)
+2026-04-08 08:29:37.180 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:37.181 INFO [SQLITE] HIT key=085f793c... score=95 verified 0 days ago hits=1
+2026-04-08 08:29:37.181 INFO [CACHE] L2 HIT key=085f793c... (written to L1)
+2026-04-08 08:29:37.181 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:37.182 INFO [SQLITE] HIT key=c3298143... score=95 verified 0 days ago hits=1
+2026-04-08 08:29:37.182 INFO [CACHE] L2 HIT key=c3298143... (written to L1)
+2026-04-08 08:29:37.182 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:37.183 INFO [SQLITE] HIT key=ee9d33b4... score=95 verified 0 days ago hits=1
+2026-04-08 08:29:37.183 INFO [CACHE] L2 HIT key=ee9d33b4... (written to L1)
+2026-04-08 08:29:37.183 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:37.184 INFO [CACHE] MISS key=bd3b3685...
+2026-04-08 08:29:37.184 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:29:52.381 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → done in 38299ms | score: 60 | source: unknown
+2026-04-08 08:29:52.382 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:29:59.083 WARN [VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → row 1 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 08:29:59.085 INFO [SQLITE] HIT key=5881a8d1... score=95 verified 0 days ago hits=1
+2026-04-08 08:29:59.085 INFO [CACHE] L2 HIT key=5881a8d1... (written to L1)
+2026-04-08 08:29:59.085 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:59.086 INFO [SQLITE] HIT key=a65a8998... score=95 verified 0 days ago hits=1
+2026-04-08 08:29:59.086 INFO [CACHE] L2 HIT key=a65a8998... (written to L1)
+2026-04-08 08:29:59.086 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:59.087 INFO [SQLITE] HIT key=0b38005b... score=95 verified 0 days ago hits=1
+2026-04-08 08:29:59.087 INFO [CACHE] L2 HIT key=0b38005b... (written to L1)
+2026-04-08 08:29:59.087 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:29:59.087 INFO [CACHE] MISS key=3eb8d05d...
+2026-04-08 08:29:59.087 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:30:02.445 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.radwell.com/Shop?source=GoogleShopping&utm_source=GoogleShopping&utm_medium=cpc&utm_campaign=Shopping&itemid=SEW%20EURODRIVE%20DFR63L4/BR&detailid=20814421&gclid=Cj0KCQjwgLOzBhC1ARIsAFQeZ_j_s81q-K3-w-c_w-w_b_w_w_w
+2026-04-08 08:30:02.445 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → done in 25261ms | score: 65 | source: distributor
+2026-04-08 08:30:02.446 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:30:11.795 WARN [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 08:30:11.796 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → done in 12707ms | score: 0 | source: unknown
+2026-04-08 08:30:11.796 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 08:30:22.191 WARN [VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → row 13 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 08:30:22.194 INFO [SQLITE] HIT key=00544d8d... score=95 verified 0 days ago hits=1
+2026-04-08 08:30:22.194 INFO [CACHE] L2 HIT key=00544d8d... (written to L1)
+2026-04-08 08:30:22.194 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:30:22.195 INFO [SQLITE] HIT key=e7b9471d... score=95 verified 0 days ago hits=1
+2026-04-08 08:30:22.195 INFO [CACHE] L2 HIT key=e7b9471d... (written to L1)
+2026-04-08 08:30:22.195 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 08:30:22.347 WARN [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 08:30:22.347 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → done in 10551ms | score: 0 | source: unknown
+2026-04-08 08:30:22.348 INFO [RULE ENFORCE] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 08:30:26.363 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → done in 33981ms | score: 65 | source: distributor
+2026-04-08 08:30:26.364 INFO [RULE ENFORCE] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 08:30:27.197 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.radwell.com/Products/SEW%20EURODRIVE/DFR63L4~BR
+2026-04-08 08:30:27.198 INFO [WEB VERIFY] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → done in 24752ms | score: 75 | source: distributor
+2026-04-08 08:30:31.401 INFO [RULE ENFORCE] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → done in 9051ms | score improved: 0 → 0
+2026-04-08 08:30:31.402 INFO [SQLITE] SET key=3eb8d05d... score=0 re_verify_after=2026-04-15
+2026-04-08 08:30:31.402 INFO ─────────────────────────────────────────
+2026-04-08 08:30:31.402 INFO  VERIFICATION SUMMARY
+2026-04-08 08:30:31.402 INFO ─────────────────────────────────────────
+2026-04-08 08:30:31.402 INFO  Total rows processed : 20
+2026-04-08 08:30:31.402 INFO  Gemini API calls     : 7 (web verify)
+2026-04-08 08:30:31.403 INFO  Gemini fallback calls: 2 (rule enforce)
+2026-04-08 08:30:31.403 INFO  Cache hits           : 16
+2026-04-08 08:30:31.403 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 08:30:31.403 INFO  Errors               : 0
+2026-04-08 08:30:31.403 INFO  Total time           : 77337ms
+2026-04-08 08:30:31.403 INFO ─────────────────────────────────────────
+2026-04-08 08:30:37.598 INFO [RULE ENFORCE] Row 8986aacf-e4ec-4429-a3ce-453aafdcca72 → done in 11233ms | score improved: 65 → 65
+2026-04-08 09:30:20.364 INFO Shutting down...
+2026-04-08 09:30:37.620 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 09:30:37.621 INFO ─────────────────────────────────
+2026-04-08 09:30:37.621 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 09:30:37.621 INFO ─────────────────────────────────
+2026-04-08 09:30:37.621 INFO  MOCK_MODE        : false
+2026-04-08 09:30:37.621 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 09:30:37.621 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 09:30:37.621 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 09:30:37.621 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 09:30:37.621 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 09:30:37.621 INFO ─────────────────────────────────
+2026-04-08 09:31:51.337 WARN [AUTH] login failed for tawdev@gmail.com
+2026-04-08 09:31:51.359 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 09:31:51.390 INFO [SQLITE] Cache database ready at /app/data/cache.db
+2026-04-08 09:32:09.600 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 09:32:17.009 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 09:37:13.433 INFO Shutting down...
+2026-04-08 09:37:18.224 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 09:37:18.225 INFO ─────────────────────────────────
+2026-04-08 09:37:18.225 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 09:37:18.225 INFO ─────────────────────────────────
+2026-04-08 09:37:18.225 INFO  MOCK_MODE        : false
+2026-04-08 09:37:18.225 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 09:37:18.225 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 09:37:18.225 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 09:37:18.225 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 09:37:18.225 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 09:37:18.225 INFO ─────────────────────────────────
+2026-04-08 09:38:29.832 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 09:46:31.156 INFO Shutting down...
+2026-04-08 09:46:37.679 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 09:46:37.679 INFO ─────────────────────────────────
+2026-04-08 09:46:37.679 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 09:46:37.679 INFO ─────────────────────────────────
+2026-04-08 09:46:37.679 INFO  MOCK_MODE        : false
+2026-04-08 09:46:37.679 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 09:46:37.679 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 09:46:37.680 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 09:46:37.680 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 09:46:37.680 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 09:46:37.680 INFO ─────────────────────────────────
+2026-04-08 09:47:19.070 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 09:47:23.451 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 09:47:59.257 ERROR [8a983978-e81f-44d2-b614-ceb0689b470d] End of data reached (data length = 3, asked index = 4). Corrupted zip ? {"statusCode":500,"stack":"Error: End of data reached (data length = 3, asked index = 4). Corrupted zip ?\n    at NodeBufferReader.checkIndex (/app/node_modules/jszip/lib/reader/DataReader.js:26:19)\n    at NodeBufferReader.checkOffset (/app/node_modules/jszip/lib/reader/DataReader.js:17:14)\n    at NodeBufferReader.readData (/app/node_modules/jszip/lib/reader/NodeBufferReader.js:14:10)\n    at NodeBufferReader.readString (/app/node_modules/jszip/lib/reader/DataReader.js:75:49)\n    at ZipEntries.isSignature (/app/node_modules/jszip/lib/zipEntries.js:39:37)\n    at ZipEntries.readEndOfCentral (/app/node_modules/jszip/lib/zipEntries.js:164:35)\n    at ZipEntries.load (/app/node_modules/jszip/lib/zipEntries.js:255:14)\n    at /app/node_modules/jszip/lib/load.js:48:24\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async XLSX.load (/app/node_modules/exceljs/lib/xlsx/xlsx.js:279:17)\n    at async getSheetNames (/app/src/services/excelService.js:47:3)\n    at async handleGetSheets (/app/src/controllers/sheetsController.js:5:19)","path":"/api/get-sheets","method":"POST"}
+2026-04-08 10:41:00.909 INFO Shutting down...
+2026-04-08 10:41:49.541 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 10:41:49.542 INFO ─────────────────────────────────
+2026-04-08 10:41:49.542 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 10:41:49.542 INFO ─────────────────────────────────
+2026-04-08 10:41:49.542 INFO  MOCK_MODE        : false
+2026-04-08 10:41:49.542 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 10:41:49.542 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 10:41:49.542 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 10:41:49.542 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 10:41:49.542 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 10:41:49.543 INFO ─────────────────────────────────
+2026-04-08 10:43:03.961 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:43:04.032 INFO [JOB] Created job 6dd6daf8-417b-4b45-8709-d378fd1b7863 for tawdev@gmail.com | file: test_phase3.xlsx | rows: 1
+2026-04-08 10:43:04.033 INFO [JOB] Job 6dd6daf8-417b-4b45-8709-d378fd1b7863 submitted by tawdev@gmail.com
+2026-04-08 10:46:28.398 WARN [AUTH] login failed for tawdev@gmail.com
+2026-04-08 10:46:28.417 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:46:28.475 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:46:28.487 INFO [JOB] Created job 5e4ab8c8-fce9-4fcc-994f-ed5180e56fbb for tawdev@gmail.com | file: small_test.xlsx | rows: 1
+2026-04-08 10:46:28.487 INFO [JOB] Job 5e4ab8c8-fce9-4fcc-994f-ed5180e56fbb submitted by tawdev@gmail.com
+2026-04-08 10:46:28.708 INFO [JOB] Created job f9599d4f-50e1-4470-bbfa-56720965ca7c for tawdev@gmail.com | file: medium_test.xlsx | rows: 101
+2026-04-08 10:46:28.708 INFO [JOB] Job f9599d4f-50e1-4470-bbfa-56720965ca7c submitted by tawdev@gmail.com
+2026-04-08 10:46:28.775 INFO [JOB] Created job 90845e4d-4a46-4c59-98ff-e401f31e7af3 for tawdev@gmail.com | file: cache_test.xlsx | rows: 1
+2026-04-08 10:46:28.775 INFO [JOB] Job 90845e4d-4a46-4c59-98ff-e401f31e7af3 submitted by tawdev@gmail.com
+2026-04-08 10:47:17.886 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:47:30.661 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:47:30.680 INFO [JOB] Created job 4fea73ed-0e4f-4034-9391-95943c6ea878 for tawdev@gmail.com | file: user1.xlsx | rows: 1
+2026-04-08 10:47:30.681 INFO [JOB] Job 4fea73ed-0e4f-4034-9391-95943c6ea878 submitted by tawdev@gmail.com
+2026-04-08 10:47:30.710 WARN [AUTH] token rejected: jwt malformed
+2026-04-08 10:47:40.041 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:48:27.086 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:49:13.090 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:49:13.111 WARN [AUTH] login failed for wrong@example.com
+2026-04-08 10:49:13.125 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:49:13.154 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:49:13.168 INFO [JOB] Created job 08372273-f11d-4608-b9b9-8783611c8569 for tawdev@gmail.com | file: small.xlsx | rows: 1
+2026-04-08 10:49:13.169 INFO [JOB] Job 08372273-f11d-4608-b9b9-8783611c8569 submitted by tawdev@gmail.com
+2026-04-08 10:49:13.184 INFO [JOB] Created job 7ce048a1-3757-482f-b90f-49504f742b23 for tawdev@gmail.com | file: medium.xlsx | rows: 101
+2026-04-08 10:49:13.184 INFO [JOB] Job 7ce048a1-3757-482f-b90f-49504f742b23 submitted by tawdev@gmail.com
+2026-04-08 10:52:43.842 INFO Shutting down...
+2026-04-08 10:52:56.873 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 10:52:56.873 INFO ─────────────────────────────────
+2026-04-08 10:52:56.873 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 10:52:56.873 INFO ─────────────────────────────────
+2026-04-08 10:52:56.873 INFO  MOCK_MODE        : false
+2026-04-08 10:52:56.873 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 10:52:56.873 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 10:52:56.873 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 10:52:56.874 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 10:52:56.874 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 10:52:56.874 INFO ─────────────────────────────────
+2026-04-08 10:56:24.574 INFO Shutting down...
+2026-04-08 10:56:26.296 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 10:56:26.297 INFO ─────────────────────────────────
+2026-04-08 10:56:26.297 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 10:56:26.297 INFO ─────────────────────────────────
+2026-04-08 10:56:26.297 INFO  MOCK_MODE        : false
+2026-04-08 10:56:26.297 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 10:56:26.297 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 10:56:26.297 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 10:56:26.297 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 10:56:26.297 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 10:56:26.297 INFO ─────────────────────────────────
+2026-04-08 10:57:11.584 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:57:40.699 WARN [AUTH] login failed for test
+2026-04-08 10:57:40.719 WARN [AUTH] login failed for test
+2026-04-08 10:57:40.737 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:57:40.756 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:58:48.646 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 10:59:02.824 INFO [f9c797af-9d1c-4339-b548-547ea2cc7ce2] Detecting format {"totalRows":20}
+2026-04-08 10:59:02.825 INFO [FORMAT DETECT] Row f9c797af-9d1c-4339-b548-547ea2cc7ce2 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.118 INFO [FORMAT DETECT] Row f9c797af-9d1c-4339-b548-547ea2cc7ce2 → response received in 5293ms | format: B
+2026-04-08 10:59:08.158 INFO [a9486e89-50b9-4b2e-af16-958b05b26046] Normalizing data {"format":"B","rowCount":20}
+2026-04-08 10:59:08.163 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.163 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.163 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.163 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.163 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.163 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.163 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.164 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.164 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.164 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.164 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.164 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.164 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.164 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:08.165 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:11.841 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 3677ms | format: normalized
+2026-04-08 10:59:11.842 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:11.945 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 3780ms | format: normalized
+2026-04-08 10:59:11.945 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:12.355 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 4191ms | format: normalized
+2026-04-08 10:59:12.355 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:12.458 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 4295ms | format: normalized
+2026-04-08 10:59:12.458 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:12.621 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 4458ms | format: normalized
+2026-04-08 10:59:12.622 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → calling Gemini 2.0-flash (real API)
+2026-04-08 10:59:12.869 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 4705ms | format: normalized
+2026-04-08 10:59:12.871 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 4708ms | format: normalized
+2026-04-08 10:59:12.972 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 4809ms | format: normalized
+2026-04-08 10:59:13.268 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 5104ms | format: normalized
+2026-04-08 10:59:14.003 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 5839ms | format: normalized
+2026-04-08 10:59:14.240 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 6077ms | format: normalized
+2026-04-08 10:59:14.241 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 6077ms | format: normalized
+2026-04-08 10:59:14.778 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 6614ms | format: normalized
+2026-04-08 10:59:15.145 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 6980ms | format: normalized
+2026-04-08 10:59:15.460 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 3618ms | format: normalized
+2026-04-08 10:59:16.366 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 4420ms | format: normalized
+2026-04-08 10:59:16.587 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 4232ms | format: normalized
+2026-04-08 10:59:16.643 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 4019ms | format: normalized
+2026-04-08 10:59:17.936 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 5478ms | format: normalized
+2026-04-08 10:59:17.938 INFO [FORMAT DETECT] Row a9486e89-50b9-4b2e-af16-958b05b26046 → response received in 9774ms | format: normalized
+2026-04-08 11:01:08.470 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 11:01:19.731 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 11:01:19.745 INFO [720a62dd-cc64-4550-8a9e-fa28a8f56a88] Starting verification {"rowCount":1,"maxConcurrency":15}
+2026-04-08 11:01:19.771 INFO [SQLITE] Cache database ready at /app/data/cache.db
+2026-04-08 11:01:19.771 INFO [CACHE] MISS key=3c0c37fb...
+2026-04-08 11:01:19.771 INFO [WEB VERIFY] Row 720a62dd-cc64-4550-8a9e-fa28a8f56a88 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 11:01:27.713 INFO [WEB VERIFY] Row 720a62dd-cc64-4550-8a9e-fa28a8f56a88 → done in 7941ms | score: 95 | source: official
+2026-04-08 11:01:28.136 INFO [SQLITE] SET key=3c0c37fb... score=95 re_verify_after=never
+2026-04-08 11:01:28.137 INFO ─────────────────────────────────────────
+2026-04-08 11:01:28.137 INFO  VERIFICATION SUMMARY
+2026-04-08 11:01:28.137 INFO ─────────────────────────────────────────
+2026-04-08 11:01:28.137 INFO  Total rows processed : 1
+2026-04-08 11:01:28.137 INFO  Gemini API calls     : 1 (web verify)
+2026-04-08 11:01:28.137 INFO  Gemini fallback calls: 0 (rule enforce)
+2026-04-08 11:01:28.137 INFO  Cache hits           : 0
+2026-04-08 11:01:28.137 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 11:01:28.137 INFO  Errors               : 0
+2026-04-08 11:01:28.137 INFO  Total time           : 8391ms (8391ms per row avg)
+2026-04-08 11:01:28.137 INFO ─────────────────────────────────────────
+2026-04-08 11:02:03.286 INFO [6f59d831-fe73-466e-9720-da3423ccfa17] Detecting format {"totalRows":20}
+2026-04-08 11:02:03.286 INFO [FORMAT DETECT] Row 6f59d831-fe73-466e-9720-da3423ccfa17 → calling Gemini 2.0-flash (real API)
+2026-04-08 11:02:07.504 INFO [FORMAT DETECT] Row 6f59d831-fe73-466e-9720-da3423ccfa17 → response received in 4218ms | format: A
+2026-04-08 11:02:07.532 INFO [56cd7211-e26d-4129-a0eb-fe904ba39121] Normalizing data {"format":"A","rowCount":20}
+2026-04-08 11:02:18.565 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 11:02:24.834 INFO [501c1c31-0571-4c9e-b352-7064091be77f] Detecting format {"totalRows":20}
+2026-04-08 11:02:24.834 INFO [FORMAT DETECT] Row 501c1c31-0571-4c9e-b352-7064091be77f → calling Gemini 2.0-flash (real API)
+2026-04-08 11:02:29.508 INFO [FORMAT DETECT] Row 501c1c31-0571-4c9e-b352-7064091be77f → response received in 4674ms | format: A
+2026-04-08 11:02:29.551 INFO [9490c0bb-bd12-4629-85dc-3b6e8da0a890] Normalizing data {"format":"A","rowCount":20}
+2026-04-08 11:03:10.087 INFO Shutting down...
+2026-04-08 11:03:13.923 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 11:03:13.924 INFO ─────────────────────────────────
+2026-04-08 11:03:13.924 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 11:03:13.924 INFO ─────────────────────────────────
+2026-04-08 11:03:13.924 INFO  MOCK_MODE        : false
+2026-04-08 11:03:13.924 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 11:03:13.924 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 11:03:13.924 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 11:03:13.924 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 11:03:13.924 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 11:03:13.924 INFO ─────────────────────────────────
+2026-04-08 11:03:56.305 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 11:04:03.375 INFO [91bc521f-a21d-41ff-8188-e5b952012091] Detecting format {"totalRows":20}
+2026-04-08 11:04:03.375 INFO [FORMAT DETECT] Row 91bc521f-a21d-41ff-8188-e5b952012091 → calling Gemini 2.0-flash (real API)
+2026-04-08 11:04:08.605 INFO [FORMAT DETECT] Row 91bc521f-a21d-41ff-8188-e5b952012091 → response received in 5229ms | format: A
+2026-04-08 11:04:08.643 INFO [23aefc72-d652-4165-b0eb-6f63450dc71d] Normalizing data {"format":"A","rowCount":20}
+2026-04-08 11:05:45.965 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 11:05:46.057 INFO [cac2ae83-146f-4c9e-bc53-15c3836b906b] Starting verification {"rowCount":1,"maxConcurrency":15}
+2026-04-08 11:05:46.088 INFO [SQLITE] Cache database ready at /app/data/cache.db
+2026-04-08 11:05:46.089 INFO [CACHE] MISS key=c23ac4bc...
+2026-04-08 11:05:46.090 INFO [WEB VERIFY] Row cac2ae83-146f-4c9e-bc53-15c3836b906b → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 11:06:00.366 INFO [WEB VERIFY] Row cac2ae83-146f-4c9e-bc53-15c3836b906b → done in 14276ms | score: 1 | source: not_found
+2026-04-08 11:06:00.368 INFO [RULE ENFORCE] Row cac2ae83-146f-4c9e-bc53-15c3836b906b → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 11:06:06.531 INFO [RULE ENFORCE] Row cac2ae83-146f-4c9e-bc53-15c3836b906b → done in 6160ms | score improved: 1 → 1
+2026-04-08 11:06:06.536 INFO [SQLITE] SET key=c23ac4bc... score=1 re_verify_after=2026-04-15
+2026-04-08 11:06:06.537 INFO ─────────────────────────────────────────
+2026-04-08 11:06:06.537 INFO  VERIFICATION SUMMARY
+2026-04-08 11:06:06.537 INFO ─────────────────────────────────────────
+2026-04-08 11:06:06.537 INFO  Total rows processed : 1
+2026-04-08 11:06:06.537 INFO  Gemini API calls     : 1 (web verify)
+2026-04-08 11:06:06.537 INFO  Gemini fallback calls: 1 (rule enforce)
+2026-04-08 11:06:06.537 INFO  Cache hits           : 0
+2026-04-08 11:06:06.538 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 11:06:06.538 INFO  Errors               : 0
+2026-04-08 11:06:06.538 INFO  Total time           : 20480ms (20480ms per row avg)
+2026-04-08 11:06:06.538 INFO ─────────────────────────────────────────
+2026-04-08 11:06:51.429 INFO [42f9a1f2-18e8-4cfa-92f7-e997adb5706e] Detecting format {"totalRows":20}
+2026-04-08 11:06:51.429 INFO [FORMAT DETECT] Row 42f9a1f2-18e8-4cfa-92f7-e997adb5706e → calling Gemini 2.0-flash (real API)
+2026-04-08 11:06:56.666 INFO [FORMAT DETECT] Row 42f9a1f2-18e8-4cfa-92f7-e997adb5706e → response received in 5237ms | format: A
+2026-04-08 11:06:56.713 INFO [f20f6aa8-e9bb-4c66-a785-992a9813ff5a] Normalizing data {"format":"A","rowCount":20}
+2026-04-08 11:07:21.322 INFO Shutting down...
+2026-04-08 11:07:24.810 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 11:07:24.810 INFO ─────────────────────────────────
+2026-04-08 11:07:24.810 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 11:07:24.811 INFO ─────────────────────────────────
+2026-04-08 11:07:24.811 INFO  MOCK_MODE        : false
+2026-04-08 11:07:24.811 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 11:07:24.811 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 11:07:24.811 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 11:07:24.811 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 11:07:24.811 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 11:07:24.811 INFO ─────────────────────────────────
+2026-04-08 11:08:06.331 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 11:08:13.964 INFO [65299292-d98f-4d44-9d91-950ba45c8a94] Detecting format {"totalRows":20}
+2026-04-08 11:08:13.964 INFO [FORMAT DETECT] Row 65299292-d98f-4d44-9d91-950ba45c8a94 → calling Gemini 2.0-flash (real API)
+2026-04-08 11:08:18.795 INFO [FORMAT DETECT] Row 65299292-d98f-4d44-9d91-950ba45c8a94 → response received in 4831ms | format: A
+2026-04-08 11:08:18.821 INFO [38974f05-12ad-4f24-a6f1-16d61e951b9d] Normalizing data {"format":"A","rowCount":20}
+2026-04-08 11:11:06.276 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 11:12:10.274 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 11:12:23.332 INFO [0a7ef057-4a16-4dbf-bee0-6084f9b44922] Detecting format {"totalRows":20}
+2026-04-08 11:12:23.333 INFO [FORMAT DETECT] Row 0a7ef057-4a16-4dbf-bee0-6084f9b44922 → calling Gemini 2.0-flash (real API)
+2026-04-08 11:12:28.949 INFO [FORMAT DETECT] Row 0a7ef057-4a16-4dbf-bee0-6084f9b44922 → response received in 5615ms | format: A
+2026-04-08 11:12:28.968 INFO [f3804645-c6bd-4359-be3a-b5a7759c3f31] Normalizing data {"format":"A","rowCount":20}
+2026-04-08 11:12:30.747 INFO [0d018f9e-11ee-4948-ae1c-c5bb94ec4de4] Starting verification {"rowCount":20,"maxConcurrency":15}
+2026-04-08 11:12:30.774 INFO [SQLITE] Cache database ready at /app/data/cache.db
+2026-04-08 11:12:30.775 INFO [SQLITE] HIT key=746da27f... score=95 verified 0 days ago hits=2
+2026-04-08 11:12:30.776 INFO [CACHE] L2 HIT key=746da27f... (written to L1)
+2026-04-08 11:12:30.776 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.776 INFO [CACHE] MISS key=5076e9db...
+2026-04-08 11:12:30.777 INFO [SQLITE] HIT key=5f174e08... score=90 verified 0 days ago hits=2
+2026-04-08 11:12:30.777 INFO [CACHE] L2 HIT key=5f174e08... (written to L1)
+2026-04-08 11:12:30.777 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.778 INFO [SQLITE] HIT key=84be17ed... score=1 verified 0 days ago hits=2
+2026-04-08 11:12:30.778 INFO [CACHE] L2 HIT key=84be17ed... (written to L1)
+2026-04-08 11:12:30.778 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.779 INFO [SQLITE] HIT key=9d9c4c57... score=95 verified 0 days ago hits=2
+2026-04-08 11:12:30.779 INFO [CACHE] L2 HIT key=9d9c4c57... (written to L1)
+2026-04-08 11:12:30.779 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.780 INFO [SQLITE] HIT key=4844dc15... score=95 verified 0 days ago hits=2
+2026-04-08 11:12:30.780 INFO [CACHE] L2 HIT key=4844dc15... (written to L1)
+2026-04-08 11:12:30.780 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.780 INFO [SQLITE] HIT key=75b339dd... score=0 verified 0 days ago hits=2
+2026-04-08 11:12:30.781 INFO [CACHE] L2 HIT key=75b339dd... (written to L1)
+2026-04-08 11:12:30.781 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.782 INFO [SQLITE] HIT key=1e28de11... score=85 verified 0 days ago hits=2
+2026-04-08 11:12:30.782 INFO [CACHE] L2 HIT key=1e28de11... (written to L1)
+2026-04-08 11:12:30.782 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.782 INFO [SQLITE] HIT key=12633bd9... score=95 verified 0 days ago hits=1
+2026-04-08 11:12:30.782 INFO [CACHE] L2 HIT key=12633bd9... (written to L1)
+2026-04-08 11:12:30.782 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.783 INFO [SQLITE] HIT key=71679fbb... score=0 verified 0 days ago hits=2
+2026-04-08 11:12:30.783 INFO [CACHE] L2 HIT key=71679fbb... (written to L1)
+2026-04-08 11:12:30.783 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.783 INFO [SQLITE] HIT key=085f793c... score=95 verified 0 days ago hits=2
+2026-04-08 11:12:30.783 INFO [CACHE] L2 HIT key=085f793c... (written to L1)
+2026-04-08 11:12:30.783 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.784 INFO [SQLITE] HIT key=c3298143... score=95 verified 0 days ago hits=2
+2026-04-08 11:12:30.784 INFO [CACHE] L2 HIT key=c3298143... (written to L1)
+2026-04-08 11:12:30.784 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.784 INFO [SQLITE] HIT key=ee9d33b4... score=95 verified 0 days ago hits=2
+2026-04-08 11:12:30.784 INFO [CACHE] L2 HIT key=ee9d33b4... (written to L1)
+2026-04-08 11:12:30.784 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.784 INFO [CACHE] MISS key=bd3b3685...
+2026-04-08 11:12:30.785 INFO [SQLITE] HIT key=5881a8d1... score=95 verified 0 days ago hits=2
+2026-04-08 11:12:30.785 INFO [CACHE] L2 HIT key=5881a8d1... (written to L1)
+2026-04-08 11:12:30.785 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.785 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 11:12:30.785 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 11:12:30.786 INFO [SQLITE] HIT key=a65a8998... score=95 verified 0 days ago hits=2
+2026-04-08 11:12:30.786 INFO [CACHE] L2 HIT key=a65a8998... (written to L1)
+2026-04-08 11:12:30.786 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.787 INFO [SQLITE] HIT key=0b38005b... score=95 verified 0 days ago hits=2
+2026-04-08 11:12:30.787 INFO [CACHE] L2 HIT key=0b38005b... (written to L1)
+2026-04-08 11:12:30.787 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.788 INFO [SQLITE] HIT key=3eb8d05d... score=0 verified 0 days ago hits=1
+2026-04-08 11:12:30.788 INFO [CACHE] L2 HIT key=3eb8d05d... (written to L1)
+2026-04-08 11:12:30.788 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.788 INFO [SQLITE] HIT key=00544d8d... score=95 verified 0 days ago hits=2
+2026-04-08 11:12:30.788 INFO [CACHE] L2 HIT key=00544d8d... (written to L1)
+2026-04-08 11:12:30.788 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:30.788 INFO [SQLITE] HIT key=e7b9471d... score=95 verified 0 days ago hits=2
+2026-04-08 11:12:30.788 INFO [CACHE] L2 HIT key=e7b9471d... (written to L1)
+2026-04-08 11:12:30.789 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 11:12:53.942 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → done in 23156ms | score: 60 | source: distributor
+2026-04-08 11:12:53.944 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 11:12:55.326 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.lsa-control.com/en/producto/fwa-indrv-mpb-05vrs-d5-1-nnn-nn-firmware/?SID=tqprjsbu2b0aqvnqilmdu3mu5u
+2026-04-08 11:12:57.182 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.radwell.com/DFR63L4/BR
+2026-04-08 11:12:57.183 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → done in 26398ms | score: 65 | source: distributor
+2026-04-08 11:12:57.184 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 11:13:00.779 WARN [VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → row 1 hit 30s timeout, marking timeout and continuing
+2026-04-08 11:13:00.787 WARN [VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → row 13 hit 30s timeout, marking timeout and continuing
+2026-04-08 11:13:00.788 INFO ─────────────────────────────────────────
+2026-04-08 11:13:00.788 INFO  VERIFICATION SUMMARY
+2026-04-08 11:13:00.788 INFO ─────────────────────────────────────────
+2026-04-08 11:13:00.789 INFO  Total rows processed : 20
+2026-04-08 11:13:00.789 INFO  Gemini API calls     : 4 (web verify)
+2026-04-08 11:13:00.789 INFO  Gemini fallback calls: 0 (rule enforce)
+2026-04-08 11:13:00.789 INFO  Cache hits           : 18
+2026-04-08 11:13:00.789 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 11:13:00.789 INFO  Errors               : 0
+2026-04-08 11:13:00.789 INFO  Total time           : 30041ms (1502ms per row avg)
+2026-04-08 11:13:00.789 INFO ─────────────────────────────────────────
+2026-04-08 11:13:10.147 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → done in 16203ms | score: 65 | source: distributor
+2026-04-08 11:13:20.024 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.radwell.com/Shop?source=GoogleShopping&part=DFR63L4%2FBR
+2026-04-08 11:13:20.024 INFO [WEB VERIFY] Row 0d018f9e-11ee-4948-ae1c-c5bb94ec4de4 → done in 22840ms | score: 60 | source: distributor
+2026-04-08 11:13:59.102 INFO [cb892f2c-5d47-4529-bc0b-27187f855321] Starting verification {"rowCount":20,"maxConcurrency":15}
+2026-04-08 11:13:59.106 INFO [CACHE] L1 HIT key=746da27f...
+2026-04-08 11:13:59.106 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.107 INFO [CACHE] MISS key=5076e9db...
+2026-04-08 11:13:59.107 INFO [CACHE] L1 HIT key=5f174e08...
+2026-04-08 11:13:59.107 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.107 INFO [CACHE] L1 HIT key=84be17ed...
+2026-04-08 11:13:59.107 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.107 INFO [CACHE] L1 HIT key=9d9c4c57...
+2026-04-08 11:13:59.107 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.108 INFO [CACHE] L1 HIT key=4844dc15...
+2026-04-08 11:13:59.108 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.108 INFO [CACHE] L1 HIT key=75b339dd...
+2026-04-08 11:13:59.108 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.108 INFO [CACHE] L1 HIT key=1e28de11...
+2026-04-08 11:13:59.108 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.108 INFO [CACHE] L1 HIT key=12633bd9...
+2026-04-08 11:13:59.108 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.108 INFO [CACHE] L1 HIT key=71679fbb...
+2026-04-08 11:13:59.109 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.110 INFO [CACHE] L1 HIT key=085f793c...
+2026-04-08 11:13:59.111 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.111 INFO [CACHE] L1 HIT key=c3298143...
+2026-04-08 11:13:59.111 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.111 INFO [CACHE] L1 HIT key=ee9d33b4...
+2026-04-08 11:13:59.112 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.112 INFO [CACHE] MISS key=bd3b3685...
+2026-04-08 11:13:59.113 INFO [CACHE] L1 HIT key=5881a8d1...
+2026-04-08 11:13:59.113 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.113 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 11:13:59.114 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 11:13:59.114 INFO [CACHE] L1 HIT key=a65a8998...
+2026-04-08 11:13:59.114 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.116 INFO [CACHE] L1 HIT key=0b38005b...
+2026-04-08 11:13:59.116 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.116 INFO [CACHE] L1 HIT key=3eb8d05d...
+2026-04-08 11:13:59.116 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.116 INFO [CACHE] L1 HIT key=00544d8d...
+2026-04-08 11:13:59.116 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:13:59.116 INFO [CACHE] L1 HIT key=e7b9471d...
+2026-04-08 11:13:59.116 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 11:14:05.828 WARN [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 11:14:05.829 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → done in 6715ms | score: 0 | source: unknown
+2026-04-08 11:14:05.829 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 11:14:23.418 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → done in 24305ms | score: 60 | source: distributor
+2026-04-08 11:14:23.419 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 11:14:24.353 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://buyrexroth.com/R911318492
+2026-04-08 11:14:29.113 WARN [VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → row 1 hit 30s timeout, marking timeout and continuing
+2026-04-08 11:14:29.113 WARN [VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → row 13 hit 30s timeout, marking timeout and continuing
+2026-04-08 11:14:29.113 INFO ─────────────────────────────────────────
+2026-04-08 11:14:29.113 INFO  VERIFICATION SUMMARY
+2026-04-08 11:14:29.113 INFO ─────────────────────────────────────────
+2026-04-08 11:14:29.113 INFO  Total rows processed : 20
+2026-04-08 11:14:29.113 INFO  Gemini API calls     : 4 (web verify)
+2026-04-08 11:14:29.114 INFO  Gemini fallback calls: 0 (rule enforce)
+2026-04-08 11:14:29.114 INFO  Cache hits           : 18
+2026-04-08 11:14:29.114 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 11:14:29.114 INFO  Errors               : 0
+2026-04-08 11:14:29.114 INFO  Total time           : 30010ms (1501ms per row avg)
+2026-04-08 11:14:29.114 INFO ─────────────────────────────────────────
+2026-04-08 11:14:32.710 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.radwell.com/Shop?source=Google&sku=DFR63L4/BR
+2026-04-08 11:14:32.711 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → done in 26882ms | score: 65 | source: distributor
+2026-04-08 11:14:47.675 INFO [WEB VERIFY] Row cb892f2c-5d47-4529-bc0b-27187f855321 → done in 24255ms | score: 60 | source: distributor

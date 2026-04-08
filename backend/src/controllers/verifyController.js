@@ -25,11 +25,17 @@ async function handleVerify(req, res, next) {
   try {
     const { rows, batchSize } = req.body;
     const pLimit = (await import('p-limit')).default;
-    const limit = pLimit(config.maxConcurrency);
+    
+    // Create 3 independent pools for parallel processing
+    const geminiPool = pLimit(15);  // Gemini calls (can handle 15 concurrent with multi-key)
+    const rulePool = pLimit(10);    // Rule enforcement (fallback)
+    const urlPool = pLimit(30);     // URL validation (independent, doesn't block)
+    
+    const mainPool = pLimit(config.maxConcurrency); // Main orchestration pool
     const actualBatchSize = batchSize || config.batchSize;
     const correlationId = req.correlationId;
 
-    logger.info('Starting verification', { correlationId, rowCount: rows.length });
+    logger.info('Starting verification', { correlationId, rowCount: rows.length, maxConcurrency: config.maxConcurrency });
 
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
     const heartbeat = setInterval(() => { if (!res.destroyed) res.write(': heartbeat\n\n'); }, 15000);
@@ -47,11 +53,11 @@ async function handleVerify(req, res, next) {
     const totalBatches = Math.ceil(total / actualBatchSize);
     const startTime = Date.now();
 
-    const ROW_HARD_TIMEOUT_MS = 45000;
+    const ROW_HARD_TIMEOUT_MS = 30000; // Per-row timeout (30s as per Phase 2 spec)
     const withRowTimeout = (promise, rowIndex) => Promise.race([
       promise,
       new Promise((_, reject) => setTimeout(
-        () => reject(Object.assign(new Error('Row hard timeout (45s)'), { __rowTimeout: true, rowIndex })),
+        () => reject(Object.assign(new Error('Row timeout (30s)'), { __rowTimeout: true, rowIndex })),
         ROW_HARD_TIMEOUT_MS,
       )),
     ]);
@@ -59,71 +65,129 @@ async function handleVerify(req, res, next) {
     let aborted = false;
     req.on('close', () => { aborted = true; });
 
-    const tasks = rows.map(row => limit(async () => {
+    const tasks = rows.map(row => mainPool(async () => {
       if (res.destroyed || aborted) return;
       const deduped = applyAllDeduplication(row);
       const internalItemNumber = deduped.internalItemNumber;
-      // Pass full row object so cache key uses all available fields
       const cacheKey = cacheService.makeCacheKey(deduped);
       const cached = cacheService.get(cacheKey);
+      
       if (cached) {
         cacheHits++;
         completed++;
-        logger.info(`[WEB VERIFY] Row ${correlationId} → CACHE HIT (no API call)`);
+        const layer = cached.__cacheLayer === 'L2' ? 'L2 CACHE HIT (SQLite)' : 'L1 CACHE HIT (RAM)';
+        logger.info(`[WEB VERIFY] Row ${correlationId} → ${layer} (no API call)`);
         const result = { ...cached, rowIndex: row.rowIndex, internalItemNumber };
         results.push(result);
         send({ type: 'row_complete', result });
         send({ type: 'progress', batch: Math.ceil(completed / actualBatchSize), totalBatches, completed, total, elapsedSeconds: Math.round((Date.now() - startTime) / 1000) });
         return;
       }
+      
       try {
-        if (config.geminiMockMode) mockCalls++; else geminiCalls++;
         const bail = () => { if (aborted || res.destroyed) throw Object.assign(new Error('client aborted'), { __aborted: true }); };
+        
         let result = await withRowTimeout((async () => {
           bail();
-          let r = await verifyRow(deduped, false, correlationId);
-          bail();
-          if (r.verificationScore < 70 && deduped.supplementary.trim()) {
-            const suppType = classifySupplementary(deduped.supplementary);
-            if (suppType === 'part_specification') {
-              if (config.geminiMockMode) mockCalls++; else geminiCalls++;
-              r = await verifyRow(deduped, true, correlationId);
-              bail();
-              r.supplementaryUsed = true;
-            }
-          }
-          // Req 4: if Manufacturer is still empty, force rule-enforce fallback to infer it
-          const needsManufacturerInference = !r.manufacturer || !r.manufacturer.trim();
-          if (r.verificationScore < 70 || needsManufacturerInference) {
-            if (config.claudeMockMode) mockCalls++; else fallbackCalls++;
-            r = await enforceRules(deduped, r, correlationId);
+          
+          // Step 1: Gemini verification (pool: 15 concurrent)
+          if (config.geminiMockMode) mockCalls++; else geminiCalls++;
+          let r = await geminiPool(async () => {
             bail();
+            return await verifyRow(deduped, false, correlationId);
+          });
+          bail();
+          
+          // Step 2 & 4: Rule enforcement (if needed) and URL validation run in parallel
+          const rulePromise = (async () => {
+            if (r.verificationScore < 70 && deduped.supplementary.trim()) {
+              const suppType = classifySupplementary(deduped.supplementary);
+              if (suppType === 'part_specification') {
+                if (config.geminiMockMode) mockCalls++; else geminiCalls++;
+                const supplementaryResult = await geminiPool(async () => {
+                  bail();
+                  return await verifyRow(deduped, true, correlationId);
+                });
+                bail();
+                supplementaryResult.supplementaryUsed = true;
+                return supplementaryResult;
+              }
+            }
+            
+            // Step 3: Rule enforcement (if needed, parallel to URL validation)
+            const needsManufacturerInference = !r.manufacturer || !r.manufacturer.trim();
+            if (r.verificationScore < 70 || needsManufacturerInference) {
+              if (config.claudeMockMode) mockCalls++; else fallbackCalls++;
+              return await rulePool(async () => {
+                bail();
+                return await enforceRules(deduped, r, correlationId);
+              });
+            }
+            return r;
+          })();
+          
+          const urlPromise = (async () => {
+            // Step 4: URL validation (parallel to rule enforcement)
+            if (r.websiteId) {
+              const { validateUrl } = require('../services/urlValidatorService');
+              return await urlPool(async () => {
+                bail();
+                const urlCheck = await validateUrl(r.websiteId);
+                return { status: urlCheck.status, finalUrl: urlCheck.finalUrl };
+              });
+            }
+            return null;
+          })();
+          
+          // Wait for both rule enforcement and URL validation to complete
+          const [ruleResult, urlResult] = await Promise.all([rulePromise, urlPromise]);
+          r = ruleResult || r; // Use rule result if it was updated
+          
+          // Step 5: Merge URL validation results
+          if (urlResult) {
+            if (urlResult.status === 'broken') {
+              r.websiteId = '';
+            } else if (urlResult.status === 'redirected' && urlResult.finalUrl) {
+              r.websiteId = urlResult.finalUrl;
+            }
+            r.urlValidationStatus = urlResult.status;
           }
+          
           return r;
         })(), row.rowIndex);
-        // URL validation note: if URL was unreachable, AI's score/source_type still stand
+        
+        // URL validation note
         if (result.urlValidationStatus === 'broken' || result.urlValidationStatus === 'timeout') {
-          logger.info(`[VERIFY] Row ${correlationId} → URL validation failed (${result.urlValidationStatus}) but score=${result.verificationScore} kept. Part was confirmed by AI, URL unreachable.`);
+          logger.info(`[VERIFY] Row ${correlationId} → URL validation failed (${result.urlValidationStatus}) but score=${result.verificationScore} kept.`);
         }
-        // Block score/source_type inconsistency from reaching frontend
+        
+        // Block score/source_type inconsistency
         if (result.verificationScore >= 70 && result.sourceType === 'not_found') {
           const vs = (result.verifiedSource || '').toLowerCase();
           let newSourceType;
           if (vs.includes('manufacturer')) newSourceType = 'official';
           else if (vs.includes('distributor') || vs.includes('store') || vs.includes('reseller')) newSourceType = 'distributor';
           else newSourceType = 'unknown';
-          logger.info(`[VERIFY] Row ${correlationId} → source_type corrected from not_found to ${newSourceType} based on verified_source`);
+          logger.info(`[VERIFY] Row ${correlationId} → source_type corrected to ${newSourceType}`);
           result.sourceType = newSourceType;
         }
+        
         result = deduplicateVerified(result);
-        // Req 2b: keep verified C/D layout aligned with the original input
         result = mirrorOriginalLayout(result, deduped);
         result.rowIndex = row.rowIndex;
         result.internalItemNumber = internalItemNumber;
+        
         if (result.supplementaryChanged && result.supplementaryOriginal !== result.supplementary) {
           changeLogs.push(createChangeLog(row.rowIndex, result.supplementaryOriginal, result.supplementary, result.verificationScore, result.verificationScore < 70 ? 'claude-sonnet-4-6' : 'gemini-2.5-flash'));
         }
-        cacheService.set(cacheKey, result);
+        
+        cacheService.set(cacheKey, result, {
+          manufacturer:     deduped.manufacturer     || null,
+          item_number:      deduped.itemNumber       || null,
+          type_designation: deduped.typeDesignation  || null,
+          description:      deduped.description      || null,
+        });
+        
         results.push(result);
         completed++;
         send({ type: 'row_complete', result });
@@ -132,8 +196,7 @@ async function handleVerify(req, res, next) {
         if (error && error.__aborted) return;
         completed++;
         if (error && error.__rowTimeout) {
-          // Hard 45s timeout — return a placeholder result so the queue keeps moving
-          logger.warn(`[VERIFY] Row ${correlationId} → row ${row.rowIndex} hit 45s hard timeout, marking timeout and continuing`);
+          logger.warn(`[VERIFY] Row ${correlationId} → row ${row.rowIndex} hit 30s timeout, marking timeout and continuing`);
           const timeoutResult = {
             rowIndex: row.rowIndex,
             internalItemNumber,
@@ -168,7 +231,7 @@ async function handleVerify(req, res, next) {
     clearInterval(heartbeat);
     results.sort((a, b) => a.rowIndex - b.rowIndex);
 
-    // Cache collision detection — if >80% of rows have identical descriptions, something is wrong
+    // Cache collision detection
     const verifiedDescriptions = results.map(r => r.description).filter(Boolean);
     const uniqueVerified = new Set(verifiedDescriptions);
     if (verifiedDescriptions.length > 10 && uniqueVerified.size / verifiedDescriptions.length < 0.2) {
@@ -190,7 +253,7 @@ async function handleVerify(req, res, next) {
       ` Cache hits           : ${cacheHits}`,
       ` Mock calls           : ${mockCalls} (should be 0)`,
       ` Errors               : ${errorCount}`,
-      ` Total time           : ${totalMs}ms`,
+      ` Total time           : ${totalMs}ms (${Math.round(totalMs / total)}ms per row avg)`,
       '─────────────────────────────────────────',
     ];
     for (const l of summary) logger.info(l);

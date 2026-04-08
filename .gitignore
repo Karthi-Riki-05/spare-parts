@@ -11,3 +11,6 @@ test-results/
 testing_excel.xlsx
 .DS_Store
 *.tsbuildinfo
+backend/data/*.db
+backend/data/*.db-shm
+backend/data/*.db-wal

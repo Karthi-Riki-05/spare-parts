@@ -6,8 +6,10 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   CORS_ORIGIN: z.string().default('http://localhost:3001'),
-  // Single AI provider — all models via GEMINI_API_KEY
+  // Single AI provider — all models via GEMINI_API_KEY (with optional 2 and 3)
   GEMINI_API_KEY: z.string().default(''),
+  GEMINI_API_KEY_2: z.string().default(''),
+  GEMINI_API_KEY_3: z.string().default(''),
   MAX_ROWS_WARNING: z.coerce.number().default(5000),
   MAX_ROWS_LIMIT: z.coerce.number().default(10000),
   BATCH_SIZE: z.coerce.number().default(5),
@@ -24,6 +26,11 @@ const envSchema = z.object({
   GEMINI_MOCK_MODE: z.string().transform(v => v === 'true').default('false'),
   CLAUDE_MOCK_MODE: z.string().transform(v => v === 'true').default('false'),
   LOG_WRITE: z.string().transform(v => v === 'true').default('false'),
+  // Auth
+  JWT_SECRET: z.string().default('changeme-secret-key'),
+  ADMIN_EMAIL: z.string().default('tawdev@gmail.com'),
+  ADMIN_PASSWORD: z.string().default('T@Wdev$05'),
+  COOKIE_SECURE: z.string().transform(v => v === 'true').default('false'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -37,6 +44,8 @@ const config = {
   nodeEnv: parsed.data.NODE_ENV,
   corsOrigin: parsed.data.CORS_ORIGIN,
   geminiApiKey: parsed.data.GEMINI_API_KEY,
+  geminiApiKey2: parsed.data.GEMINI_API_KEY_2,
+  geminiApiKey3: parsed.data.GEMINI_API_KEY_3,
   maxRowsWarning: parsed.data.MAX_ROWS_WARNING,
   maxRowsLimit: parsed.data.MAX_ROWS_LIMIT,
   batchSize: parsed.data.BATCH_SIZE,
@@ -53,6 +62,10 @@ const config = {
   geminiMockMode: parsed.data.GEMINI_MOCK_MODE || parsed.data.MOCK_MODE,
   claudeMockMode: parsed.data.CLAUDE_MOCK_MODE || parsed.data.MOCK_MODE,
   logWrite: parsed.data.LOG_WRITE,
+  jwtSecret: parsed.data.JWT_SECRET,
+  adminEmail: parsed.data.ADMIN_EMAIL,
+  adminPassword: parsed.data.ADMIN_PASSWORD,
+  cookieSecure: parsed.data.COOKIE_SECURE,
 };
 
 module.exports = { config };
