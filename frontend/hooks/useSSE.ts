@@ -21,8 +21,7 @@ export function useSSE() {
     handlers: SSEHandlers,
   ): AbortController {
     const controller = new AbortController();
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
-    const url = `${backendUrl}${path}`;
+    const url = path.startsWith('/api') ? path : `/api${path}`;
 
     (async () => {
       try {

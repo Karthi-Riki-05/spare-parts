@@ -4,9 +4,13 @@ export const maxDuration = 600;
 
 export async function POST(req: Request) {
   const backend = process.env.BACKEND_URL || 'http://localhost:3001';
+  const cookie = req.headers.get('cookie') || undefined;
   const upstream = await fetch(`${backend}/api/verify`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
     body: await req.text(),
     // @ts-expect-error - Node fetch duplex required for streaming request bodies
     duplex: 'half',

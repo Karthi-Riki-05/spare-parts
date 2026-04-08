@@ -7,8 +7,7 @@ import type {
   VerificationResult,
 } from '@spare-parts/types';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
-const BASE = `${BACKEND_URL}/api`;
+const BASE = '/api';
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {

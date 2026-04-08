@@ -1,6 +1,6 @@
 import { useRouter } from 'next/navigation';
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const API_URL = '/api';
 
 export interface User {
   email: string;
@@ -8,7 +8,7 @@ export interface User {
 
 export async function getUser(): Promise<User | null> {
   try {
-    const res = await fetch(`${API_URL}/api/auth/me`, {
+    const res = await fetch(`${API_URL}/auth/me`, {
       credentials: 'include',
       cache: 'no-store',
     });
