@@ -56,8 +56,11 @@ async function handleVerify(req, res, next) {
       )),
     ]);
 
+    let aborted = false;
+    req.on('close', () => { aborted = true; });
+
     const tasks = rows.map(row => limit(async () => {
-      if (res.destroyed) return;
+      if (res.destroyed || aborted) return;
       const deduped = applyAllDeduplication(row);
       const internalItemNumber = deduped.internalItemNumber;
       // Pass full row object so cache key uses all available fields
@@ -75,13 +78,17 @@ async function handleVerify(req, res, next) {
       }
       try {
         if (config.geminiMockMode) mockCalls++; else geminiCalls++;
+        const bail = () => { if (aborted || res.destroyed) throw Object.assign(new Error('client aborted'), { __aborted: true }); };
         let result = await withRowTimeout((async () => {
+          bail();
           let r = await verifyRow(deduped, false, correlationId);
+          bail();
           if (r.verificationScore < 70 && deduped.supplementary.trim()) {
             const suppType = classifySupplementary(deduped.supplementary);
             if (suppType === 'part_specification') {
               if (config.geminiMockMode) mockCalls++; else geminiCalls++;
               r = await verifyRow(deduped, true, correlationId);
+              bail();
               r.supplementaryUsed = true;
             }
           }
@@ -90,6 +97,7 @@ async function handleVerify(req, res, next) {
           if (r.verificationScore < 70 || needsManufacturerInference) {
             if (config.claudeMockMode) mockCalls++; else fallbackCalls++;
             r = await enforceRules(deduped, r, correlationId);
+            bail();
           }
           return r;
         })(), row.rowIndex);
@@ -121,6 +129,7 @@ async function handleVerify(req, res, next) {
         send({ type: 'row_complete', result });
         send({ type: 'progress', batch: Math.ceil(completed / actualBatchSize), totalBatches, completed, total, elapsedSeconds: Math.round((Date.now() - startTime) / 1000) });
       } catch (error) {
+        if (error && error.__aborted) return;
         completed++;
         if (error && error.__rowTimeout) {
           // Hard 45s timeout — return a placeholder result so the queue keeps moving

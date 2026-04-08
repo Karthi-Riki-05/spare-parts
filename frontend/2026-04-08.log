@@ -1,0 +1,44 @@
+2026-04-08 06:14:31.565 INFO Server running on http://localhost:3001 {"nodeEnv":"production","mockMode":false}
+2026-04-08 06:14:31.566 INFO ─────────────────────────────────
+2026-04-08 06:14:31.566 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 06:14:31.567 INFO ─────────────────────────────────
+2026-04-08 06:14:31.567 INFO  MOCK_MODE        : false
+2026-04-08 06:14:31.567 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 06:14:31.568 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 06:14:31.568 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 06:14:31.568 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 06:14:31.568 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 06:14:31.569 INFO ─────────────────────────────────
+2026-04-08 06:16:23.706 INFO [b1264c2c-b9d7-43cd-b249-039b67d39eae] Detecting format {"totalRows":20}
+2026-04-08 06:16:23.707 INFO [FORMAT DETECT] Row b1264c2c-b9d7-43cd-b249-039b67d39eae → calling Gemini 2.0-flash (real API)
+2026-04-08 06:16:28.196 INFO [FORMAT DETECT] Row b1264c2c-b9d7-43cd-b249-039b67d39eae → response received in 4488ms | format: A
+2026-04-08 06:16:28.661 INFO [e9c8ff8e-045a-42c1-8d6b-0b9a1d510856] Normalizing data {"format":"A","rowCount":20}
+2026-04-08 06:16:32.376 INFO [86e5b81d-28a1-4dd5-ae59-85f4b733399f] Starting verification {"rowCount":20}
+2026-04-08 06:16:32.379 INFO [WEB VERIFY] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 06:16:32.380 INFO [WEB VERIFY] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 06:16:41.994 INFO [WEB VERIFY] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → done in 9615ms | score: 95 | source: official
+2026-04-08 06:16:41.995 INFO [WEB VERIFY] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 06:16:47.604 INFO [WEB VERIFY] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → done in 15223ms | score: 60 | source: distributor
+2026-04-08 06:16:47.605 INFO [WEB VERIFY] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 06:17:03.454 INFO [URL VALIDATOR] URL timeout — keeping URL as unverified: https://www.getriebemotor-shop.de/sew-eurodrive-getriebemotor-r77drs71m4be1hris-tf-r77-drs71m4be1hris-tf/
+2026-04-08 06:17:03.454 INFO [WEB VERIFY] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → done in 21458ms | score: 80 | source: distributor
+2026-04-08 06:17:03.455 INFO [WEB VERIFY] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → calling Gemini 2.5-flash with Google Search (real API)
+2026-04-08 06:17:10.932 INFO [WEB VERIFY] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → done in 7477ms | score: 40 | source: not_found
+2026-04-08 06:17:10.933 INFO [RULE ENFORCE] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 06:17:16.279 INFO [URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: https://www.dbrautomation.com/en/product/r911318478-fwa-indrv-mpb-05vrs-d5-1-nnn-tf
+2026-04-08 06:17:16.279 INFO [WEB VERIFY] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → done in 28674ms | score: 60 | source: distributor
+2026-04-08 06:17:16.280 INFO [RULE ENFORCE] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 06:17:17.380 WARN [VERIFY] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → row 1 hit 45s hard timeout, marking timeout and continuing
+2026-04-08 06:17:18.003 INFO [RULE ENFORCE] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → done in 7069ms | score improved: 40 → 40
+2026-04-08 06:17:18.003 INFO ─────────────────────────────────────────
+2026-04-08 06:17:18.003 INFO  VERIFICATION SUMMARY
+2026-04-08 06:17:18.003 INFO ─────────────────────────────────────────
+2026-04-08 06:17:18.004 INFO  Total rows processed : 20
+2026-04-08 06:17:18.004 INFO  Gemini API calls     : 5 (web verify)
+2026-04-08 06:17:18.004 INFO  Gemini fallback calls: 2 (rule enforce)
+2026-04-08 06:17:18.004 INFO  Cache hits           : 0
+2026-04-08 06:17:18.004 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 06:17:18.004 INFO  Errors               : 0
+2026-04-08 06:17:18.004 INFO  Total time           : 45626ms
+2026-04-08 06:17:18.005 INFO ─────────────────────────────────────────
+2026-04-08 06:17:25.183 INFO [RULE ENFORCE] Row 86e5b81d-28a1-4dd5-ae59-85f4b733399f → done in 8902ms | score improved: 60 → 60
