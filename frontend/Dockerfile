@@ -26,8 +26,8 @@ ENV PORT=3000
 
 # Update the paths to copy from the new builder structure
 COPY --from=builder /app/frontend/.next/standalone ./
-COPY --from=builder /app/frontend/.next/static ./frontend/.next/static
-COPY --from=builder /app/frontend/public ./frontend/public
+COPY --from=builder /app/frontend/.next/static ./.next/static
+COPY --from=builder /app/frontend/public ./public
 
 USER node
 EXPOSE 3000
