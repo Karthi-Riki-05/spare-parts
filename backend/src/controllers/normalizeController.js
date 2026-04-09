@@ -1,5 +1,5 @@
 const { readExcelFromBase64 } = require('../services/excelService');
-const { normalizeRow } = require('../services/openaiService');
+const { normalizeRow, normalizeRowsBatch } = require('../services/openaiService');
 const { applyAllDeduplication } = require('../services/deduplicationService');
 const { handleErsPrefix } = require('../utils/ersHandler');
 const { logger } = require('../utils/logger');
@@ -43,19 +43,84 @@ function normalizeFormatA(rows, mapping, format) {
 }
 
 async function normalizeFormatC(rows, correlationId, format) {
-  return Promise.all(rows.map(async (row, index) => {
+  // Format C: Batch rows that need AI processing
+  const BATCH_SIZE = 10;
+  const pLimit = (await import('p-limit')).default;
+  const limit = pLimit(4); // Lower concurrency for batch processing
+  
+  const rowsNeedingAi = [];
+  const rowsWithoutAi = [];
+  
+  rows.forEach((row, index) => {
     const keys = Object.keys(row);
-    const internalItemNumber = extractVal(row, keys[0] || '');
-
     const mfrVal = extractVal(row, keys[2] || '');
     const itemVal = extractVal(row, keys[3] || '');
-
+    
     if (mfrVal && itemVal) {
+      // Already has manufacturer and item — no AI needed
+      rowsWithoutAi.push({ row, index, needsAi: false });
+    } else {
+      // Missing data — needs AI
+      rowsNeedingAi.push({ row, index, needsAi: true });
+    }
+  });
+  
+  // Process rows that need AI in batches
+  const aiResults = {};
+  if (rowsNeedingAi.length > 0) {
+    const batches = [];
+    for (let i = 0; i < rowsNeedingAi.length; i += BATCH_SIZE) {
+      batches.push(rowsNeedingAi.slice(i, i + BATCH_SIZE));
+    }
+    
+    const batchResultSets = await Promise.all(batches.map((batch) => limit(async () => {
+      const keys = Object.keys(batch[0].row);
+      const texts = batch.map(({ row }) => 
+        keys.map(k => extractVal(row, k)).filter(Boolean).join(' ')
+      );
+      const results = await normalizeRowsBatch(texts.map(text => ({ text })), correlationId);
+      
+      return batch.map(({ index }, i) => ({
+        index,
+        ...results[i],
+      }));
+    })));
+    
+    // Flatten results into map
+    batchResultSets.flat().forEach(r => {
+      aiResults[r.index] = r;
+    });
+  }
+  
+  // Combine all results in original order
+  const allResults = [...rowsWithoutAi, ...rowsNeedingAi].sort((a, b) => a.index - b.index);
+  
+  return allResults.map(({ row, index, needsAi }) => {
+    const keys = Object.keys(row);
+    const internalItemNumber = extractVal(row, keys[0] || '');
+    
+    let result;
+    if (needsAi && aiResults[index]) {
+      result = aiResults[index];
+      const raw = {
+        internalItemNumber,
+        description: result.description,
+        manufacturer: result.manufacturer,
+        itemNumber: result.item_number,
+        typeDesignation: result.type_designation,
+        supplementary: result.supplementary,
+        sparePartCategory: extractVal(row, keys[6] || ''),
+        _originalFormat: format,
+        rowIndex: index,
+      };
+      return handleErsPrefix(applyAllDeduplication(raw));
+    } else {
+      // No AI needed — use direct values
       const raw = {
         internalItemNumber,
         description: extractVal(row, keys[1] || ''),
-        manufacturer: mfrVal,
-        itemNumber: itemVal,
+        manufacturer: extractVal(row, keys[2] || ''),
+        itemNumber: extractVal(row, keys[3] || ''),
         typeDesignation: extractVal(row, keys[4] || ''),
         supplementary: extractVal(row, keys[5] || ''),
         sparePartCategory: extractVal(row, keys[6] || ''),
@@ -64,22 +129,7 @@ async function normalizeFormatC(rows, correlationId, format) {
       };
       return handleErsPrefix(applyAllDeduplication(raw));
     }
-
-    const rawText = keys.map(k => extractVal(row, k)).filter(Boolean).join(' ');
-    const result = await normalizeRow(rawText, correlationId);
-    const raw = {
-      internalItemNumber,
-      description: result.description,
-      manufacturer: result.manufacturer,
-      itemNumber: result.item_number,
-      typeDesignation: result.type_designation,
-      supplementary: result.supplementary,
-      sparePartCategory: extractVal(row, keys[6] || ''),
-      _originalFormat: format,
-      rowIndex: index,
-    };
-    return handleErsPrefix(applyAllDeduplication(raw));
-  }));
+  });
 }
 
 async function handleNormalize(req, res, next) {
@@ -91,34 +141,76 @@ async function handleNormalize(req, res, next) {
 
     let normalized;
     if (format === 'A') {
+      // Format A: no AI needed, just direct column mapping
       normalized = normalizeFormatA(rawRows, mapping, 'A');
     } else if (format === 'B') {
-      // Process rows in parallel (p-limit) — send ONLY col_1 to AI (not col_0 which is internal item number)
+      // Format B: batch AI calls — 10 rows per call instead of 1 row per call
+      // This reduces 100 calls to 10 calls, speeding up processing ~90%
       const pLimit = (await import('p-limit')).default;
       const limit = pLimit(config.maxConcurrency);
-      normalized = await Promise.all(rawRows.map((row, index) => limit(async () => {
-        const internalItemNumber = extractVal(row, 'col_0');
-        const rawText = cleanFormatBNoise(extractVal(row, 'col_1'));
-        if (!rawText) {
-          return handleErsPrefix(applyAllDeduplication({
-            internalItemNumber, description: '', manufacturer: '',
-            itemNumber: '', typeDesignation: '', supplementary: '',
-            _originalFormat: 'B', rowIndex: index,
+      
+      const BATCH_SIZE = 10;
+      const rowsToNormalize = rawRows.map((row, index) => ({
+        row, 
+        index,
+        internalItemNumber: extractVal(row, 'col_0'),
+        rawText: cleanFormatBNoise(extractVal(row, 'col_1')),
+      }));
+      
+      // Group into batches
+      const batches = [];
+      for (let i = 0; i < rowsToNormalize.length; i += BATCH_SIZE) {
+        batches.push(rowsToNormalize.slice(i, i + BATCH_SIZE));
+      }
+      
+      // Process batches in parallel
+      const batchResults = await Promise.all(batches.map((batch, batchIdx) => limit(async () => {
+        // Filter out empty rows
+        const nonEmpty = batch.filter(r => r.rawText);
+        if (!nonEmpty.length) {
+          // All rows in batch are empty
+          return batch.map(r => ({
+            internalItemNumber: r.internalItemNumber,
+            description: '',
+            manufacturer: '',
+            itemNumber: '',
+            typeDesignation: '',
+            supplementary: '',
+            rowIndex: r.index,
           }));
         }
-        const result = await normalizeRow(rawText, req.correlationId);
-        return handleErsPrefix(applyAllDeduplication({
-          internalItemNumber,
-          description: result.description,
-          manufacturer: result.manufacturer,
-          itemNumber: result.item_number,
-          typeDesignation: result.type_designation,
-          supplementary: result.supplementary,
-          _originalFormat: 'B',
-          rowIndex: index,
-        }));
+        
+        // Call batch API for non-empty rows
+        const batchResults = await normalizeRowsBatch(nonEmpty.map(r => ({ text: r.rawText })), req.correlationId);
+        
+        // Reconstruct with original order (including empty rows)
+        return batch.map(r => {
+          const nonEmptyIdx = nonEmpty.findIndex(ne => ne.index === r.index);
+          if (nonEmptyIdx === -1) {
+            // Empty row
+            return { internalItemNumber: r.internalItemNumber, description: '', manufacturer: '', itemNumber: '', typeDesignation: '', supplementary: '', rowIndex: r.index };
+          }
+          const result = batchResults[nonEmptyIdx];
+          return {
+            internalItemNumber: r.internalItemNumber,
+            description: result.description,
+            manufacturer: result.manufacturer,
+            itemNumber: result.item_number,
+            typeDesignation: result.type_designation,
+            supplementary: result.supplementary,
+            rowIndex: r.index,
+          };
+        });
+      })));
+      
+      // Flatten results back to original order
+      const flatResults = batchResults.flat();
+      normalized = flatResults.map(result => handleErsPrefix(applyAllDeduplication({
+        ...result,
+        _originalFormat: 'B',
       })));
     } else {
+      // Format C: similar batching approach
       normalized = await normalizeFormatC(rawRows, req.correlationId, 'C');
     }
 

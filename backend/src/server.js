@@ -35,6 +35,13 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 
+// Request timeout: 120s (accounts for Format B/C AI processing on large files)
+app.use((req, res, next) => {
+  req.setTimeout(120000); // 2 minutes
+  res.setTimeout(120000);
+  next();
+});
+
 app.use((req, _res, next) => {
   req.correlationId = uuidv4();
   next();
