@@ -322,7 +322,8 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
               {...rest}
             />
           ))}
-          onScroll={({ scrollLeft }) => {
+          onScroll={(props: any) => {
+            const scrollLeft = props.scrollLeft ?? 0;
             const headerContainer = document.getElementById('table-header-container');
             if (headerContainer) {
               headerContainer.scrollLeft = scrollLeft;
