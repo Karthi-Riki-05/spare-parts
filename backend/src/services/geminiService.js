@@ -7,14 +7,13 @@ const { validateUrl } = require('./urlValidatorService');
 const { mockVerificationResult } = require('./mocks/geminiMock');
 const geminiPool = require('./geminiPool');
 
-const clients = new Map(); // Cache clients by API key
+const clients = new Map();
 
 function getClient(apiKey) {
   const keyToUse = apiKey || config.geminiApiKey;
   if (!keyToUse) {
     throw new Error('No Gemini API key configured');
   }
-  
   if (!clients.has(keyToUse)) {
     clients.set(keyToUse, new GoogleGenerativeAI(keyToUse));
   }
@@ -22,22 +21,97 @@ function getClient(apiKey) {
 }
 
 function buildPrompt(row, useSupplementary) {
-  let partInfo = `- Description: ${row.description || 'empty'}\n- Manufacturer: ${row.manufacturer || 'empty'}\n- Item Number: ${row.itemNumber || 'empty'}\n- Type Designation: ${row.typeDesignation || 'empty'}`;
+  // NOTE: itemNumber is intentionally excluded from the prompt.
+  // The AI must extract the part number from Description/Supplementary text.
+  // The original itemNumber from Excel is preserved separately in mapResult.
+  let partInfo = `- Description: ${row.description || 'empty'}\n- Manufacturer: ${row.manufacturer || 'empty'}\n- Type Designation: ${row.typeDesignation || 'empty'}`;
+
   if (useSupplementary && row.supplementary) {
     partInfo += `\n- Supplementary Info: ${row.supplementary}`;
   }
-  // Swedish translation and ERS. handling are done at normalization step
-  return `You are verifying industrial spare parts data. Search the web to confirm this part exists and find its official product page.\n\nPart to verify:\n${partInfo}\n\nSEARCH SEQUENCE:\n1. Search "[Manufacturer] [Item Number]" on manufacturer's official website\n2. If not found: search on Octopart, then Mouser, then RS Online, then PLCHardware\n3. Confirm the exact part number appears on the page\n\nMANDATORY RULES:\n- IF MANUFACTURER IS EMPTY — USE THIS EXACT SEQUENCE:\n  STEP 1 — Check Type Designation prefix:\n    1LA, 1FT, 1FK, 1PH, 6ES7, 6SL3, 6SE7, 6GK, 6RA, SIMATIC, SINAMICS, SINUMERIK → Siemens\n    MKD, MHD, HCS, HDS, R911, MSK, LSF                                          → Bosch Rexroth / Indramat\n    MM0, MLU, MDX, DRS, R77, KA, WA, FA                                          → SEW-Eurodrive\n    LR, OGE, OGH, OGS, OU, OF, SI                                                → IFM Electronic\n    SMT, VADMI, ADNGF, DNC, DSNU, FESTO                                          → Festo\n    BOS, BAM, BTL, BES, BCC                                                      → Balluff\n    NI, BI, BIM, QS, PS                                                          → Turck\n    QST, LTV, ZT, RT                                                             → Atlas Copco\n    62, 63, 22, 23, 32, 33 (bearing nums)                                        → SKF\n    VR, EDS, VM, HDA, HFT                                                        → Hydac\n  STEP 2 — Check Item Number pattern:\n    Starts with R9 followed by 6+ digits  → Bosch Rexroth\n    8-digit number starting 18 or 82      → SEW-Eurodrive\n    Starts with 6ES, 6SL, 6SE, 6GK         → Siemens\n    Starts with H followed by 7 digits     → Hydac\n  STEP 3 — Check Description for brand keywords:\n    Contains SIMATIC, SINAMICS, SINUMERIK, SIMODRIVE  → Siemens\n    Contains MOVIMOT, MOVIDRIVE, MOVITRAC, MOVIAXIS   → SEW-Eurodrive\n    Contains REXROTH, INDRAMAT                        → Bosch Rexroth\n    Contains FESTO (any case)                         → Festo\n    Contains HYDAC (any case)                         → Hydac\n  STEP 4 — Web search using all 3 fields combined:\n    Search 1: "[typeDesignation] manufacturer datasheet"\n    Search 2: "[itemNumber] industrial spare part brand"\n    Search 3: "[description] [typeDesignation] official"\n    Extract manufacturer from search results\n  STEP 5 — Only leave manufacturer blank if ALL 4 steps above fail to identify any manufacturer. Set manufacturer_inferred: true when inferred.\n- If item_number == type_designation: keep only item_number\n- Fill empty fields ONLY with data confirmed on a real webpage\n\nSCORING (verification_score is an INTEGER 0-100):\n- 90-100: exact part confirmed on official manufacturer page with matching item number\n- 70-89:  exact part confirmed on a major distributor (Mouser/RS/Octopart/PLCHardware)\n- 50-69:  similar/related part found, partial match only\n- 0-49:   not found or only generic results\nNEVER return 0 or 1 unless the part is genuinely unfindable.\n\nMANDATORY URL RULES:\n- website_id MUST be the direct product page URL\n- NEVER use these domains as website_id: indiamart.com, alibaba.com, aliexpress.com, amazon.com, ebay.com, made-in-china.com, tradeindia.com, exportersindia.com\n- If official manufacturer URL found but slow to load → still include it in website_id\n- PDF datasheets are acceptable only if no product page exists\n\nSOURCE TYPE RULES (follow exactly):\n- source_type = "official"    → website_id is on manufacturer's own domain\n- source_type = "distributor" → website_id is on Mouser/RS/Octopart/PLCHardware or any reseller\n- source_type = "not_found"   → website_id empty, part not confirmed anywhere\n- source_type = "unknown"     → score < 50 only\n\nSCORE AND SOURCE_TYPE MUST BE CONSISTENT:\n- score 90-100 → source_type MUST be "official"\n- score 70-89  → source_type MUST be "distributor"\n- score 50-69  → source_type = "distributor" or "unknown"\n- score < 50   → source_type = "not_found" or "unknown"\nNEVER return score 90+ with source_type "not_found"\n\nRespond ONLY with a single JSON object, no markdown fences, no prose:\n{"description":"","manufacturer":"","item_number":"","type_designation":"","supplementary":"","verified_source":"Manufacturer website","verification_score":0,"website_id":"","source_type":"official","manufacturer_website":"","manufacturer_inferred":false,"supplementary_used":${useSupplementary},"supplementary_changed":false,"supplementary_original":"","supplementary_type":"unknown"}`;
+
+  return `You are an industrial spare parts data specialist. Your job is to extract the part number from the description, identify the manufacturer, and find the official product page on the web.
+
+PART DATA:
+${partInfo}
+
+STEP 1 — EXTRACT ITEM NUMBER:
+- Look inside Description and Supplementary Info for patterns like: Artnr, Art.nr, Part No, PN, Item#, Artikelnummer, or any standalone alphanumeric code that looks like a manufacturer part number.
+- Set extracted_item_number to the value you find. If none found, leave it empty.
+
+STEP 2 — IDENTIFY MANUFACTURER (if manufacturer field is empty):
+Check Type Designation prefix first:
+  1LA, 1FT, 1FK, 1PH, 6ES7, 6SL3, 6SE7, 6GK, 6RA, SIMATIC, SINAMICS, SINUMERIK → Siemens
+  MKD, MHD, HCS, HDS, R911, MSK, LSF                                              → Bosch Rexroth
+  MM0, MLU, MDX, DRS, R77, KA, WA, FA                                             → SEW-Eurodrive
+  LR, OGE, OGH, OGS, OU, OF, SI                                                   → IFM Electronic
+  SMT, VADMI, ADNGF, DNC, DSNU, FESTO                                             → Festo
+  BOS, BAM, BTL, BES, BCC                                                         → Balluff
+  NI, BI, BIM, QS, PS                                                             → Turck
+  QST, LTV, ZT, RT                                                                → Atlas Copco
+  62, 63, 22, 23, 32, 33 (bearing numbers)                                        → SKF
+  VR, EDS, VM, HDA, HFT                                                           → Hydac
+
+Check Item Number pattern:
+  Starts with R9 + 6 or more digits → Bosch Rexroth
+  8-digit number starting with 18 or 82 → SEW-Eurodrive
+  Starts with 6ES, 6SL, 6SE, 6GK → Siemens
+  Starts with H + 7 digits → Hydac
+
+Check Description for brand keywords:
+  SIMATIC, SINAMICS, SINUMERIK, SIMODRIVE → Siemens
+  MOVIMOT, MOVIDRIVE, MOVITRAC, MOVIAXIS → SEW-Eurodrive
+  REXROTH, INDRAMAT → Bosch Rexroth
+  FESTO → Festo
+  HYDAC → Hydac
+  ATLAS COPCO → Atlas Copco
+  SKF → SKF
+
+If none of the above match, search the web: "[typeDesignation] manufacturer" and "[description] brand industrial".
+Set manufacturer_inferred: true if you had to infer the manufacturer.
+Only leave manufacturer blank if all methods above fail.
+
+STEP 3 — SEARCH THE WEB:
+Search sequence:
+1. Search "[Manufacturer] [extracted_item_number OR typeDesignation]" on the manufacturer's official website.
+2. If not found: search Octopart, then Mouser, then RS Online, then PLCHardware.
+3. Confirm the exact part number appears on the found page.
+
+MANDATORY URL RULES:
+- website_id MUST be a direct HTML product page URL.
+- website_id MUST NOT end in .pdf — HTML pages only. If only a PDF exists, leave website_id empty.
+- NEVER use these domains: indiamart.com, alibaba.com, aliexpress.com, amazon.com, ebay.com, made-in-china.com, tradeindia.com, exportersindia.com.
+
+SCORING (verification_score is an INTEGER 0-100):
+- 90-100: exact part confirmed on official manufacturer HTML page.
+- 70-89:  exact part confirmed on a major distributor HTML page (Mouser, RS, Octopart, PLCHardware).
+- 50-69:  similar or related part found, partial match only.
+- 0-49:   not found or only generic results.
+NEVER return score 0 or 1 unless the part is genuinely unfindable after all search steps.
+
+SOURCE TYPE RULES:
+- "official"     → website_id is on the manufacturer's own domain.
+- "distributor"  → website_id is on Mouser, RS, Octopart, PLCHardware, or any other reseller.
+- "not_found"    → part not confirmed anywhere, website_id must be empty.
+- "unknown"      → only valid when score is below 50.
+
+SCORE AND SOURCE_TYPE CONSISTENCY (mandatory):
+- score 90-100 → source_type MUST be "official"
+- score 70-89  → source_type MUST be "distributor"
+- score 50-69  → source_type must be "distributor" or "unknown"
+- score below 50 → source_type must be "not_found" or "unknown"
+NEVER return score 90 or above with source_type "not_found".
+
+Respond with ONLY a single valid JSON object. No markdown, no prose, no explanation:
+{"extracted_item_number":"","description":"","manufacturer":"","type_designation":"","supplementary":"","verified_source":"","verification_score":0,"website_id":"","source_type":"not_found","manufacturer_website":"","manufacturer_inferred":false,"supplementary_used":${useSupplementary},"supplementary_changed":false,"supplementary_original":"","supplementary_type":"unknown"}`;
 }
 
 function tryParseObjectContaining(text, requiredKey) {
-  // Find every {...} candidate (greedy, balanced via lastIndexOf scan) that contains requiredKey
   let i = 0;
   const matches = [];
   while (i < text.length) {
     const open = text.indexOf('{', i);
     if (open === -1) break;
-    // Find matching close brace by simple depth counting
     let depth = 0;
     let close = -1;
     for (let j = open; j < text.length; j++) {
@@ -52,7 +126,6 @@ function tryParseObjectContaining(text, requiredKey) {
     if (!requiredKey || candidate.includes(requiredKey)) matches.push(candidate);
     i = close + 1;
   }
-  // Try the LAST candidate first (Gemini often puts JSON after prose)
   for (let k = matches.length - 1; k >= 0; k--) {
     try { return JSON.parse(matches[k]); } catch { /* try next */ }
   }
@@ -61,18 +134,14 @@ function tryParseObjectContaining(text, requiredKey) {
 
 function extractVerifyJson(text) {
   const cleaned = text.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
-  // Step 1: full text parse
   try { return JSON.parse(cleaned); } catch { /* fall through */ }
-  // Step 2: last {...} block
   const lastOpen = cleaned.lastIndexOf('{');
   const lastClose = cleaned.lastIndexOf('}');
   if (lastOpen !== -1 && lastClose > lastOpen) {
     try { return JSON.parse(cleaned.slice(lastOpen, lastClose + 1)); } catch { /* fall through */ }
   }
-  // Step 3: object containing "verification_score"
   const byScore = tryParseObjectContaining(cleaned, 'verification_score');
   if (byScore) return byScore;
-  // Step 4: object containing "source_type"
   const bySource = tryParseObjectContaining(cleaned, 'source_type');
   if (bySource) return bySource;
   return null;
@@ -80,9 +149,9 @@ function extractVerifyJson(text) {
 
 function safeDefaultRaw(row, useSupplementary) {
   return {
+    extracted_item_number: '',
     description: row.description || '',
     manufacturer: row.manufacturer || '',
-    item_number: row.itemNumber || '',
     type_designation: row.typeDesignation || '',
     supplementary: row.supplementary || '',
     verified_source: 'Parse error - manual review needed',
@@ -98,12 +167,24 @@ function safeDefaultRaw(row, useSupplementary) {
   };
 }
 
-function mapResult(raw, rowIndex) {
+// Takes the full original row as second argument so we can
+// always preserve the original Excel itemNumber in the output.
+function mapResult(raw, originalRow) {
   return {
-    rowIndex, internalItemNumber: '',
-    description: raw.description || '', manufacturer: raw.manufacturer || '',
-    itemNumber: raw.item_number || '', typeDesignation: raw.type_designation || '',
-    supplementary: raw.supplementary || '',
+    rowIndex: originalRow.rowIndex,
+    internalItemNumber: '',
+
+    // Original itemNumber from Excel — always preserved
+    itemNumber: originalRow.itemNumber || '',
+
+    // Part number the AI extracted from description text
+    extractedItemNumber: raw.extracted_item_number || '',
+
+    description: raw.description || originalRow.description || '',
+    manufacturer: raw.manufacturer || originalRow.manufacturer || '',
+    typeDesignation: raw.type_designation || originalRow.typeDesignation || '',
+    supplementary: raw.supplementary || originalRow.supplementary || '',
+
     verifiedSource: raw.verified_source || 'Not found',
     verificationScore: raw.verification_score || 0,
     websiteId: raw.website_id || '',
@@ -123,7 +204,7 @@ async function verifyRow(row, useSupplementary, correlationId) {
     logger.warn(`[WEB VERIFY] Row ${correlationId} → MOCK MODE (no real API call)`);
     return mockVerificationResult(row.rowIndex, row);
   }
-  
+
   const apiKey = geminiPool.getNextKey();
   const keyNum = geminiPool.getKeyIndex();
   logger.info(`[WEB VERIFY] Row ${correlationId} → calling Gemini 2.5-flash with Google Search [KEY ${keyNum}/${geminiPool.getKeyCount()}]`);
@@ -132,25 +213,28 @@ async function verifyRow(row, useSupplementary, correlationId) {
     const start = Date.now();
     try {
       const prompt = buildPrompt(row, useSupplementary);
+
       const model = getClient(apiKey).getGenerativeModel({
         model: 'gemini-2.5-flash',
         tools: [{ googleSearch: {} }],
       });
+
       const genResult = await model.generateContent(prompt);
       const text = genResult.response.text();
+
       let parsed = extractVerifyJson(text);
       if (!parsed) {
         logger.warn(`[WEB VERIFY] Row ${correlationId} → JSON parse failed after 4 attempts, returning safe default`);
         parsed = safeDefaultRaw(row, useSupplementary);
       }
 
-      let result = mapResult(parsed, row.rowIndex);
+      // Pass full original row so mapResult can preserve itemNumber from Excel
+      let result = mapResult(parsed, row);
 
       if (result.websiteId) {
         const urlCheck = await validateUrl(result.websiteId);
         result.urlValidationStatus = urlCheck.status;
         if (urlCheck.status === 'broken') {
-          // 4xx/5xx — clear URL only, keep score/source_type
           result.websiteId = '';
         } else if (urlCheck.status === 'redirected' && urlCheck.finalUrl) {
           result.websiteId = urlCheck.finalUrl;
