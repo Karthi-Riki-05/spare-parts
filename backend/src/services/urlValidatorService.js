@@ -6,10 +6,10 @@ async function validateUrl(url) {
     const res = await fetch(url, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(15000) });
     if (res.status === 200) return { status: 'valid', finalUrl: url };
     if (res.status >= 300 && res.status < 400) return { status: 'redirected', finalUrl: res.headers.get('location') || url };
-    logger.info(`[URL VALIDATOR] URL broken but part confirmed — keeping score and source_type, clearing websiteId only: ${url}`);
-    return { status: 'broken', finalUrl: null };
+    logger.info(`[URL VALIDATOR] URL check returned status ${res.status} — keeping URL: ${url}`);
+    return { status: 'unverified', finalUrl: url };
   } catch {
-    logger.info(`[URL VALIDATOR] URL timeout — keeping URL as unverified: ${url}`);
+    logger.info(`[URL VALIDATOR] URL timeout or error — keeping URL as unverified: ${url}`);
     return { status: 'unverified', finalUrl: url };
   }
 }

@@ -109,15 +109,34 @@ export function useVerification() {
       try {
         setPhase('normalizing');
         setProgressMessage('Normalizing data...');
-        setProgress(50);
+        setProgress(0);
 
-        const result = await api.normalize(base64, sheetIndex, format);
-        setNormalizedRows(result.rows);
-        originalDataRef.current = result.originalData;
-        rawDataRef.current = result.originalData;
-        setRowCount(result.rows.length);
+        let accumulator: NormalizedRow[] = [];
+        let allOriginalData: RawRow[] = [];
+        const BATCH_SIZE = 500; // Increased from 200 to 500 for speed
+        let offset = 0;
+        let totalOriginalRows = count > 0 ? count : 1; 
 
-        if (count > 5000) {
+        while (offset < totalOriginalRows) {
+          const result = await api.normalize(base64, sheetIndex, format, undefined, BATCH_SIZE, offset);
+          accumulator = [...accumulator, ...(result.rows || [])];
+          allOriginalData = [...allOriginalData, ...(result.originalData || [])];
+          
+          if (result.totalOriginalRows) {
+            totalOriginalRows = result.totalOriginalRows;
+          }
+
+          offset += BATCH_SIZE;
+          setProgress(Math.min(100, Math.round((offset / totalOriginalRows) * 100)));
+          setProgressMessage(`Normalizing data... ${Math.min(offset, totalOriginalRows)} / ${totalOriginalRows}`);
+        }
+
+        setNormalizedRows(accumulator);
+        originalDataRef.current = allOriginalData;
+        rawDataRef.current = allOriginalData;
+        setRowCount(accumulator.length);
+
+        if (totalOriginalRows > 5000) {
           setShowLargeFileWarning(true);
         }
 
@@ -306,7 +325,12 @@ export function useVerification() {
 
   const exportData = useCallback(async () => {
     try {
-      const blob = await api.exportData(results, originalDataRef.current, fileName);
+      const blob = await api.exportData(
+        results,
+        originalDataRef.current,
+        fileName,
+        formatResult?.format
+      );
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -314,9 +338,9 @@ export function useVerification() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError((err as Error).message);
+      setError(`Download failed: ${(err as Error).message}`);
     }
-  }, [results, fileName]);
+  }, [results, fileName, formatResult]);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();

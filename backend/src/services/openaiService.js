@@ -3,12 +3,30 @@ const { config } = require('../config');
 const { withRetry } = require('../utils/retry');
 const { logger } = require('../utils/logger');
 const { logAiError } = require('../utils/aiErrorLogger');
-const { mockFormatDetection, mockNormalization, mockNormalizeRow, buildMockDetection } = require('./mocks/openaiMock');
+const { buildMockDetection } = require('./mocks/openaiMock');
 
-let genAI = null;
-function getClient() {
-  if (!genAI) genAI = new GoogleGenerativeAI(config.geminiApiKey);
-  return genAI;
+// Multi-client pool for rate-limit avoidance
+let clients = [];
+let nextClientIdx = 0;
+
+function getClients() {
+  if (clients.length === 0) {
+    const keys = [config.geminiApiKey, config.geminiApiKey2, config.geminiApiKey3].filter(k => k && k.trim());
+    clients = keys.map(key => ({
+      genAI: new GoogleGenerativeAI(key),
+      suffix: key.slice(-4)
+    }));
+    logger.info(`AI Pool initialized with ${clients.length} keys.`);
+  }
+  return clients;
+}
+
+function getNextClient() {
+  const pool = getClients();
+  if (pool.length === 0) throw new Error('No Gemini API keys configured');
+  const client = pool[nextClientIdx];
+  nextClientIdx = (nextClientIdx + 1) % pool.length;
+  return client;
 }
 
 function stripJsonFence(text) {
@@ -24,53 +42,24 @@ function extractJson(text) {
 }
 
 async function detectFormat(sampleRows, correlationId) {
-  if (config.openaiMockMode) {
-    logger.warn(`[FORMAT DETECT] Row ${correlationId} → MOCK MODE (no real API call)`);
-    return buildMockDetection(sampleRows);
-  }
-  logger.info(`[FORMAT DETECT] Row ${correlationId} → calling Gemini 2.0-flash (real API)`);
-  const prompt = `Analyze this Excel file structure. Determine which format it matches:\n\nFORMAT A: Data already in separate columns\nFORMAT B: All data in ONE column\nFORMAT C: Incomplete — Manufacturer column empty\n\nSample rows:\n${JSON.stringify(sampleRows, null, 2)}\n\nRespond ONLY with valid JSON, no markdown, no backticks:\n{"format":"A" or "B" or "C","confidence":0-100,"reasoning":"one sentence","suggestedMapping":{"internalItemNumber":"col_0","description":"col_X","manufacturer":"col_X","itemNumber":"col_X","typeDesignation":"col_X","supplementary":"col_X"}}`;
+  if (config.openaiMockMode) return buildMockDetection(sampleRows);
+  
+  const client = getNextClient();
+  logger.info(`[FORMAT DETECT] ${correlationId} → calling Gemini (Key ...${client.suffix})`);
+  
+  const prompt = `Analyze this Excel file structure. Respond ONLY with valid JSON:\n\nSample rows:\n${JSON.stringify(sampleRows, null, 2)}\n\n{"format":"A" or "B" or "C","confidence":0-100,"reasoning":"one sentence","suggestedMapping":{"internalItemNumber":"col_0","description":"col_X","manufacturer":"col_X","itemNumber":"col_X","typeDesignation":"col_X","supplementary":"col_X"}}`;
 
   return withRetry(async () => {
     const start = Date.now();
     try {
-      const model = getClient().getGenerativeModel({
+      const model = client.genAI.getGenerativeModel({
         model: 'gemini-flash-latest',
         generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
       });
       const genResult = await model.generateContent(prompt);
       const text = genResult.response.text();
-      if (!text) throw new Error('Empty response from Gemini');
       const parsed = extractJson(text);
-      logger.info(`[FORMAT DETECT] Row ${correlationId} → response received in ${Date.now() - start}ms | format: ${parsed.format}`);
-      return parsed;
-    } catch (error) {
-      logAiError('FORMAT DETECT', correlationId, error);
-      throw error;
-    }
-  }, config.maxRetries, config.retryDelayMs, correlationId);
-}
-
-async function normalizeRow(rawText, correlationId) {
-  if (config.openaiMockMode) {
-    logger.warn(`[FORMAT DETECT] Row ${correlationId} → MOCK MODE (no real API call)`);
-    return mockNormalizeRow(rawText);
-  }
-  logger.info(`[FORMAT DETECT] Row ${correlationId} → calling Gemini 2.0-flash (real API)`);
-  const prompt = `Extract structured spare parts data from this raw text.\n\nInput: "${rawText}"\n\nRules:\n1. Look for: "Artnr:", "Art.nr.", "P/N:", "Ref:", "ERS."\n2. Manufacturer = recognizable brand (SKF, ABB, Siemens, Bosch, Atlas Copco, Festo, etc.)\n3. If a field contains "ERS." — keep the FULL value including ERS. for the handler to process\n4. If item_number == type_designation: put in item_number only\n5. If any field (description, manufacturer) contains Swedish language text, translate it to English. Preserve technical part numbers, model codes, and alphanumeric identifiers exactly as-is — only translate human-readable descriptive words.\n   Examples: MINNESMODUL → Memory Module, KUGGVÄXELMOTOR → Gear Motor, KONA ANALOGGIVARE → Cone Analog Sensor, FIRMWARE → FIRMWARE (keep as-is)\n6. Missing = empty string\n7. Sequences like ", -" or "- ," are empty data entry placeholders — treat them as null/missing. Do not include them in any field.\n8. For the manufacturer reference code: put it in "type_designation" if it looks like a model/type code. Put it in "item_number" if it looks like a pure numeric or alphanumeric order code. Use both fields if both are clearly present in the text.\n\nReturn ONLY valid JSON, no markdown, no backticks:\n{"description":"","manufacturer":"","item_number":"","type_designation":"","supplementary":"","swedish_found":false,"ers_removed":false}`;
-
-  return withRetry(async () => {
-    const start = Date.now();
-    try {
-      const model = getClient().getGenerativeModel({
-        model: 'gemini-flash-latest',
-        generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
-      });
-      const genResult = await model.generateContent(prompt);
-      const text = genResult.response.text();
-      if (!text) throw new Error('Empty response from Gemini');
-      const parsed = extractJson(text);
-      logger.info(`[FORMAT DETECT] Row ${correlationId} → response received in ${Date.now() - start}ms | format: normalized`);
+      logger.info(`[FORMAT DETECT] ${correlationId} → done in ${Date.now() - start}ms | format: ${parsed.format}`);
       return parsed;
     } catch (error) {
       logAiError('FORMAT DETECT', correlationId, error);
@@ -80,27 +69,23 @@ async function normalizeRow(rawText, correlationId) {
 }
 
 /**
- * Batch normalize 10 rows in ONE Gemini call (instead of 10 calls)
- * Returns array of normalized results in same order as input
+ * Batch normalize rows in ONE call
+ * Triple-key rotation ensures we never hit rate limits during large file uploads
  */
 async function normalizeRowsBatch(rawTextsWithIndices, correlationId) {
   if (!rawTextsWithIndices.length) return [];
   
-  if (config.openaiMockMode) {
-    logger.warn(`[BATCH NORMALIZE] ${rawTextsWithIndices.length} rows → MOCK MODE`);
-    return rawTextsWithIndices.map(({ text }) => mockNormalizeRow(text));
-  }
-
+  const client = getNextClient();
   const batchSize = rawTextsWithIndices.length;
-  logger.info(`[BATCH NORMALIZE] ${batchSize} rows → calling Gemini 2.0-flash (single batch call)`);
+  logger.info(`[BATCH NORMALIZE] ${batchSize} rows → calling Gemini (Key ...${client.suffix})`);
 
   const itemsJson = rawTextsWithIndices.map(({ text }, i) => `${i + 1}. "${text}"`).join('\n');
-  const prompt = `Extract structured spare parts data from these ${batchSize} raw texts.\n\n${itemsJson}\n\nRules:\n1. Look for: "Artnr:", "Art.nr.", "P/N:", "Ref:", "ERS."\n2. Manufacturer = recognizable brand (SKF, ABB, Siemens, Bosch, Atlas Copco, Festo, etc.)\n3. If a field contains "ERS." — keep the FULL value including ERS. for the handler to process\n4. If item_number == type_designation: put in item_number only\n5. If any field contains Swedish language text, translate to English. Keep technical codes as-is.\n6. Missing = empty string\n7. Sequences like ", -" are placeholders — treat as null/missing\n8. Use type_designation for model/type codes, item_number for order codes\n\nReturn a JSON array with ${batchSize} items (one per input), in same order. NO interpretation of nested structure — each is a separate object:\n[{"description":"","manufacturer":"","item_number":"","type_designation":"","supplementary":"","swedish_found":false,"ers_removed":false}, ...]`;
+  const prompt = `Extract spare parts data from these ${batchSize} texts. Respond with a JSON array of ${batchSize} objects.\n\n${itemsJson}\n\nRULES:\n1. Manufacturer = brand (SKF, ABB, etc.)\n2. item_number = order code, type_designation = model\n3. Translate Swedish descriptive words to English (Keep technical codes as-is).\n4. Return exactly ${batchSize} items in input order.\n\n[{"description":"","manufacturer":"","item_number":"","type_designation":"","supplementary":"","swedish_found":false}, ...]`;
 
   return withRetry(async () => {
     const start = Date.now();
     try {
-      const model = getClient().getGenerativeModel({
+      const model = client.genAI.getGenerativeModel({
         model: 'gemini-flash-latest',
         generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
       });
@@ -111,18 +96,30 @@ async function normalizeRowsBatch(rawTextsWithIndices, correlationId) {
       const cleaned = stripJsonFence(text);
       const array = JSON.parse(cleaned);
       
-      if (!Array.isArray(array)) throw new Error('Expected JSON array from batch normalize');
-      if (array.length !== batchSize) {
-        logger.warn(`[BATCH NORMALIZE] Expected ${batchSize} results, got ${array.length}`);
-      }
+      if (!Array.isArray(array)) throw new Error('Expected JSON array');
+      
+      // Sanitization layer: Convert any null/undefined values to empty strings
+      const sanitized = array.map(item => ({
+        description: String(item.description || ''),
+        manufacturer: String(item.manufacturer || ''),
+        item_number: String(item.item_number || ''),
+        type_designation: String(item.type_designation || ''),
+        supplementary: String(item.supplementary || ''),
+        swedish_found: Boolean(item.swedish_found)
+      }));
 
-      logger.info(`[BATCH NORMALIZE] ${batchSize} rows processed in ${Date.now() - start}ms`);
-      return array.slice(0, batchSize); // Ensure exact count
+      logger.info(`[BATCH NORMALIZE] ${batchSize} rows processed in ${Date.now() - start}ms (Key ...${client.suffix})`);
+      return sanitized.slice(0, batchSize);
     } catch (error) {
       logAiError('BATCH NORMALIZE', correlationId, error);
       throw error;
     }
   }, config.maxRetries, config.retryDelayMs, correlationId);
+}
+
+// Single row fallback (Legacy)
+async function normalizeRow(rawText, correlationId) {
+  return (await normalizeRowsBatch([{ text: rawText }], correlationId))[0];
 }
 
 module.exports = { detectFormat, normalizeRow, normalizeRowsBatch };

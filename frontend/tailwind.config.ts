@@ -5,16 +5,17 @@ const config: Config = {
     './app/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         bg: {
-          primary: '#0b0e14',
-          surface: '#10131a',
-          card: '#141825',
+          primary: 'var(--bg-primary)',
+          surface: 'var(--bg-surface)',
+          card: 'var(--bg-card)',
         },
         brand: {
-          cyan: '#06b6d4',
+          cyan: 'var(--brand-cyan)',
           green: '#34d399',
           red: '#ef4444',
           yellow: '#fbbf24',
@@ -24,13 +25,13 @@ const config: Config = {
           purple: '#a78bfa',
         },
         border: {
-          DEFAULT: '#1a1f2e',
-          hover: '#222838',
+          DEFAULT: 'var(--border)',
+          hover: 'var(--border-hover)',
         },
         text: {
-          primary: '#c8cdd5',
-          muted: '#5c6578',
-          hint: '#3b4559',
+          primary: 'var(--text-primary)',
+          muted: 'var(--text-muted)',
+          hint: 'var(--text-hint)',
         },
       },
       fontFamily: {

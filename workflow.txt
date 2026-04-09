@@ -332,3 +332,5 @@ Fix:     lsof -i :3001 (or :3000) then kill the process
 ===============================================================================
  END OF WORKFLOW
 ===============================================================================
+docker compose -f docker-compose.prod.yml exec backend sh -c "rm -f /app/data/cache.db /app/data/jobs.db"
+docker compose -f docker-compose.prod.yml restart backend

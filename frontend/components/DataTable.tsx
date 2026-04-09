@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, forwardRef } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import type { VerificationResult, NormalizedRow } from '@spare-parts/types';
 import { useEditState } from '@/hooks/useEditState';
@@ -49,7 +49,7 @@ const TABLE_HEIGHT = 600;
 const STICKY_COL_WIDTH = 140;
 
 function ScoreBadge({ score }: { score: number }) {
-  if (!score || score === 0) return <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11 }}>—</span>;
+  if (score == null || Number.isNaN(score)) return <span style={{ opacity: 0.5, fontSize: 11 }}>—</span>;
   let bg = '#dc2626';
   if (score >= 90) bg = '#16a34a';
   else if (score >= 70) bg = '#ca8a04';
@@ -67,7 +67,7 @@ function ScoreBadge({ score }: { score: number }) {
 }
 
 function WebsiteLink({ url }: { url: string }) {
-  if (!url) return <span style={{ color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', fontSize: 12 }}>—</span>;
+  if (!url) return <span style={{ opacity: 0.5, fontStyle: 'italic', fontSize: 12 }}>—</span>;
   let domain = url;
   try { domain = new URL(url).hostname.replace('www.', ''); } catch {}
   return (
@@ -75,7 +75,8 @@ function WebsiteLink({ url }: { url: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      style={{ color: '#22d3ee', textDecoration: 'underline', fontSize: 11 }}
+      className="text-brand-cyan hover:underline"
+      style={{ fontSize: 11 }}
       onClick={(e) => e.stopPropagation()}
     >
       {domain}
@@ -163,8 +164,8 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
             ...style,
             display: 'flex',
             alignItems: 'center',
-            borderBottom: '1px solid var(--border, #1e2536)',
-            background: isHovered ? 'rgba(255,255,255,0.04)' : 'transparent',
+            borderBottom: '1px solid var(--border, #e2e8f0)',
+            background: isHovered ? 'rgba(128,128,128,0.1)' : 'transparent',
             width: totalWidth,
           }}
           onMouseEnter={() => setHoveredRow(index)}
@@ -214,7 +215,7 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
                     position: 'sticky',
                     left: 0,
                     zIndex: 1,
-                    background: isHovered ? '#162032' : '#0f0f1a',
+                    backgroundColor: isHovered ? 'rgba(128,128,128,0.05)' : 'var(--bg-surface)',
                   }
                 : {}),
             };
@@ -234,7 +235,7 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
                   <input
                     autoFocus
                     defaultValue={displayVal}
-                    className="w-full bg-border border border-brand-cyan text-slate-200 px-2 py-1 rounded font-mono text-[11px] outline-none"
+                    className="w-full bg-bg-surface border border-brand-cyan text-text-primary px-2 py-1 rounded font-mono text-[11px] outline-none"
                     onKeyDown={(e) => handleKeyDown(e, rowIndex, col.key)}
                     onBlur={(e) => handleBlur(e, rowIndex, col.key)}
                   />
@@ -243,7 +244,7 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
                     className="font-mono text-[11px] px-2.5 truncate"
                     style={
                       isEmpty
-                        ? { color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', fontSize: 12 }
+                        ? { opacity: 0.5, fontStyle: 'italic', fontSize: 12 }
                         : undefined
                     }
                   >
@@ -269,13 +270,17 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
           50%      { opacity: 1;   transform: scale(1.15); }
         }
       `}</style>
-      {/* Scrollable container for both header and body */}
-      <div style={{ overflowX: 'auto', width: '100%' }}>
+      {/* Container to prevent double scrollbars. react-window handles them natively now. */}
+      <div style={{ width: '100%' }}>
         {/* Header */}
         <div
-          className="flex bg-bg-card border-b-2 border-border"
-          style={{ width: totalWidth, position: 'sticky', top: 0, zIndex: 3 }}
+          id="table-header-container"
+          style={{ width: '100%', overflowX: 'hidden' }}
         >
+          <div
+            className="flex bg-bg-card border-b-2 border-border"
+            style={{ width: totalWidth, position: 'relative', top: 0, zIndex: 3 }}
+          >
           {columns.map((col, colIdx) => (
             <div
               key={col.key}
@@ -287,7 +292,7 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
                       position: 'sticky',
                       left: 0,
                       zIndex: 4,
-                      background: '#1a1a2e',
+                      backgroundColor: 'var(--bg-card)',
                     }
                   : {}),
               }}
@@ -298,6 +303,7 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
               )}
             </div>
           ))}
+          </div>
         </div>
         {/* Rows */}
         <List
@@ -305,7 +311,23 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
           height={Math.min(TABLE_HEIGHT, rows.length * ROW_HEIGHT)}
           itemCount={rows.length}
           itemSize={ROW_HEIGHT}
-          width={totalWidth}
+          width="100%"
+          innerElementType={forwardRef(({ style, ...rest }, ref) => (
+            <div
+              ref={ref as any}
+              style={{
+                ...style,
+                width: totalWidth,
+              }}
+              {...rest}
+            />
+          ))}
+          onScroll={({ scrollLeft }) => {
+            const headerContainer = document.getElementById('table-header-container');
+            if (headerContainer) {
+              headerContainer.scrollLeft = scrollLeft;
+            }
+          }}
           onItemsRendered={({ visibleStartIndex, visibleStopIndex }) => {
             setVisibleRange({
               start: visibleStartIndex + 1,

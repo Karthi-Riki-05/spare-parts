@@ -93,12 +93,14 @@ export const api = {
   detectFormat: (fileData: string, sheetIndex = 0) =>
     post<FormatDetectionResult & { rowCount: number }>('/detect-format', { fileData, sheetIndex }),
 
-  normalize: (fileData: string, sheetIndex: number, format: FormatType, mapping?: ColumnMapping) =>
-    post<{ rows: NormalizedRow[]; originalData: RawRow[] }>('/normalize', {
+  normalize: (fileData: string, sheetIndex: number, format: FormatType, mapping?: ColumnMapping, limit?: number, offset?: number) =>
+    post<{ rows: NormalizedRow[]; originalData: RawRow[]; totalOriginalRows: number }>('/normalize', {
       fileData,
       sheetIndex,
       format,
       mapping,
+      limit,
+      offset,
     }),
 
   manualMap: (fileData: string, sheetIndex: number, mapping: ColumnMapping) =>
@@ -112,11 +114,12 @@ export const api = {
     results: VerificationResult[],
     originalData: RawRow[],
     fileName: string,
+    originalFormat?: string,
   ): Promise<Blob> => {
     const res = await fetch(`${BASE}/export`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ results, originalData, fileName }),
+      body: JSON.stringify({ results, originalData, fileName, originalFormat }),
     });
     if (!res.ok) throw new Error('Export failed');
     return res.blob();

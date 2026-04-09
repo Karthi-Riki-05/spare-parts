@@ -27,15 +27,16 @@ async function handleVerify(req, res, next) {
     const pLimit = (await import('p-limit')).default;
     
     // Create 3 independent pools for parallel processing
-    const geminiPool = pLimit(15);  // Gemini calls (can handle 15 concurrent with multi-key)
-    const rulePool = pLimit(10);    // Rule enforcement (fallback)
-    const urlPool = pLimit(30);     // URL validation (independent, doesn't block)
+    const maxC = config.maxConcurrency || 5;
+    const geminiPool = pLimit(Math.max(15, maxC));  // Ensure AI pool is at least as large as orchestration
+    const rulePool = pLimit(maxC);
+    const urlPool = pLimit(30);
     
-    const mainPool = pLimit(config.maxConcurrency); // Main orchestration pool
+    const mainPool = pLimit(maxC);
     const actualBatchSize = batchSize || config.batchSize;
     const correlationId = req.correlationId;
 
-    logger.info('Starting verification', { correlationId, rowCount: rows.length, maxConcurrency: config.maxConcurrency });
+    logger.info('Starting verification', { correlationId, rowCount: rows.length, maxConcurrency: maxC, timeout: config.verificationTimeoutMs });
 
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
     const heartbeat = setInterval(() => { if (!res.destroyed) res.write(': heartbeat\n\n'); }, 15000);
@@ -53,11 +54,11 @@ async function handleVerify(req, res, next) {
     const totalBatches = Math.ceil(total / actualBatchSize);
     const startTime = Date.now();
 
-    const ROW_HARD_TIMEOUT_MS = 30000; // Per-row timeout (30s as per Phase 2 spec)
+    const ROW_HARD_TIMEOUT_MS = config.verificationTimeoutMs; 
     const withRowTimeout = (promise, rowIndex) => Promise.race([
       promise,
       new Promise((_, reject) => setTimeout(
-        () => reject(Object.assign(new Error('Row timeout (30s)'), { __rowTimeout: true, rowIndex })),
+        () => reject(Object.assign(new Error(`Row timeout (${ROW_HARD_TIMEOUT_MS/1000}s)`), { __rowTimeout: true, rowIndex })),
         ROW_HARD_TIMEOUT_MS,
       )),
     ]);
@@ -145,9 +146,7 @@ async function handleVerify(req, res, next) {
           
           // Step 5: Merge URL validation results
           if (urlResult) {
-            if (urlResult.status === 'broken') {
-              r.websiteId = '';
-            } else if (urlResult.status === 'redirected' && urlResult.finalUrl) {
+            if (urlResult.status === 'redirected' && urlResult.finalUrl) {
               r.websiteId = urlResult.finalUrl;
             }
             r.urlValidationStatus = urlResult.status;
@@ -205,10 +204,10 @@ async function handleVerify(req, res, next) {
             itemNumber: deduped.itemNumber || '',
             typeDesignation: deduped.typeDesignation || '',
             supplementary: deduped.supplementary || '',
-            verifiedSource: 'Verification timed out',
+            verifiedSource: 'Not found (Timeout)',
             verificationScore: 0,
             websiteId: '',
-            sourceType: 'timeout',
+            sourceType: 'not_found',
             manufacturerWebsite: '',
             manufacturerInferred: false,
             supplementaryUsed: false,

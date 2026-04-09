@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:fixtures": "node tests/fixtures/create-fixtures.js"
+    "test:fixtures": "node tests/fixtures/create-fixtures.js",
+    "cache:clear": "node src/scripts/clear-cache.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.7.0",

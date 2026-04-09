@@ -15,8 +15,10 @@ function deduplicateVerified(result) {
 }
 
 function normalizeCanonicalField(row) {
-  if (!row.itemNumber.trim() && row.typeDesignation.trim()) {
-    return { ...row, itemNumber: row.typeDesignation, typeDesignation: '' };
+  const item = (row.itemNumber || '').trim();
+  const type = (row.typeDesignation || '').trim();
+  if (!item && type) {
+    return { ...row, itemNumber: type, typeDesignation: '' };
   }
   return row;
 }

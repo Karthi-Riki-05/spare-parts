@@ -234,9 +234,7 @@ async function verifyRow(row, useSupplementary, correlationId) {
       if (result.websiteId) {
         const urlCheck = await validateUrl(result.websiteId);
         result.urlValidationStatus = urlCheck.status;
-        if (urlCheck.status === 'broken') {
-          result.websiteId = '';
-        } else if (urlCheck.status === 'redirected' && urlCheck.finalUrl) {
+        if (urlCheck.status === 'redirected' && urlCheck.finalUrl) {
           result.websiteId = urlCheck.finalUrl;
         }
         // 'unverified' (timeout) → keep websiteId as-is

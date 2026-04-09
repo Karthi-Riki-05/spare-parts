@@ -853,3 +853,600 @@
 2026-04-08 16:28:51.687 INFO  GEMINI_API_KEY   : SET (...G7NU)
 2026-04-08 16:28:51.687 INFO  AI PROVIDER      : Google Gemini (single provider)
 2026-04-08 16:28:51.687 INFO ─────────────────────────────────
+2026-04-08 16:35:09.306 INFO Shutting down...
+2026-04-08 16:35:33.554 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 16:35:33.554 INFO ─────────────────────────────────
+2026-04-08 16:35:33.554 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 16:35:33.554 INFO ─────────────────────────────────
+2026-04-08 16:35:33.554 INFO  MOCK_MODE        : false
+2026-04-08 16:35:33.554 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 16:35:33.554 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 16:35:33.555 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 16:35:33.555 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 16:35:33.555 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 16:35:33.555 INFO ─────────────────────────────────
+2026-04-08 16:39:09.532 INFO Shutting down...
+2026-04-08 16:39:15.281 INFO Server running on http://localhost:3001 {"nodeEnv":"development","mockMode":false}
+2026-04-08 16:39:15.281 INFO ─────────────────────────────────
+2026-04-08 16:39:15.281 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 16:39:15.282 INFO ─────────────────────────────────
+2026-04-08 16:39:15.282 INFO  MOCK_MODE        : false
+2026-04-08 16:39:15.282 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 16:39:15.282 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 16:39:15.282 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 16:39:15.282 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 16:39:15.282 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 16:39:15.282 INFO ─────────────────────────────────
+2026-04-08 17:03:28.832 INFO Shutting down...
+2026-04-08 17:05:13.671 INFO Server running on http://localhost:3001 {"nodeEnv":"production","mockMode":false}
+2026-04-08 17:05:13.671 INFO ─────────────────────────────────
+2026-04-08 17:05:13.671 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 17:05:13.671 INFO ─────────────────────────────────
+2026-04-08 17:05:13.671 INFO  MOCK_MODE        : false
+2026-04-08 17:05:13.672 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 17:05:13.672 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 17:05:13.672 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 17:05:13.672 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 17:05:13.672 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 17:05:13.672 INFO ─────────────────────────────────
+2026-04-08 17:13:51.088 INFO Shutting down...
+2026-04-08 17:57:31.043 INFO Server running on http://localhost:3001 {"nodeEnv":"production","mockMode":false}
+2026-04-08 17:57:31.043 INFO ─────────────────────────────────
+2026-04-08 17:57:31.043 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 17:57:31.043 INFO ─────────────────────────────────
+2026-04-08 17:57:31.043 INFO  MOCK_MODE        : false
+2026-04-08 17:57:31.044 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 17:57:31.044 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 17:57:31.044 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 17:57:31.044 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 17:57:31.044 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 17:57:31.044 INFO ─────────────────────────────────
+2026-04-08 17:57:31.930 INFO Shutting down...
+2026-04-08 17:58:22.437 INFO Server running on http://localhost:3001 {"nodeEnv":"production","mockMode":false}
+2026-04-08 17:58:22.437 INFO ─────────────────────────────────
+2026-04-08 17:58:22.438 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 17:58:22.438 INFO ─────────────────────────────────
+2026-04-08 17:58:22.438 INFO  MOCK_MODE        : false
+2026-04-08 17:58:22.438 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 17:58:22.438 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 17:58:22.438 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 17:58:22.438 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 17:58:22.438 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 17:58:22.438 INFO ─────────────────────────────────
+2026-04-08 18:14:45.384 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 18:15:45.712 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 18:16:06.738 INFO [4f7c08a4-0a0b-49d9-a1e3-2e119e9d5f63] Detecting format {"totalRows":20}
+2026-04-08 18:16:06.738 INFO [FORMAT DETECT] Row 4f7c08a4-0a0b-49d9-a1e3-2e119e9d5f63 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:12.678 INFO [FORMAT DETECT] Row 4f7c08a4-0a0b-49d9-a1e3-2e119e9d5f63 → response received in 5939ms | format: B
+2026-04-08 18:16:18.843 INFO [27eb17b3-574b-4c3c-bfb8-04aad2d87913] Normalizing data {"format":"B","rowCount":20}
+2026-04-08 18:16:18.852 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.852 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.853 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.853 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.853 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.853 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.853 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.853 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.854 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.854 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.854 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.854 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.854 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.854 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:18.854 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:22.674 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 3821ms | format: normalized
+2026-04-08 18:16:22.675 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:22.678 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 3824ms | format: normalized
+2026-04-08 18:16:22.678 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:22.776 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 3922ms | format: normalized
+2026-04-08 18:16:22.776 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:23.044 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 4190ms | format: normalized
+2026-04-08 18:16:23.044 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:23.048 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 4194ms | format: normalized
+2026-04-08 18:16:23.048 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:23.120 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 4267ms | format: normalized
+2026-04-08 18:16:23.451 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 4599ms | format: normalized
+2026-04-08 18:16:23.553 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 4699ms | format: normalized
+2026-04-08 18:16:23.554 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 4700ms | format: normalized
+2026-04-08 18:16:23.981 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 5128ms | format: normalized
+2026-04-08 18:16:24.085 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 5232ms | format: normalized
+2026-04-08 18:16:24.304 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 5449ms | format: normalized
+2026-04-08 18:16:24.887 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 6033ms | format: normalized
+2026-04-08 18:16:25.818 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 6965ms | format: normalized
+2026-04-08 18:16:25.857 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 3182ms | format: normalized
+2026-04-08 18:16:26.226 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 7373ms | format: normalized
+2026-04-08 18:16:26.537 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 3761ms | format: normalized
+2026-04-08 18:16:26.839 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 3790ms | format: normalized
+2026-04-08 18:16:27.367 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 4689ms | format: normalized
+2026-04-08 18:16:27.667 INFO [FORMAT DETECT] Row 27eb17b3-574b-4c3c-bfb8-04aad2d87913 → response received in 4623ms | format: normalized
+2026-04-08 18:16:35.533 INFO [4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c] Normalizing data {"format":"B","rowCount":20}
+2026-04-08 18:16:35.533 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.533 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:35.534 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:39.131 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 3596ms | format: normalized
+2026-04-08 18:16:39.131 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:39.178 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 3643ms | format: normalized
+2026-04-08 18:16:39.178 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:39.583 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 4049ms | format: normalized
+2026-04-08 18:16:39.584 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:39.798 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 4264ms | format: normalized
+2026-04-08 18:16:39.798 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:39.825 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 4291ms | format: normalized
+2026-04-08 18:16:39.826 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → calling Gemini 2.0-flash (real API)
+2026-04-08 18:16:40.027 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 4494ms | format: normalized
+2026-04-08 18:16:40.170 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 4636ms | format: normalized
+2026-04-08 18:16:40.171 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 4637ms | format: normalized
+2026-04-08 18:16:40.172 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 4638ms | format: normalized
+2026-04-08 18:16:40.370 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 4836ms | format: normalized
+2026-04-08 18:16:40.809 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 5275ms | format: normalized
+2026-04-08 18:16:41.034 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 5500ms | format: normalized
+2026-04-08 18:16:41.238 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 5704ms | format: normalized
+2026-04-08 18:16:42.795 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 7261ms | format: normalized
+2026-04-08 18:16:42.796 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 3662ms | format: normalized
+2026-04-08 18:16:42.796 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 7262ms | format: normalized
+2026-04-08 18:16:43.627 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 4042ms | format: normalized
+2026-04-08 18:16:43.740 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 3914ms | format: normalized
+2026-04-08 18:16:44.511 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 5332ms | format: normalized
+2026-04-08 18:16:45.061 INFO [FORMAT DETECT] Row 4973f22f-d9ca-4b4f-9eef-fba6e1ed8e7c → response received in 5263ms | format: normalized
+2026-04-08 18:16:58.524 INFO [cbded076-1ace-4dd6-b939-bcb4dd7f0d8f] Starting verification {"rowCount":20,"maxConcurrency":15}
+2026-04-08 18:16:58.543 INFO [SQLITE] Cache database ready at /app/data/cache.db
+2026-04-08 18:16:58.543 INFO [CACHE] MISS key=5073dc69...
+2026-04-08 18:16:58.543 INFO [CACHE] MISS key=60cc2790...
+2026-04-08 18:16:58.543 INFO [CACHE] MISS key=af3cc23e...
+2026-04-08 18:16:58.544 INFO [CACHE] MISS key=65a2fc05...
+2026-04-08 18:16:58.544 INFO [CACHE] MISS key=5ae889a1...
+2026-04-08 18:16:58.544 INFO [CACHE] MISS key=2472f4c1...
+2026-04-08 18:16:58.544 INFO [CACHE] MISS key=b3d6f461...
+2026-04-08 18:16:58.544 INFO [CACHE] MISS key=596b4605...
+2026-04-08 18:16:58.544 INFO [CACHE] MISS key=007bedd7...
+2026-04-08 18:16:58.544 INFO [CACHE] MISS key=45a17287...
+2026-04-08 18:16:58.544 INFO [CACHE] MISS key=c839af96...
+2026-04-08 18:16:58.544 INFO [CACHE] MISS key=5d80bc69...
+2026-04-08 18:16:58.544 INFO [CACHE] MISS key=ba2f06f6...
+2026-04-08 18:16:58.544 INFO [CACHE] MISS key=9005e748...
+2026-04-08 18:16:58.544 INFO [CACHE] MISS key=15a136ba...
+2026-04-08 18:16:58.545 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.545 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.545 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.545 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.545 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.545 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.545 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.545 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.546 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.546 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.546 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.546 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.546 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.547 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:16:58.547 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:17:01.649 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:01.650 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3105ms | score: 0 | source: unknown
+2026-04-08 18:17:01.651 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:17:01.662 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:01.662 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3116ms | score: 0 | source: unknown
+2026-04-08 18:17:01.663 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:01.866 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:01.867 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3320ms | score: 0 | source: unknown
+2026-04-08 18:17:01.867 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:01.870 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:01.870 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3324ms | score: 0 | source: unknown
+2026-04-08 18:17:01.870 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:01.872 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:01.872 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3327ms | score: 0 | source: unknown
+2026-04-08 18:17:01.872 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:01.873 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:01.873 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3328ms | score: 0 | source: unknown
+2026-04-08 18:17:01.873 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:02.012 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:02.012 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3467ms | score: 0 | source: unknown
+2026-04-08 18:17:02.013 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:02.295 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:02.295 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3750ms | score: 0 | source: unknown
+2026-04-08 18:17:02.295 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:02.505 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:02.505 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3958ms | score: 0 | source: unknown
+2026-04-08 18:17:02.505 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:02.730 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:02.730 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 4184ms | score: 0 | source: unknown
+2026-04-08 18:17:02.731 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:17:03.732 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:03.732 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 5186ms | score: 0 | source: unknown
+2026-04-08 18:17:03.732 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:03.858 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:03.858 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 5313ms | score: 0 | source: unknown
+2026-04-08 18:17:03.858 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:04.065 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:04.065 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 5519ms | score: 0 | source: unknown
+2026-04-08 18:17:04.066 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:04.066 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 5521ms | score: 0 | source: unknown
+2026-04-08 18:17:04.684 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:04.684 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3033ms | score: 0 | source: unknown
+2026-04-08 18:17:04.687 INFO [SQLITE] SET key=65a2fc05... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:04.687 INFO [CACHE] MISS key=8e61b00c...
+2026-04-08 18:17:04.688 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:17:04.927 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:04.927 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 6381ms | score: 0 | source: unknown
+2026-04-08 18:17:06.424 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:06.424 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3693ms | score: 0 | source: unknown
+2026-04-08 18:17:06.426 INFO [SQLITE] SET key=c839af96... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:06.426 INFO [CACHE] MISS key=813a39e7...
+2026-04-08 18:17:06.427 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:17:07.177 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:07.178 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 2490ms | score: 0 | source: unknown
+2026-04-08 18:17:07.841 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 5971ms | score improved: 0 → 0
+2026-04-08 18:17:07.842 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:07.844 INFO [SQLITE] SET key=45a17287... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:07.845 INFO [CACHE] MISS key=4d01d3de...
+2026-04-08 18:17:07.845 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:17:08.703 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 6407ms | score improved: 0 → 0
+2026-04-08 18:17:08.704 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:08.708 INFO [SQLITE] SET key=b3d6f461... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:08.708 INFO [CACHE] MISS key=00cfced5...
+2026-04-08 18:17:08.708 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:17:09.583 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 7920ms | score improved: 0 → 0
+2026-04-08 18:17:09.583 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:09.586 INFO [SQLITE] SET key=007bedd7... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:09.586 INFO [CACHE] MISS key=f637df3e...
+2026-04-08 18:17:09.586 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:17:09.679 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 7812ms | score improved: 0 → 0
+2026-04-08 18:17:09.679 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:09.682 INFO [SQLITE] SET key=9005e748... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:09.910 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 8037ms | score improved: 0 → 0
+2026-04-08 18:17:09.912 INFO [SQLITE] SET key=5073dc69... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:10.132 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:10.133 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3705ms | score: 0 | source: unknown
+2026-04-08 18:17:10.133 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:10.772 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 8758ms | score improved: 0 → 0
+2026-04-08 18:17:10.774 INFO [SQLITE] SET key=af3cc23e... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:11.205 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 8699ms | score improved: 0 → 0
+2026-04-08 18:17:11.207 INFO [SQLITE] SET key=15a136ba... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:11.312 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 7454ms | score improved: 0 → 0
+2026-04-08 18:17:11.314 INFO [SQLITE] SET key=5ae889a1... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:11.676 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 9803ms | score improved: 0 → 0
+2026-04-08 18:17:11.678 INFO [SQLITE] SET key=60cc2790... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:11.976 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 8244ms | score improved: 0 → 0
+2026-04-08 18:17:11.978 INFO [SQLITE] SET key=596b4605... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:12.841 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:12.841 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 4996ms | score: 0 | source: unknown
+2026-04-08 18:17:12.841 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:13.011 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:13.011 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 3425ms | score: 0 | source: unknown
+2026-04-08 18:17:13.011 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:13.281 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 5439ms | score improved: 0 → 0
+2026-04-08 18:17:13.283 INFO [SQLITE] SET key=ba2f06f6... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:13.960 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 4281ms | score improved: 0 → 0
+2026-04-08 18:17:13.962 INFO [SQLITE] SET key=8e61b00c... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:15.258 WARN [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:15.258 INFO [WEB VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 6549ms | score: 0 | source: unknown
+2026-04-08 18:17:15.258 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:16.300 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 6717ms | score improved: 0 → 0
+2026-04-08 18:17:16.302 INFO [SQLITE] SET key=5d80bc69... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:17.676 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 7543ms | score improved: 0 → 0
+2026-04-08 18:17:17.679 INFO [SQLITE] SET key=813a39e7... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:19.430 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 10725ms | score improved: 0 → 0
+2026-04-08 18:17:19.431 INFO [SQLITE] SET key=2472f4c1... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:19.432 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 6421ms | score improved: 0 → 0
+2026-04-08 18:17:19.434 INFO [SQLITE] SET key=f637df3e... score=0 re_verify_after=2026-04-15
+2026-04-08 18:17:37.849 WARN [VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → row 17 hit 30s timeout, marking timeout and continuing
+2026-04-08 18:17:38.715 WARN [VERIFY] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → row 18 hit 30s timeout, marking timeout and continuing
+2026-04-08 18:17:38.716 INFO ─────────────────────────────────────────
+2026-04-08 18:17:38.716 INFO  VERIFICATION SUMMARY
+2026-04-08 18:17:38.716 INFO ─────────────────────────────────────────
+2026-04-08 18:17:38.716 INFO  Total rows processed : 20
+2026-04-08 18:17:38.717 INFO  Gemini API calls     : 22 (web verify)
+2026-04-08 18:17:38.717 INFO  Gemini fallback calls: 18 (rule enforce)
+2026-04-08 18:17:38.717 INFO  Cache hits           : 0
+2026-04-08 18:17:38.717 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 18:17:38.717 INFO  Errors               : 0
+2026-04-08 18:17:38.717 INFO  Total time           : 40192ms (2010ms per row avg)
+2026-04-08 18:17:38.717 INFO ─────────────────────────────────────────
+2026-04-08 18:17:49.259 INFO [da7e31cd-1bb2-4ed7-8346-ed7eec8af658] Starting verification {"rowCount":20,"maxConcurrency":15}
+2026-04-08 18:17:49.260 INFO [CACHE] L1 HIT key=5073dc69...
+2026-04-08 18:17:49.260 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.260 INFO [CACHE] L1 HIT key=60cc2790...
+2026-04-08 18:17:49.261 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.261 INFO [CACHE] L1 HIT key=af3cc23e...
+2026-04-08 18:17:49.261 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.261 INFO [CACHE] L1 HIT key=65a2fc05...
+2026-04-08 18:17:49.261 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.262 INFO [CACHE] L1 HIT key=5ae889a1...
+2026-04-08 18:17:49.262 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.262 INFO [CACHE] L1 HIT key=2472f4c1...
+2026-04-08 18:17:49.262 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.262 INFO [CACHE] L1 HIT key=b3d6f461...
+2026-04-08 18:17:49.262 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.262 INFO [CACHE] L1 HIT key=596b4605...
+2026-04-08 18:17:49.262 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.263 INFO [CACHE] L1 HIT key=007bedd7...
+2026-04-08 18:17:49.263 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.263 INFO [CACHE] L1 HIT key=45a17287...
+2026-04-08 18:17:49.263 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.263 INFO [CACHE] L1 HIT key=c839af96...
+2026-04-08 18:17:49.263 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.263 INFO [CACHE] L1 HIT key=5d80bc69...
+2026-04-08 18:17:49.263 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.264 INFO [CACHE] L1 HIT key=ba2f06f6...
+2026-04-08 18:17:49.264 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.264 INFO [CACHE] L1 HIT key=9005e748...
+2026-04-08 18:17:49.264 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.264 INFO [CACHE] L1 HIT key=15a136ba...
+2026-04-08 18:17:49.264 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.264 INFO [CACHE] L1 HIT key=8e61b00c...
+2026-04-08 18:17:49.265 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.265 INFO [CACHE] L1 HIT key=813a39e7...
+2026-04-08 18:17:49.265 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.266 INFO [CACHE] MISS key=4d01d3de...
+2026-04-08 18:17:49.266 INFO [CACHE] MISS key=00cfced5...
+2026-04-08 18:17:49.266 INFO [CACHE] L1 HIT key=f637df3e...
+2026-04-08 18:17:49.267 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:17:49.267 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:17:49.268 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:17:51.083 INFO [RULE ENFORCE] Row cbded076-1ace-4dd6-b939-bcb4dd7f0d8f → done in 35824ms | score improved: 0 → 0
+2026-04-08 18:17:53.309 WARN [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:53.309 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → done in 4042ms | score: 0 | source: unknown
+2026-04-08 18:17:53.309 INFO [RULE ENFORCE] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:17:55.297 WARN [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:17:55.297 INFO [WEB VERIFY] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → done in 6028ms | score: 0 | source: unknown
+2026-04-08 18:17:55.298 INFO [RULE ENFORCE] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → calling Gemini 2.0-flash fallback (real API) | suppLocked=false
+2026-04-08 18:18:04.177 INFO [RULE ENFORCE] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → done in 8879ms | score improved: 0 → 0
+2026-04-08 18:18:04.181 INFO [SQLITE] SET key=00cfced5... score=0 re_verify_after=2026-04-15
+2026-04-08 18:18:11.218 INFO [RULE ENFORCE] Row da7e31cd-1bb2-4ed7-8346-ed7eec8af658 → done in 17909ms | score improved: 0 → 0
+2026-04-08 18:18:11.220 INFO [SQLITE] SET key=4d01d3de... score=0 re_verify_after=2026-04-15
+2026-04-08 18:18:11.220 INFO ─────────────────────────────────────────
+2026-04-08 18:18:11.220 INFO  VERIFICATION SUMMARY
+2026-04-08 18:18:11.220 INFO ─────────────────────────────────────────
+2026-04-08 18:18:11.220 INFO  Total rows processed : 20
+2026-04-08 18:18:11.220 INFO  Gemini API calls     : 2 (web verify)
+2026-04-08 18:18:11.220 INFO  Gemini fallback calls: 2 (rule enforce)
+2026-04-08 18:18:11.220 INFO  Cache hits           : 18
+2026-04-08 18:18:11.220 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 18:18:11.221 INFO  Errors               : 0
+2026-04-08 18:18:11.221 INFO  Total time           : 21960ms (1098ms per row avg)
+2026-04-08 18:18:11.221 INFO ─────────────────────────────────────────
+2026-04-08 18:18:18.708 INFO [b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba] Starting verification {"rowCount":20,"maxConcurrency":15}
+2026-04-08 18:18:18.709 INFO [CACHE] L1 HIT key=5073dc69...
+2026-04-08 18:18:18.709 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.710 INFO [CACHE] L1 HIT key=60cc2790...
+2026-04-08 18:18:18.710 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.710 INFO [CACHE] L1 HIT key=af3cc23e...
+2026-04-08 18:18:18.710 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.710 INFO [CACHE] L1 HIT key=65a2fc05...
+2026-04-08 18:18:18.710 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.710 INFO [CACHE] L1 HIT key=5ae889a1...
+2026-04-08 18:18:18.710 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.710 INFO [CACHE] L1 HIT key=2472f4c1...
+2026-04-08 18:18:18.710 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.711 INFO [CACHE] L1 HIT key=b3d6f461...
+2026-04-08 18:18:18.711 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.711 INFO [CACHE] L1 HIT key=596b4605...
+2026-04-08 18:18:18.711 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.711 INFO [CACHE] L1 HIT key=007bedd7...
+2026-04-08 18:18:18.711 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.711 INFO [CACHE] L1 HIT key=45a17287...
+2026-04-08 18:18:18.712 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.713 INFO [CACHE] L1 HIT key=c839af96...
+2026-04-08 18:18:18.713 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.713 INFO [CACHE] L1 HIT key=5d80bc69...
+2026-04-08 18:18:18.713 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.713 INFO [CACHE] L1 HIT key=ba2f06f6...
+2026-04-08 18:18:18.713 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.713 INFO [CACHE] L1 HIT key=9005e748...
+2026-04-08 18:18:18.713 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.713 INFO [CACHE] L1 HIT key=15a136ba...
+2026-04-08 18:18:18.714 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.714 INFO [CACHE] L1 HIT key=8e61b00c...
+2026-04-08 18:18:18.714 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.714 INFO [CACHE] L1 HIT key=813a39e7...
+2026-04-08 18:18:18.714 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.714 INFO [CACHE] L1 HIT key=4d01d3de...
+2026-04-08 18:18:18.714 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.714 INFO [CACHE] L1 HIT key=00cfced5...
+2026-04-08 18:18:18.714 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.714 INFO [CACHE] L1 HIT key=f637df3e...
+2026-04-08 18:18:18.714 INFO [WEB VERIFY] Row b1b6cd0a-fa2e-4e7c-8f1f-c1b9ab1399ba → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:18:18.715 INFO ─────────────────────────────────────────
+2026-04-08 18:18:18.715 INFO  VERIFICATION SUMMARY
+2026-04-08 18:18:18.715 INFO ─────────────────────────────────────────
+2026-04-08 18:18:18.715 INFO  Total rows processed : 20
+2026-04-08 18:18:18.715 INFO  Gemini API calls     : 0 (web verify)
+2026-04-08 18:18:18.715 INFO  Gemini fallback calls: 0 (rule enforce)
+2026-04-08 18:18:18.715 INFO  Cache hits           : 20
+2026-04-08 18:18:18.715 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 18:18:18.715 INFO  Errors               : 0
+2026-04-08 18:18:18.715 INFO  Total time           : 6ms (0ms per row avg)
+2026-04-08 18:18:18.715 INFO ─────────────────────────────────────────
+2026-04-08 18:18:33.551 INFO [Cache] Flushed all entries
+2026-04-08 18:18:37.033 INFO [0c5c9f05-a9a0-4599-98eb-0d50394739a8] Starting verification {"rowCount":20,"maxConcurrency":15}
+2026-04-08 18:18:37.035 INFO [SQLITE] HIT key=5073dc69... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.036 INFO [CACHE] L2 HIT key=5073dc69... (written to L1)
+2026-04-08 18:18:37.036 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.036 INFO [SQLITE] HIT key=60cc2790... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.036 INFO [CACHE] L2 HIT key=60cc2790... (written to L1)
+2026-04-08 18:18:37.036 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.037 INFO [SQLITE] HIT key=af3cc23e... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.037 INFO [CACHE] L2 HIT key=af3cc23e... (written to L1)
+2026-04-08 18:18:37.037 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.038 INFO [SQLITE] HIT key=65a2fc05... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.038 INFO [CACHE] L2 HIT key=65a2fc05... (written to L1)
+2026-04-08 18:18:37.038 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.039 INFO [SQLITE] HIT key=5ae889a1... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.039 INFO [CACHE] L2 HIT key=5ae889a1... (written to L1)
+2026-04-08 18:18:37.039 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.040 INFO [SQLITE] HIT key=2472f4c1... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.040 INFO [CACHE] L2 HIT key=2472f4c1... (written to L1)
+2026-04-08 18:18:37.040 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.040 INFO [SQLITE] HIT key=b3d6f461... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.041 INFO [CACHE] L2 HIT key=b3d6f461... (written to L1)
+2026-04-08 18:18:37.041 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.041 INFO [SQLITE] HIT key=596b4605... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.041 INFO [CACHE] L2 HIT key=596b4605... (written to L1)
+2026-04-08 18:18:37.041 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.042 INFO [SQLITE] HIT key=007bedd7... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.042 INFO [CACHE] L2 HIT key=007bedd7... (written to L1)
+2026-04-08 18:18:37.042 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.043 INFO [SQLITE] HIT key=45a17287... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.043 INFO [CACHE] L2 HIT key=45a17287... (written to L1)
+2026-04-08 18:18:37.043 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.044 INFO [SQLITE] HIT key=c839af96... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.044 INFO [CACHE] L2 HIT key=c839af96... (written to L1)
+2026-04-08 18:18:37.044 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.045 INFO [SQLITE] HIT key=5d80bc69... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.045 INFO [CACHE] L2 HIT key=5d80bc69... (written to L1)
+2026-04-08 18:18:37.045 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.045 INFO [SQLITE] HIT key=ba2f06f6... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.046 INFO [CACHE] L2 HIT key=ba2f06f6... (written to L1)
+2026-04-08 18:18:37.046 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.046 INFO [SQLITE] HIT key=9005e748... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.046 INFO [CACHE] L2 HIT key=9005e748... (written to L1)
+2026-04-08 18:18:37.046 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.047 INFO [SQLITE] HIT key=15a136ba... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.047 INFO [CACHE] L2 HIT key=15a136ba... (written to L1)
+2026-04-08 18:18:37.047 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.047 INFO [SQLITE] HIT key=8e61b00c... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.047 INFO [CACHE] L2 HIT key=8e61b00c... (written to L1)
+2026-04-08 18:18:37.047 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.048 INFO [SQLITE] HIT key=813a39e7... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.048 INFO [CACHE] L2 HIT key=813a39e7... (written to L1)
+2026-04-08 18:18:37.048 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.049 INFO [SQLITE] HIT key=4d01d3de... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.049 INFO [CACHE] L2 HIT key=4d01d3de... (written to L1)
+2026-04-08 18:18:37.049 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.049 INFO [SQLITE] HIT key=00cfced5... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.049 INFO [CACHE] L2 HIT key=00cfced5... (written to L1)
+2026-04-08 18:18:37.049 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.049 INFO [SQLITE] HIT key=f637df3e... score=0 verified 0 days ago hits=1
+2026-04-08 18:18:37.050 INFO [CACHE] L2 HIT key=f637df3e... (written to L1)
+2026-04-08 18:18:37.050 INFO [WEB VERIFY] Row 0c5c9f05-a9a0-4599-98eb-0d50394739a8 → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:18:37.050 INFO ─────────────────────────────────────────
+2026-04-08 18:18:37.050 INFO  VERIFICATION SUMMARY
+2026-04-08 18:18:37.050 INFO ─────────────────────────────────────────
+2026-04-08 18:18:37.050 INFO  Total rows processed : 20
+2026-04-08 18:18:37.050 INFO  Gemini API calls     : 0 (web verify)
+2026-04-08 18:18:37.050 INFO  Gemini fallback calls: 0 (rule enforce)
+2026-04-08 18:18:37.050 INFO  Cache hits           : 20
+2026-04-08 18:18:37.050 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 18:18:37.050 INFO  Errors               : 0
+2026-04-08 18:18:37.050 INFO  Total time           : 17ms (1ms per row avg)
+2026-04-08 18:18:37.051 INFO ─────────────────────────────────────────
+2026-04-08 18:19:37.609 INFO Shutting down...
+2026-04-08 18:19:38.016 INFO Server running on http://localhost:3001 {"nodeEnv":"production","mockMode":false}
+2026-04-08 18:19:38.016 INFO ─────────────────────────────────
+2026-04-08 18:19:38.017 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 18:19:38.017 INFO ─────────────────────────────────
+2026-04-08 18:19:38.017 INFO  MOCK_MODE        : false
+2026-04-08 18:19:38.017 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 18:19:38.017 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 18:19:38.017 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 18:19:38.017 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 18:19:38.017 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 18:19:38.017 INFO ─────────────────────────────────
+2026-04-08 18:19:48.429 INFO [Cache] Flushed all entries
+2026-04-08 18:20:20.931 ERROR Expected double-quoted property name in JSON at position 134 {"statusCode":400,"stack":"SyntaxError: Expected double-quoted property name in JSON at position 134\n    at JSON.parse (<anonymous>)\n    at parse (/app/node_modules/body-parser/lib/types/json.js:92:19)\n    at /app/node_modules/body-parser/lib/read.js:128:18\n    at AsyncResource.runInAsyncScope (node:async_hooks:206:9)\n    at invokeCallback (/app/node_modules/raw-body/index.js:238:16)\n    at done (/app/node_modules/raw-body/index.js:227:7)\n    at IncomingMessage.onEnd (/app/node_modules/raw-body/index.js:287:7)\n    at IncomingMessage.emit (node:events:524:28)\n    at endReadableNT (node:internal/streams/readable:1698:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)","path":"/api/verify","method":"POST"}
+2026-04-08 18:20:48.101 INFO [d9e691b2-05f3-4848-8478-8dbff55c442d] Starting verification {"rowCount":1,"maxConcurrency":15}
+2026-04-08 18:20:48.110 INFO [SQLITE] Cache database ready at /app/data/cache.db
+2026-04-08 18:20:48.110 INFO [SQLITE] HIT key=5073dc69... score=0 verified 0 days ago hits=2
+2026-04-08 18:20:48.111 INFO [CACHE] L2 HIT key=5073dc69... (written to L1)
+2026-04-08 18:20:48.111 INFO [WEB VERIFY] Row d9e691b2-05f3-4848-8478-8dbff55c442d → L2 CACHE HIT (SQLite) (no API call)
+2026-04-08 18:20:48.112 INFO ─────────────────────────────────────────
+2026-04-08 18:20:48.112 INFO  VERIFICATION SUMMARY
+2026-04-08 18:20:48.112 INFO ─────────────────────────────────────────
+2026-04-08 18:20:48.112 INFO  Total rows processed : 1
+2026-04-08 18:20:48.112 INFO  Gemini API calls     : 0 (web verify)
+2026-04-08 18:20:48.112 INFO  Gemini fallback calls: 0 (rule enforce)
+2026-04-08 18:20:48.112 INFO  Cache hits           : 1
+2026-04-08 18:20:48.112 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 18:20:48.112 INFO  Errors               : 0
+2026-04-08 18:20:48.112 INFO  Total time           : 10ms (10ms per row avg)
+2026-04-08 18:20:48.113 INFO ─────────────────────────────────────────
+2026-04-08 18:21:18.176 INFO Shutting down...
+2026-04-08 18:21:18.560 INFO Server running on http://localhost:3001 {"nodeEnv":"production","mockMode":false}
+2026-04-08 18:21:18.560 INFO ─────────────────────────────────
+2026-04-08 18:21:18.560 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 18:21:18.560 INFO ─────────────────────────────────
+2026-04-08 18:21:18.560 INFO  MOCK_MODE        : false
+2026-04-08 18:21:18.560 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 18:21:18.560 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 18:21:18.561 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 18:21:18.561 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 18:21:18.561 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 18:21:18.561 INFO ─────────────────────────────────
+2026-04-08 18:21:25.804 INFO [Cache] Flushed all entries
+2026-04-08 18:21:49.154 INFO Shutting down...
+2026-04-08 18:21:49.754 INFO Server running on http://localhost:3001 {"nodeEnv":"production","mockMode":false}
+2026-04-08 18:21:49.754 INFO ─────────────────────────────────
+2026-04-08 18:21:49.755 INFO  SPARE PARTS VERIFIER — AI CONFIG
+2026-04-08 18:21:49.755 INFO ─────────────────────────────────
+2026-04-08 18:21:49.755 INFO  MOCK_MODE        : false
+2026-04-08 18:21:49.755 INFO  OPENAI_MOCK_MODE : false
+2026-04-08 18:21:49.755 INFO  GEMINI_MOCK_MODE : false
+2026-04-08 18:21:49.756 INFO  CLAUDE_MOCK_MODE : false
+2026-04-08 18:21:49.756 INFO  GEMINI_API_KEY   : SET (...G7NU)
+2026-04-08 18:21:49.756 INFO  AI PROVIDER      : Google Gemini (single provider)
+2026-04-08 18:21:49.756 INFO ─────────────────────────────────
+2026-04-08 18:22:15.290 INFO [SQLITE] Cache database ready at /app/data/cache.db
+2026-04-08 18:22:15.291 INFO [SQLITE] Cleared all cached entries
+2026-04-08 18:22:15.291 INFO [Cache] Flushed all entries (L1 + L2)
+2026-04-08 18:23:30.143 INFO [fc117ad7-0d31-400d-acfa-8f8a263f47ec] Detecting format {"totalRows":20}
+2026-04-08 18:23:30.143 INFO [FORMAT DETECT] Row fc117ad7-0d31-400d-acfa-8f8a263f47ec → calling Gemini 2.0-flash (real API)
+2026-04-08 18:23:35.331 INFO [FORMAT DETECT] Row fc117ad7-0d31-400d-acfa-8f8a263f47ec → response received in 5187ms | format: A
+2026-04-08 18:23:42.130 INFO [aaecc0e3-30fe-4c4a-96b3-62951abd33b5] Normalizing data {"format":"A","rowCount":20}
+2026-04-08 18:24:00.803 INFO [978e2416-4407-4dea-a881-d9132f8d2192] Starting verification {"rowCount":2,"maxConcurrency":15}
+2026-04-08 18:24:00.805 INFO [CACHE] MISS key=746da27f...
+2026-04-08 18:24:00.806 INFO [CACHE] MISS key=5076e9db...
+2026-04-08 18:24:00.806 INFO [WEB VERIFY] Row 978e2416-4407-4dea-a881-d9132f8d2192 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:24:00.806 INFO [WEB VERIFY] Row 978e2416-4407-4dea-a881-d9132f8d2192 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:24:04.326 WARN [WEB VERIFY] Row 978e2416-4407-4dea-a881-d9132f8d2192 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:24:04.327 INFO [WEB VERIFY] Row 978e2416-4407-4dea-a881-d9132f8d2192 → done in 3521ms | score: 0 | source: unknown
+2026-04-08 18:24:04.328 INFO [WEB VERIFY] Row 978e2416-4407-4dea-a881-d9132f8d2192 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:24:04.662 WARN [WEB VERIFY] Row 978e2416-4407-4dea-a881-d9132f8d2192 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:24:04.662 INFO [WEB VERIFY] Row 978e2416-4407-4dea-a881-d9132f8d2192 → done in 3856ms | score: 0 | source: unknown
+2026-04-08 18:24:04.663 INFO [WEB VERIFY] Row 978e2416-4407-4dea-a881-d9132f8d2192 → calling Gemini 2.5-flash with Google Search [KEY 1/1]
+2026-04-08 18:24:07.490 WARN [WEB VERIFY] Row 978e2416-4407-4dea-a881-d9132f8d2192 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:24:07.491 INFO [WEB VERIFY] Row 978e2416-4407-4dea-a881-d9132f8d2192 → done in 3162ms | score: 0 | source: unknown
+2026-04-08 18:24:07.494 INFO [SQLITE] SET key=746da27f... score=0 re_verify_after=2026-04-15
+2026-04-08 18:24:08.685 WARN [WEB VERIFY] Row 978e2416-4407-4dea-a881-d9132f8d2192 → JSON parse failed after 4 attempts, returning safe default
+2026-04-08 18:24:08.685 INFO [WEB VERIFY] Row 978e2416-4407-4dea-a881-d9132f8d2192 → done in 4022ms | score: 0 | source: unknown
+2026-04-08 18:24:08.686 INFO [SQLITE] SET key=5076e9db... score=0 re_verify_after=2026-04-15
+2026-04-08 18:24:08.687 INFO ─────────────────────────────────────────
+2026-04-08 18:24:08.687 INFO  VERIFICATION SUMMARY
+2026-04-08 18:24:08.687 INFO ─────────────────────────────────────────
+2026-04-08 18:24:08.687 INFO  Total rows processed : 2
+2026-04-08 18:24:08.687 INFO  Gemini API calls     : 4 (web verify)
+2026-04-08 18:24:08.687 INFO  Gemini fallback calls: 0 (rule enforce)
+2026-04-08 18:24:08.688 INFO  Cache hits           : 0
+2026-04-08 18:24:08.688 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 18:24:08.688 INFO  Errors               : 0
+2026-04-08 18:24:08.688 INFO  Total time           : 7884ms (3942ms per row avg)
+2026-04-08 18:24:08.688 INFO ─────────────────────────────────────────
+2026-04-08 18:24:21.453 INFO [e67a118e-bfb7-4863-bcce-385e60b8fe5f] Starting verification {"rowCount":2,"maxConcurrency":15}
+2026-04-08 18:24:21.454 INFO [CACHE] L1 HIT key=746da27f...
+2026-04-08 18:24:21.454 INFO [WEB VERIFY] Row e67a118e-bfb7-4863-bcce-385e60b8fe5f → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:24:21.455 INFO [CACHE] L1 HIT key=5076e9db...
+2026-04-08 18:24:21.455 INFO [WEB VERIFY] Row e67a118e-bfb7-4863-bcce-385e60b8fe5f → L1 CACHE HIT (RAM) (no API call)
+2026-04-08 18:24:21.455 INFO ─────────────────────────────────────────
+2026-04-08 18:24:21.455 INFO  VERIFICATION SUMMARY
+2026-04-08 18:24:21.455 INFO ─────────────────────────────────────────
+2026-04-08 18:24:21.455 INFO  Total rows processed : 2
+2026-04-08 18:24:21.455 INFO  Gemini API calls     : 0 (web verify)
+2026-04-08 18:24:21.455 INFO  Gemini fallback calls: 0 (rule enforce)
+2026-04-08 18:24:21.456 INFO  Cache hits           : 2
+2026-04-08 18:24:21.456 INFO  Mock calls           : 0 (should be 0)
+2026-04-08 18:24:21.456 INFO  Errors               : 0
+2026-04-08 18:24:21.456 INFO  Total time           : 1ms (1ms per row avg)
+2026-04-08 18:24:21.456 INFO ─────────────────────────────────────────
+2026-04-08 18:38:02.142 WARN [AUTH] login failed for tawdev@gmail.com
+2026-04-08 18:38:24.288 INFO [AUTH] login ok tawdev@gmail.com
+2026-04-08 19:13:31.845 INFO Shutting down...

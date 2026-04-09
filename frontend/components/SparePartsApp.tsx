@@ -24,6 +24,23 @@ export default function SparePartsApp() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('app-theme') as 'light' | 'dark' | null;
+    if (stored) {
+      setTheme(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('app-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -71,9 +88,15 @@ export default function SparePartsApp() {
           <div className="w-[30px] h-[30px] bg-brand-cyan rounded flex items-center justify-center font-bold text-[13px] text-white">
             SP1
           </div>
-          <h1 className="text-lg font-bold text-slate-200">Spare Parts Web Verifier</h1>
+          <h1 className="text-lg font-bold text-text-primary">Spare Parts Web Verifier</h1>
         </div>
         <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} 
+            className="text-xs px-2 py-1 bg-border hover:bg-border-hover border border-border rounded text-text-primary transition-colors"
+          >
+            {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+          </button>
           <a href="/docs" className="text-xs text-brand-cyan hover:underline">
             Docs
           </a>

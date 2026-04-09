@@ -19,7 +19,10 @@ export default function ProgressSection({
 
   return (
     <div className="bg-bg-surface rounded-[10px] p-2.5 px-4 mb-3 border border-border animate-fade-up">
-      <div className="text-xs text-brand-cyan font-medium">{message}</div>
+      <div className="flex justify-between items-center mb-0.5">
+        <div className="text-xs text-brand-cyan font-medium">{message}</div>
+        <div className="text-[11px] text-brand-cyan font-bold font-mono">{progress}%</div>
+      </div>
       {subMessage && (
         <div className="text-[10px] text-text-muted mt-0.5 mb-1.5">{subMessage}</div>
       )}

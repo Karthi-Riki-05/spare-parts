@@ -53,6 +53,7 @@ const exportSchema = z.object({
   results: z.array(z.any()),
   originalData: z.array(z.any()),
   fileName: z.string().default('verified.xlsx'),
+  originalFormat: z.enum(['A', 'B', 'C']).optional(),
 });
 
 function validateRequest(schema) {

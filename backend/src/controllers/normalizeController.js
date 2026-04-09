@@ -20,7 +20,7 @@ function cleanFormatBNoise(rawText) {
   return cleaned;
 }
 
-function normalizeFormatA(rows, mapping, format) {
+function normalizeFormatA(rows, mapping, format, offset = 0) {
   return rows.map((row, index) => {
     const keys = Object.keys(row);
     const m = mapping || {
@@ -36,13 +36,13 @@ function normalizeFormatA(rows, mapping, format) {
       supplementary: extractVal(row, m.supplementary),
       sparePartCategory: extractVal(row, keys[6] || ''),
       _originalFormat: format,
-      rowIndex: index,
+      rowIndex: offset + index,
     };
     return handleErsPrefix(applyAllDeduplication(raw));
   });
 }
 
-async function normalizeFormatC(rows, correlationId, format) {
+async function normalizeFormatC(rows, correlationId, format, offset = 0) {
   // Format C: Batch rows that need AI processing
   const BATCH_SIZE = 10;
   const pLimit = (await import('p-limit')).default;
@@ -52,16 +52,17 @@ async function normalizeFormatC(rows, correlationId, format) {
   const rowsWithoutAi = [];
   
   rows.forEach((row, index) => {
+    const originalIndex = offset + index;
     const keys = Object.keys(row);
     const mfrVal = extractVal(row, keys[2] || '');
     const itemVal = extractVal(row, keys[3] || '');
     
     if (mfrVal && itemVal) {
       // Already has manufacturer and item — no AI needed
-      rowsWithoutAi.push({ row, index, needsAi: false });
+      rowsWithoutAi.push({ row, index: originalIndex, needsAi: false });
     } else {
       // Missing data — needs AI
-      rowsNeedingAi.push({ row, index, needsAi: true });
+      rowsNeedingAi.push({ row, index: originalIndex, needsAi: true });
     }
   });
   
@@ -134,25 +135,31 @@ async function normalizeFormatC(rows, correlationId, format) {
 
 async function handleNormalize(req, res, next) {
   try {
-    const { fileData, sheetIndex = 0, format, mapping } = req.body;
-    const { rows: rawRows } = await readExcelFromBase64(fileData, sheetIndex);
+    const { fileData, sheetIndex = 0, format, mapping, limit: reqLimit, offset = 0 } = req.body;
+    const { rows: fullRows } = await readExcelFromBase64(fileData, sheetIndex);
+    const rawRows = reqLimit ? fullRows.slice(offset, offset + reqLimit) : fullRows;
     const originalData = [...rawRows];
-    logger.info('Normalizing data', { correlationId: req.correlationId, format, rowCount: rawRows.length });
+    logger.info('Normalizing data chunk', { correlationId: req.correlationId, format, rowCount: rawRows.length, offset });
 
     let normalized;
     if (format === 'A') {
       // Format A: no AI needed, just direct column mapping
-      normalized = normalizeFormatA(rawRows, mapping, 'A');
+      normalized = normalizeFormatA(rawRows, mapping, 'A', offset);
     } else if (format === 'B') {
       // Format B: batch AI calls — 10 rows per call instead of 1 row per call
       // This reduces 100 calls to 10 calls, speeding up processing ~90%
       const pLimit = (await import('p-limit')).default;
-      const limit = pLimit(config.maxConcurrency);
+      const BATCH_SIZE = 20; 
       
-      const BATCH_SIZE = 10;
+      const uniqueKeys = new Set([config.geminiApiKey, config.geminiApiKey2, config.geminiApiKey3].filter(k => k && k.trim()));
+      const keyCount = uniqueKeys.size;
+      const concurrency = keyCount > 1 ? (keyCount * 5) : 3; 
+      const limit = pLimit(concurrency);
+      
+      logger.info(`Normalization starting with BATCH_SIZE=${BATCH_SIZE}, Concurrency=${concurrency} (${keyCount} UNIQUE keys)`);
       const rowsToNormalize = rawRows.map((row, index) => ({
         row, 
-        index,
+        index: offset + index,
         internalItemNumber: extractVal(row, 'col_0'),
         rawText: cleanFormatBNoise(extractVal(row, 'col_1')),
       }));
@@ -190,14 +197,14 @@ async function handleNormalize(req, res, next) {
             // Empty row
             return { internalItemNumber: r.internalItemNumber, description: '', manufacturer: '', itemNumber: '', typeDesignation: '', supplementary: '', rowIndex: r.index };
           }
-          const result = batchResults[nonEmptyIdx];
+          const result = batchResults[nonEmptyIdx] || {};
           return {
-            internalItemNumber: r.internalItemNumber,
-            description: result.description,
-            manufacturer: result.manufacturer,
-            itemNumber: result.item_number,
-            typeDesignation: result.type_designation,
-            supplementary: result.supplementary,
+            internalItemNumber: r.internalItemNumber || '',
+            description: result.description || '',
+            manufacturer: result.manufacturer || '',
+            itemNumber: result.item_number || '',
+            typeDesignation: result.type_designation || '',
+            supplementary: result.supplementary || '',
             rowIndex: r.index,
           };
         });
@@ -211,10 +218,10 @@ async function handleNormalize(req, res, next) {
       })));
     } else {
       // Format C: similar batching approach
-      normalized = await normalizeFormatC(rawRows, req.correlationId, 'C');
+      normalized = await normalizeFormatC(rawRows, req.correlationId, 'C', offset);
     }
 
-    res.json({ rows: normalized, originalData, rawRows });
+    res.json({ rows: normalized, originalData, rawRows, totalOriginalRows: fullRows.length });
   } catch (error) { next(error); }
 }
 
