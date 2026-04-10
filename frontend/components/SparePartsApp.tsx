@@ -1,6 +1,7 @@
 'use client';
 
 import { useVerification } from '@/hooks/useVerification';
+import { useAlert } from '@/hooks/useAlert';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { logout, getUser } from '@/lib/auth';
@@ -16,6 +17,7 @@ import ManualMappingDialog from './ManualMappingDialog';
 import LargeFileWarning from './LargeFileWarning';
 import BackgroundJobModal from './BackgroundJobModal';
 import ActivityCenter from './ActivityCenter';
+import AlertModal from './ui/AlertModal';
 
 interface User {
   email: string;
@@ -23,6 +25,7 @@ interface User {
 
 export default function SparePartsApp() {
   const v = useVerification();
+  const { alertState, showConfirm } = useAlert();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
@@ -92,8 +95,9 @@ export default function SparePartsApp() {
 
   const handleLogout = async () => {
     if (isProcessing) {
-      const confirmed = window.confirm(
-        'Processing is in progress. Background jobs will continue, but inline processing will stop.\n\nAre you sure you want to logout?'
+      const confirmed = await showConfirm(
+        'Processing is in progress. Background jobs will continue, but inline processing will stop. Are you sure you want to logout?',
+        { title: 'Logout', type: 'warning', confirmText: 'Logout', cancelText: 'Stay' }
       );
       if (!confirmed) return;
     }
@@ -360,6 +364,19 @@ export default function SparePartsApp() {
           setActivityOpen(false);
           v.startVerificationAfterReview(jobId);
         }}
+      />
+
+      <AlertModal {...alertState} />
+
+      <AlertModal
+        open={v.showBackConfirm}
+        title="Go Back"
+        message="Going back will clear the current data. Continue?"
+        type="warning"
+        confirmText="Go Back"
+        cancelText="Stay"
+        onConfirm={v.confirmBack}
+        onCancel={v.cancelBack}
       />
     </>
   );

@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import { notifications } from '@/lib/notifications';
 import { formatDateTimeWithZone } from '@/lib/timeUtils';
+import { useAlert } from '@/hooks/useAlert';
+import AlertModal from './ui/AlertModal';
 
 interface ActivityCenterProps {
   open: boolean;
@@ -34,6 +36,7 @@ interface PreviewRow {
 }
 
 export default function ActivityCenter({ open, onClose, userEmail, onReview, onStartSearch }: ActivityCenterProps) {
+  const { alertState, showError, showConfirm } = useAlert();
   const [jobs, setJobs] = useState<JobItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'progress' | 'done'>('progress');
@@ -123,7 +126,7 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
       await api.deleteJob(jobId);
       setJobs(prev => prev.filter(j => j.id !== jobId));
     } catch (err) {
-      alert('Failed to delete job');
+      showError('Failed to delete job');
     }
   };
 
@@ -138,7 +141,7 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert('Failed to download results');
+      showError('Failed to download results');
     }
   };
 
@@ -150,19 +153,25 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
       // Refresh immediately
       await fetchJobs();
     } catch (err) {
-      alert('Failed to start search: ' + (err as Error).message);
+      showError('Failed to start search: ' + (err as Error).message);
     } finally {
       setLoadingSearch(null);
     }
   };
 
   const handleClearAll = async () => {
-    if (!confirm('Clear all completed jobs? This cannot be undone.')) return;
+    const confirmed = await showConfirm('Clear all completed jobs? This cannot be undone.', {
+      title: 'Clear All Jobs',
+      type: 'warning',
+      confirmText: 'Clear All',
+      cancelText: 'Cancel',
+    });
+    if (!confirmed) return;
     try {
       await api.clearAllCompleted();
       setJobs(prev => prev.filter(j => j.status !== 'completed' && j.status !== 'failed'));
     } catch (err) {
-      alert('Failed to clear jobs');
+      showError('Failed to clear jobs');
     }
   };
 
@@ -521,6 +530,7 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
           </div>
         </div>
       </div>
+      <AlertModal {...alertState} />
     </div>
   );
 }

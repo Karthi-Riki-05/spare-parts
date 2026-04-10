@@ -46,6 +46,7 @@ export function useVerification() {
   const [showMappingDialog, setShowMappingDialog] = useState(false);
   const [rowCount, setRowCount] = useState(0);
   const [showBackgroundModal, setShowBackgroundModal] = useState(false);
+  const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [validationError, setValidationError] = useState<{ detectedType: string; reason: string; suggestion: string } | null>(null);
   const [detectedLanguage, setDetectedLanguage] = useState<{ language: string; code: string; translationNeeded: boolean } | null>(null);
   const [pendingJobId, setPendingJobId] = useState<string | null>(null);
@@ -579,12 +580,22 @@ export function useVerification() {
         return;
       }
       if (normalizedRows.length > 0) {
-        const confirmed = window.confirm('Going back will clear the current data. Continue?');
-        if (!confirmed) return;
+        // Set a flag — component will show custom confirm dialog
+        setShowBackConfirm(true);
+        return;
       }
       reset();
     }
   }, [phase, normalizedRows.length, reset, pendingJobId]);
+
+  const confirmBack = useCallback(() => {
+    setShowBackConfirm(false);
+    reset();
+  }, [reset]);
+
+  const cancelBack = useCallback(() => {
+    setShowBackConfirm(false);
+  }, []);
 
   const updateRow = useCallback(
     (rowIndex: number, col: string, value: string) => {
@@ -638,6 +649,9 @@ export function useVerification() {
     setShowMappingDialog,
     showBackgroundModal,
     setShowBackgroundModal,
+    showBackConfirm,
+    confirmBack,
+    cancelBack,
     pendingJobId,
     jobTrackingMode,
     exportLanguage,

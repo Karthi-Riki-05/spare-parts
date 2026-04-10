@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useAlert } from '@/hooks/useAlert';
+import AlertModal from '@/components/ui/AlertModal';
 
 interface Job {
   id: string;
@@ -20,6 +22,7 @@ interface Job {
 
 export default function JobsPage() {
   const router = useRouter();
+  const { alertState, showError } = useAlert();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -69,7 +72,7 @@ export default function JobsPage() {
       const data = await api.listJobs();
       setJobs(data.jobs || []);
     } catch (err) {
-      alert('Failed to start search: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      showError('Failed to start search: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
@@ -163,6 +166,7 @@ export default function JobsPage() {
           </table>
         </div>
       )}
+      <AlertModal {...alertState} />
     </div>
   );
 }
