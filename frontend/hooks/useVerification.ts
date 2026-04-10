@@ -153,9 +153,12 @@ export function useVerification() {
         setProgressMessage('Normalizing data...');
         setProgress(0);
 
-        const backgroundThreshold = BACKGROUND_THRESHOLD;
+        // Background for: any Format B/C (AI-heavy), or Format A with >200 rows.
+        // Format A with ≤200 rows is instant (direct mapping, no AI).
+        const needsAiNormalize = format === 'B' || format === 'C';
+        const useBackground = needsAiNormalize || count > 200;
 
-        if (count > backgroundThreshold) {
+        if (useBackground) {
           addLog(`Background normalization started (${count} rows)...`, 'success');
 
           // Request notification permission proactively
@@ -320,9 +323,10 @@ export function useVerification() {
     abortRef.current = controller;
   }, [normalizedRows, connectSSE, addLog]);
 
-  const startVerification = useCallback(() => {
+  const startVerification = useCallback(async () => {
     if (normalizedRows.length === 0) return;
-    // Always show the modal to let user choose Wait Here vs Background
+
+    // Always use background job — show modal for confirmation
     setShowBackgroundModal(true);
   }, [normalizedRows]);
 
@@ -387,7 +391,8 @@ export function useVerification() {
 
   // Background Job Polling Effect
   useEffect(() => {
-    if (!jobTrackingMode || !pendingJobId || phase === 'idle' || phase === 'error') return;
+    if (!jobTrackingMode || !pendingJobId) return;
+    if (phase === 'error') return;
 
     let pollInterval: NodeJS.Timeout;
     let isMounted = true;
@@ -642,7 +647,19 @@ export function useVerification() {
     startVerificationAfterReview,
     loadJobData: useCallback(async (jobId: string) => {
       try {
-        setPhase('verifying');
+        // CRITICAL: Clear ALL stale state from previous file before loading new one.
+        // This prevents pendingJobId from file 1 leaking into file 2's verify flow.
+        setNormalizedRows([]);
+        setResults([]);
+        setStats(null);
+        setPendingJobId(null);
+        setJobTrackingMode(false);
+        setShowBackgroundModal(false);
+        setLogEntries([]);
+        setProgress(0);
+        setError(null);
+
+        setPhase('idle'); // NOT 'verifying' — data is loading, not verifying
         setProgressMessage('Loading job data...');
 
         const statusResponse = await api.getJobStatus(jobId);

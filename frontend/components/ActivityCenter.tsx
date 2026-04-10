@@ -156,6 +156,16 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
     }
   };
 
+  const handleClearAll = async () => {
+    if (!confirm('Clear all completed jobs? This cannot be undone.')) return;
+    try {
+      await api.clearAllCompleted();
+      setJobs(prev => prev.filter(j => j.status !== 'completed' && j.status !== 'failed'));
+    } catch (err) {
+      alert('Failed to clear jobs');
+    }
+  };
+
   const progressJobs = jobs.filter(j => j.status === 'processing' || j.status === 'pending' || j.status === 'awaiting_review');
   const doneJobs = jobs.filter(j => j.status === 'completed' || j.status === 'failed');
 
@@ -258,6 +268,15 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
               Completed ({doneJobs.length})
             </button>
           </div>
+
+          {/* Clear All for completed tab */}
+          {activeTab === 'done' && doneJobs.length > 0 && (
+            <div className="flex justify-end px-4 mb-2">
+              <button onClick={handleClearAll} className="text-[11px] text-brand-red/60 hover:text-brand-red underline">
+                Clear All
+              </button>
+            </div>
+          )}
 
           {/* Job List */}
           <div className="flex-1 overflow-y-auto px-4 pb-4">

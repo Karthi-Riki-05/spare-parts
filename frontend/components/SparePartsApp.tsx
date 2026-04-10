@@ -31,6 +31,7 @@ export default function SparePartsApp() {
   const [activityOpen, setActivityOpen] = useState(false);
   const [activeJobCount, setActiveJobCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('app-theme') as 'light' | 'dark' | null;
@@ -129,65 +130,69 @@ export default function SparePartsApp() {
       {/* Header */}
       <header className="border-b border-border bg-bg-surface mb-4">
         <div className="flex items-center justify-between px-4 py-3">
+          {/* Left: Logo + Title */}
           <div className="flex items-center gap-2.5">
-            <div className="w-[30px] h-[30px] bg-brand-cyan rounded flex items-center justify-center font-bold text-[13px] text-white">
-              SP1
-            </div>
+            <div className="w-[30px] h-[30px] bg-brand-cyan rounded flex items-center justify-center font-bold text-[13px] text-white">SP1</div>
             <h1 className="text-lg font-bold text-text-primary hidden sm:block">Spare Parts Web Verifier</h1>
             <h1 className="text-base font-bold text-text-primary sm:hidden">SP Verifier</h1>
           </div>
 
-          {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-4">
-            <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="text-xs px-2 py-1 bg-border hover:bg-border-hover border border-border rounded text-text-primary transition-colors">
-              {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+          {/* Right: 3 icons */}
+          <div className="flex items-center gap-3">
+            {/* Theme toggle — icon only */}
+            <button
+              onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-border transition-colors text-base"
+              title={theme === 'light' ? 'Dark mode' : 'Light mode'}
+            >
+              {theme === 'light' ? '🌙' : '☀️'}
             </button>
-            <a href="/jobs" className="text-xs text-brand-cyan hover:underline">Jobs</a>
-            <a href="/docs" className="text-xs text-brand-cyan hover:underline">Docs</a>
-            <button onClick={() => setActivityOpen(true)} className="relative flex items-center gap-1.5 text-xs px-2 py-1 bg-brand-cyan/10 hover:bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/20 rounded transition-colors">
-              <span>📊</span><span>Activity</span>
+
+            {/* Activity — icon only with badge */}
+            <button
+              onClick={() => setActivityOpen(true)}
+              className="relative w-8 h-8 flex items-center justify-center rounded-full hover:bg-brand-cyan/10 transition-colors text-base"
+              title="Activity Center"
+            >
+              🔔
               {activeJobCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-brand-red text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">{activeJobCount}</span>
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-brand-red text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">{activeJobCount}</span>
               )}
             </button>
+
+            {/* Profile — initial circle with dropdown */}
             {user && (
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-text-secondary">{user.email}</span>
-                <button onClick={handleLogout} className="px-2 py-1 bg-brand-red/20 hover:bg-brand-red/30 text-brand-red rounded text-xs transition-colors">Logout</button>
+              <div className="relative">
+                <button
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  className="w-8 h-8 bg-brand-cyan text-white rounded-full flex items-center justify-center font-bold text-sm hover:bg-brand-cyan/80 transition-colors"
+                  title={user.email}
+                >
+                  {user.email.charAt(0).toUpperCase()}
+                </button>
+
+                {profileOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 bg-bg-surface border border-border rounded-xl shadow-lg min-w-[200px] z-50 py-1">
+                      <div className="px-4 py-3 text-sm text-text-secondary font-medium border-b border-border">{user.email}</div>
+                      <a href="/jobs" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-border/50 transition-colors">
+                        📋 Jobs
+                      </a>
+                      <a href="/docs" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-border/50 transition-colors">
+                        📚 Docs
+                      </a>
+                      <div className="border-t border-border my-1" />
+                      <button onClick={() => { setProfileOpen(false); handleLogout(); }} className="flex items-center gap-3 px-4 py-2.5 text-sm text-brand-red hover:bg-brand-red/5 transition-colors w-full text-left">
+                        🚪 Logout
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
-
-          {/* Mobile: Activity + Hamburger */}
-          <div className="flex md:hidden items-center gap-2">
-            <button onClick={() => setActivityOpen(true)} className="relative p-2 text-brand-cyan">
-              <span>📊</span>
-              {activeJobCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 bg-brand-red text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">{activeJobCount}</span>
-              )}
-            </button>
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-text-primary text-xl" aria-label="Menu">
-              {mobileMenuOpen ? '✕' : '☰'}
-            </button>
-          </div>
         </div>
-
-        {/* Mobile dropdown menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-border px-4 py-2 space-y-1 bg-bg-surface">
-            <a href="/jobs" className="block py-2.5 text-sm text-brand-cyan">Jobs</a>
-            <a href="/docs" className="block py-2.5 text-sm text-brand-cyan">Docs</a>
-            <button onClick={() => { setTheme(t => t === 'light' ? 'dark' : 'light'); setMobileMenuOpen(false); }} className="block w-full text-left py-2.5 text-sm text-text-primary">
-              {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
-            </button>
-            {user && (
-              <>
-                <div className="py-2.5 text-sm text-text-secondary">{user.email}</div>
-                <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }} className="block w-full text-left py-2.5 text-sm text-brand-red">Logout</button>
-              </>
-            )}
-          </div>
-        )}
       </header>
 
       {/* Background job tracking banner */}
@@ -299,7 +304,7 @@ export default function SparePartsApp() {
             message={v.progressMessage}
             subMessage={v.progressSubMessage}
             progress={v.progress}
-            visible={v.phase === 'verifying' || v.phase === 'done'}
+            visible={v.phase === 'verifying' || v.phase === 'done' || (v.jobTrackingMode && v.progress > 0)}
           />
 
           <VerificationLog entries={v.logEntries} />
@@ -340,7 +345,7 @@ export default function SparePartsApp() {
             // Error is already handled in submitBackgroundJob
           }
         }}
-        onWaitHere={v.continueSSEVerification}
+        onWaitHere={() => {}} // unused — single button modal
       />
 
       <ActivityCenter

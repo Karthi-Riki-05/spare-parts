@@ -422,6 +422,26 @@ router.post('/detect/submit', requireAuth, (req, res) => {
 });
 
 /**
+ * DELETE /api/jobs/completed/all
+ * Clear all completed jobs for current user
+ */
+router.delete('/completed/all', requireAuth, (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const jobs = jobService.getJobsByUser(userEmail);
+    const completed = jobs.filter(j => j.status === 'completed' || j.status === 'failed');
+    let deleted = 0;
+    for (const job of completed) {
+      if (jobService.deleteJob(job.id)) deleted++;
+    }
+    logger.info(`[JOB] Cleared ${deleted} completed jobs for ${userEmail}`);
+    res.json({ success: true, deleted });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * DELETE /api/jobs/:jobId
  * Clear/Delete a job
  */

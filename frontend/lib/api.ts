@@ -198,6 +198,8 @@ export const api = {
 
   deleteJob: (jobId: string) => del<{ success: boolean }>(`/jobs/${jobId}`),
 
+  clearAllCompleted: () => del<{ success: boolean; deleted: number }>('/jobs/completed/all'),
+
   startJobSearch: (jobId: string) => post<{ success: boolean; message: string }>(`/jobs/${jobId}/start-search`, {}),
 };
 
