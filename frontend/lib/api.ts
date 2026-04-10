@@ -37,6 +37,19 @@ async function get<T>(path: string): Promise<T> {
   return res.json();
 }
 
+async function del<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 export interface JobStatus {
   success: boolean;
   job: {
@@ -129,10 +142,20 @@ export const api = {
   submitJob: (rows: NormalizedRow[], fileName: string) =>
     post<{ success: boolean; jobId: string; message: string }>('/jobs/submit', { rows, fileName }),
 
+  submitDetectJob: (fileData: string, sheetIndex: number, fileName: string) =>
+    post<{ success: boolean; jobId: string; message: string }>('/jobs/detect/submit', { fileData, sheetIndex, fileName }),
+
+  submitNormalizeJob: (fileData: string, sheetIndex: number, format: FormatType, mapping: ColumnMapping | undefined, fileName: string) =>
+    post<{ success: boolean; jobId: string; message: string }>('/jobs/normalize/submit', { fileData, sheetIndex, format, mapping, fileName }),
+
   getJobStatus: (jobId: string) => get<JobStatus>(`/jobs/${jobId}/status`),
 
   getJobResults: (jobId: string) => get<JobResults>(`/jobs/${jobId}/results`),
 
   listJobs: () => get<JobList>('/jobs'),
+
+  deleteJob: (jobId: string) => del<{ success: boolean }>(`/jobs/${jobId}`),
+
+  startJobSearch: (jobId: string) => post<{ success: boolean; message: string }>(`/jobs/${jobId}/start-search`, {}),
 };
 

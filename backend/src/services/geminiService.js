@@ -3,7 +3,6 @@ const { config } = require('../config');
 const { withRetry } = require('../utils/retry');
 const { logger } = require('../utils/logger');
 const { logAiError } = require('../utils/aiErrorLogger');
-const { validateUrl } = require('./urlValidatorService');
 const { mockVerificationResult } = require('./mocks/geminiMock');
 const geminiPool = require('./geminiPool');
 
@@ -21,9 +20,7 @@ function getClient(apiKey) {
 }
 
 function buildPrompt(row, useSupplementary) {
-  // NOTE: itemNumber is intentionally excluded from the prompt.
-  // The AI must extract the part number from Description/Supplementary text.
-  // The original itemNumber from Excel is preserved separately in mapResult.
+  // itemNumber is EXCLUDED here to force the AI to find it in the text.
   let partInfo = `- Description: ${row.description || 'empty'}\n- Manufacturer: ${row.manufacturer || 'empty'}\n- Type Designation: ${row.typeDesignation || 'empty'}`;
 
   if (useSupplementary && row.supplementary) {
@@ -188,7 +185,7 @@ function mapResult(raw, originalRow) {
     verifiedSource: raw.verified_source || 'Not found',
     verificationScore: raw.verification_score || 0,
     websiteId: raw.website_id || '',
-    sourceType: raw.source_type || 'not_found',
+    sourceType: raw.source_type === 'distributor' ? 'external' : (raw.source_type || 'not_found'),
     manufacturerWebsite: raw.manufacturer_website || '',
     manufacturerInferred: raw.manufacturer_inferred || false,
     supplementaryUsed: raw.supplementary_used || false,
@@ -207,7 +204,7 @@ async function verifyRow(row, useSupplementary, correlationId) {
 
   const apiKey = geminiPool.getNextKey();
   const keyNum = geminiPool.getKeyIndex();
-  logger.info(`[WEB VERIFY] Row ${correlationId} → calling Gemini 2.5-flash with Google Search [KEY ${keyNum}/${geminiPool.getKeyCount()}]`);
+  logger.info(`[WEB VERIFY] Row ${correlationId} → calling Gemini 2.5-flash with Google Search [GEMINI POOL] key=${keyNum}/${geminiPool.getKeyCount()}`);
 
   return withRetry(async () => {
     const start = Date.now();
@@ -231,14 +228,7 @@ async function verifyRow(row, useSupplementary, correlationId) {
       // Pass full original row so mapResult can preserve itemNumber from Excel
       let result = mapResult(parsed, row);
 
-      if (result.websiteId) {
-        const urlCheck = await validateUrl(result.websiteId);
-        result.urlValidationStatus = urlCheck.status;
-        if (urlCheck.status === 'redirected' && urlCheck.finalUrl) {
-          result.websiteId = urlCheck.finalUrl;
-        }
-        // 'unverified' (timeout) → keep websiteId as-is
-      }
+      // URL validation removed here — handled by verificationService.js urlPool
 
       logger.info(`[WEB VERIFY] Row ${correlationId} → done in ${Date.now() - start}ms | score: ${result.verificationScore} | source: ${result.sourceType}`);
       return result;

@@ -23,7 +23,11 @@ export default function StatsDashboard({ stats, rowCount }: StatsDashboardProps)
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 mb-3">
-      <StatCard value={s.totalRows} label="Total Rows" color="text-brand-cyan" />
+      <StatCard 
+        value={s.totalRows === 0 ? '...' : s.totalRows} 
+        label="Total Rows" 
+        color="text-brand-cyan" 
+      />
       <StatCard value={s.webVerified} label="Web Verified" color="text-brand-teal" />
       <StatCard value={s.emptyCells} label="Empty Cells" color="text-brand-red" />
       <StatCard value={s.scoreAbove90} label="Score ≥90" color="text-brand-green" />

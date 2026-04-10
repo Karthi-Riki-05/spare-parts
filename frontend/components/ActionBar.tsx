@@ -17,6 +17,7 @@ interface ActionBarProps {
   onBack: () => void;
   onExport: () => void;
   onManualMapping: () => void;
+  isTracking?: boolean;
 }
 
 export default function ActionBar({
@@ -31,6 +32,7 @@ export default function ActionBar({
   onBack,
   onExport,
   onManualMapping,
+  isTracking,
 }: ActionBarProps) {
   return (
     <div className="bg-bg-surface rounded-[10px] p-3 flex flex-wrap items-center justify-between gap-2.5 mb-3 border border-border">
@@ -44,8 +46,12 @@ export default function ActionBar({
           &larr; Back
         </Button>
         {phase !== 'verifying' ? (
-          <Button onClick={onVerify} disabled={rowCount === 0}>
-            Verify All
+          <Button 
+            onClick={onVerify} 
+            disabled={rowCount === 0 || isTracking}
+            title={isTracking ? 'Verification in progress in background' : 'Start verification'}
+          >
+            {isTracking ? 'Verifying...' : 'Verify All'}
           </Button>
         ) : (
           <Button variant="red" onClick={onStop}>
@@ -66,8 +72,11 @@ export default function ActionBar({
           <FormatDetector result={formatResult} onManualMapping={onManualMapping} />
         )}
         <span className="text-xs text-text-muted">{fileName}</span>
-        <Badge label={`${rowCount} rows`} />
-        <span className="text-[10px] text-text-hint">Click any cell to edit</span>
+        <Badge label={
+          phase === 'done' ? `✅ ${rowCount} rows verified` :
+          phase === 'verifying' ? `🔎 Verifying ${rowCount} rows` :
+          `📋 ${rowCount} rows ready to verify`
+        } />
       </div>
     </div>
   );

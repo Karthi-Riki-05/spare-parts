@@ -1,9 +1,8 @@
 const { Resend } = require('resend');
+const { config } = require('../config');
 const { logger } = require('../utils/logger');
 
-const resendApiKey = process.env.RESEND_API_KEY || '';
-const appUrl = process.env.APP_URL || 'http://localhost:3000';
-const resend = resendApiKey ? new Resend(resendApiKey) : null;
+const resend = config.resendApiKey ? new Resend(config.resendApiKey) : null;
 
 /**
  * Send job completion email
@@ -15,7 +14,7 @@ async function sendJobCompletionEmail(jobData, stats) {
       return false;
     }
     
-    const resultsUrl = `${appUrl}/results/${jobData.id}`;
+    const resultsUrl = `${config.appUrl}/results/${jobData.id}`;
     
     const htmlContent = `
       <html>
@@ -79,7 +78,7 @@ async function sendJobCompletionEmail(jobData, stats) {
     `;
     
     const response = await resend.emails.send({
-      from: 'noreply@sparepartsverifier.com',
+      from: config.notifyFromEmail,
       to: jobData.user_email,
       subject: `✅ Spare Parts Verification Complete — ${jobData.file_name}`,
       html: htmlContent,
@@ -145,7 +144,7 @@ async function sendErrorEmail(jobData, errorMessage) {
     `;
     
     const response = await resend.emails.send({
-      from: 'noreply@sparepartsverifier.com',
+      from: config.notifyFromEmail,
       to: jobData.user_email,
       subject: `⚠️ Verification Error — ${jobData.file_name}`,
       html: htmlContent,

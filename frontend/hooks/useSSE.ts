@@ -57,6 +57,7 @@ export function useSSE() {
             if (trimmed.startsWith('data: ')) {
               try {
                 const event = JSON.parse(trimmed.slice(6));
+                if (event.type === 'ping' || event.type === 'heartbeat') continue;
                 switch (event.type) {
                   case 'progress':
                     handlers.onProgress(event);
@@ -77,12 +78,28 @@ export function useSSE() {
             }
           }
         }
+
+        // If stream ended without a 'complete' event, notify user
+        // (this can happen if the connection drops silently)
+        if (!controller.signal.aborted) {
+          // Check if any remaining buffered data
+          if (buffer.trim()) {
+            const trimmed = buffer.trim();
+            if (trimmed.startsWith('data: ')) {
+              try {
+                const event = JSON.parse(trimmed.slice(6));
+                if (event.type === 'complete') handlers.onComplete(event);
+                else if (event.type === 'error') handlers.onError(event);
+              } catch {}
+            }
+          }
+        }
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
           handlers.onError({
             type: 'error',
             rowIndex: -1,
-            message: (err as Error).message || 'Connection failed',
+            message: (err as Error).message || 'Connection lost. Check Activity Center for job status.',
           });
         }
       }

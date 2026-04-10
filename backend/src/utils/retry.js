@@ -3,11 +3,14 @@ const { logger } = require('./logger');
 // Paid-tier delays: 500ms, 1s, 2s (was exponential 1s, 2s, 4s for free-tier rate limits)
 const PAID_TIER_DELAYS_MS = [500, 1000, 2000];
 
-async function withRetry(fn, maxRetries = 3, delayMs = 1000, correlationId) {
+async function withRetry(fn, maxRetries = 3, delayMs = 1000, correlationId, timeoutMs = 60000) {
   let lastError;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await fn();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms (Attempt ${attempt + 1})`)), timeoutMs);
+      });
+      return await Promise.race([fn(), timeoutPromise]);
     } catch (error) {
       lastError = error;
       if (attempt < maxRetries) {

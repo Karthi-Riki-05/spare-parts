@@ -13,14 +13,14 @@ const envSchema = z.object({
   MAX_ROWS_WARNING: z.coerce.number().default(5000),
   MAX_ROWS_LIMIT: z.coerce.number().default(10000),
   BATCH_SIZE: z.coerce.number().default(5),
-  MAX_CONCURRENCY: z.coerce.number().default(5),
+  MAX_CONCURRENCY: z.coerce.number().default(15),
   REQUEST_TIMEOUT_MS: z.coerce.number().default(30000),
   MAX_RETRIES: z.coerce.number().default(3),
   RETRY_DELAY_MS: z.coerce.number().default(1000),
   CACHE_TTL_SECONDS: z.coerce.number().default(86400),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000),
-  RATE_LIMIT_MAX: z.coerce.number().default(100),
-  VERIFICATION_TIMEOUT_MS: z.coerce.number().default(120000),
+  RATE_LIMIT_MAX: z.coerce.number().default(500),
+  VERIFICATION_TIMEOUT_MS: z.coerce.number().default(90000),
   LOG_LEVEL: z.string().default('info'),
   MOCK_MODE: z.string().transform(v => v === 'true').default('false'),
   OPENAI_MOCK_MODE: z.string().transform(v => v === 'true').default('false'),
@@ -32,6 +32,10 @@ const envSchema = z.object({
   ADMIN_EMAIL: z.string().default('tawdev@gmail.com'),
   ADMIN_PASSWORD: z.string().default('T@Wdev$05'),
   COOKIE_SECURE: z.string().transform(v => v === 'true').default('false'),
+  RESEND_API_KEY: z.string().default(''),
+  NOTIFY_FROM_EMAIL: z.string().default('noreply@spareparts.app'),
+  APP_URL: z.string().default('http://localhost:3000'),
+  BACKGROUND_THRESHOLD: z.coerce.number().default(20),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -68,6 +72,10 @@ const config = {
   adminEmail: parsed.data.ADMIN_EMAIL,
   adminPassword: parsed.data.ADMIN_PASSWORD,
   cookieSecure: parsed.data.COOKIE_SECURE,
+  resendApiKey: parsed.data.RESEND_API_KEY,
+  notifyFromEmail: parsed.data.NOTIFY_FROM_EMAIL,
+  appUrl: parsed.data.APP_URL,
+  backgroundThreshold: parsed.data.BACKGROUND_THRESHOLD,
 };
 
 module.exports = { config };

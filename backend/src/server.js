@@ -65,7 +65,8 @@ app.use('/api', require('./routes/manualMap'));
 app.use('/api', require('./routes/verify'));
 app.use('/api', require('./routes/export'));
 app.use('/api', require('./routes/cache'));
-app.use('/api/jobs', require('./routes/jobs'));
+const { router: jobsRouter, initResumption: initJobs } = require('./routes/jobs');
+app.use('/api/jobs', jobsRouter);
 
 app.use((req, res) => {
   res.status(404).render('error', { title: 'Not Found', message: 'Page not found', code: 404 });
@@ -100,7 +101,48 @@ function logAiConfigBanner() {
 if (!isTestEnv) {
   const server = app.listen(config.port, () => {
     logger.info(`Server running on http://localhost:${config.port}`, { nodeEnv: config.nodeEnv, mockMode: config.mockMode });
-    logAiConfigBanner();
+
+    logger.info('══════════════════════════');
+    logger.info(' PRODUCTION READINESS     ');
+    logger.info('══════════════════════════');
+    logger.info(' GEMINI_API_KEY:   ' + (config.geminiApiKey ? 'SET ✅' : 'MISSING ❌'));
+    logger.info(' GEMINI_API_KEY_2: ' + (config.geminiApiKey2 ? 'SET ✅' : 'not set'));
+    logger.info(' GEMINI_API_KEY_3: ' + (config.geminiApiKey3 ? 'SET ✅' : 'not set'));
+    logger.info(' RESEND_API_KEY:   ' + (config.resendApiKey ? 'SET ✅' : 'MISSING ⚠️'));
+    logger.info(' APP_URL:          ' + config.appUrl);
+    logger.info(' MOCK_MODE:        ' + config.mockMode);
+    logger.info(' MAX_CONCURRENCY:  ' + config.maxConcurrency);
+    logger.info(' BG_THRESHOLD:     ' + config.backgroundThreshold);
+    logger.info(' JWT_SECRET:       ' + (config.jwtSecret.includes('changeme') ? 'DEFAULT ⚠️' : 'CUSTOM ✅'));
+    logger.info(' keepAlive:        620000ms');
+    logger.info(' headersTimeout:   630000ms');
+    logger.info('══════════════════════════');
+    
+    // Mission: Job system resilience
+    const jobService = require('./services/jobService');
+    initJobs(); // Resume interrupted jobs
+    setInterval(() => jobService.cleanupOldJobs(48), 6 * 60 * 60 * 1000); // Cleanup every 6 hours
+
+    // Daily SQLite maintenance — cleanup old jobs (30d) + VACUUM
+    setInterval(() => {
+      try {
+        jobService.cleanupOldJobs(30 * 24); // 30 days
+        const { getDb: getCacheDb } = require('./services/sqliteCacheService');
+        const cacheDb = getCacheDb();
+        if (cacheDb) {
+          cacheDb.pragma('wal_checkpoint(TRUNCATE)');
+          cacheDb.exec('VACUUM');
+        }
+        const jobDb = jobService.getDb();
+        if (jobDb) {
+          jobDb.pragma('wal_checkpoint(TRUNCATE)');
+          jobDb.exec('VACUUM');
+        }
+        logger.info('[SQLITE] Daily maintenance complete');
+      } catch (err) {
+        logger.error('[SQLITE] Daily maintenance error: ' + err.message);
+      }
+    }, 86400000); // every 24 hours
   });
   // SSE /api/verify can run several minutes. Override Node's default socket timeouts
   // so the kernel/Express doesn't sever long-lived streams.

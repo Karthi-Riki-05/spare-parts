@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { config } = require('../config');
+const { getRecentErrors } = require('../utils/aiErrorLogger');
 
 const router = Router();
 
@@ -21,6 +22,16 @@ router.get('/ai-status', (_req, res) => {
     },
     status: hasKey ? 'ready' : 'missing_key',
   });
+});
+
+router.get('/ai-errors', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const errors = getRecentErrors(Math.min(limit, 200));
+    res.json({ success: true, errors, count: errors.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
