@@ -35,8 +35,9 @@ export default function ActionBar({
   isTracking,
 }: ActionBarProps) {
   return (
-    <div className="bg-bg-surface rounded-[10px] p-3 flex flex-wrap items-center justify-between gap-2.5 mb-3 border border-border">
-      <div className="flex flex-wrap gap-2 items-center">
+    <div className="bg-bg-surface rounded-[10px] p-3 mb-3 border border-border">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2.5">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:items-center w-full sm:w-auto">
         <Button
           variant="ghost"
           onClick={onBack}
@@ -62,7 +63,7 @@ export default function ActionBar({
           New File
         </Button>
         {hasResults && (
-          <Button variant="green" onClick={onExport}>
+          <Button variant="green" onClick={() => onExport()}>
             Download Excel
           </Button>
         )}
@@ -71,12 +72,13 @@ export default function ActionBar({
         {formatResult && (
           <FormatDetector result={formatResult} onManualMapping={onManualMapping} />
         )}
-        <span className="text-xs text-text-muted">{fileName}</span>
+        <span className="text-xs text-text-muted truncate max-w-[150px] sm:max-w-none">{fileName}</span>
         <Badge label={
-          phase === 'done' ? `✅ ${rowCount} rows verified` :
-          phase === 'verifying' ? `🔎 Verifying ${rowCount} rows` :
-          `📋 ${rowCount} rows ready to verify`
+          phase === 'done' ? `✅ ${rowCount} verified` :
+          phase === 'verifying' ? `🔎 ${rowCount} rows` :
+          `📋 ${rowCount} rows`
         } />
+      </div>
       </div>
     </div>
   );

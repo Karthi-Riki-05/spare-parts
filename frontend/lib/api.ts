@@ -9,6 +9,17 @@ import type {
 
 const BASE = '/api';
 
+export class ApiError extends Error {
+  status: number;
+  details: Record<string, unknown>;
+  constructor(message: string, status: number, details: Record<string, unknown> = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.details = details;
+  }
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
@@ -19,7 +30,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    throw new ApiError(err.error || err.message || `HTTP ${res.status}`, res.status, err);
   }
   return res.json();
 }
@@ -128,11 +139,42 @@ export const api = {
     originalData: RawRow[],
     fileName: string,
     originalFormat?: string,
+    language?: string,
   ): Promise<Blob> => {
+    // Sanitize to plain objects — prevents circular JSON from React refs/DOM elements
+    const safeResults = results.map(r => ({
+      rowIndex: r.rowIndex ?? 0,
+      internalItemNumber: String(r.internalItemNumber || ''),
+      description: String(r.description || ''),
+      manufacturer: String(r.manufacturer || ''),
+      itemNumber: String(r.itemNumber || ''),
+      typeDesignation: String(r.typeDesignation || ''),
+      supplementary: String(r.supplementary || ''),
+      verifiedSource: String((r as any).verifiedSource || ''),
+      verificationScore: Number((r as any).verificationScore) || 0,
+      websiteId: String((r as any).websiteId || ''),
+      sourceType: String((r as any).sourceType || ''),
+      manufacturerWebsite: String((r as any).manufacturerWebsite || ''),
+      manufacturerInferred: Boolean((r as any).manufacturerInferred),
+      supplementaryUsed: Boolean((r as any).supplementaryUsed),
+      supplementaryChanged: Boolean((r as any).supplementaryChanged),
+      supplementaryOriginal: String((r as any).supplementaryOriginal || ''),
+      supplementaryType: String((r as any).supplementaryType || ''),
+      urlValidationStatus: String((r as any).urlValidationStatus || ''),
+    }));
+    const safeOriginal = originalData.map(r => {
+      const plain: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(r)) {
+        if (v !== null && v !== undefined && typeof v !== 'object') plain[k] = v;
+        else if (v === null || v === undefined) plain[k] = '';
+      }
+      return plain;
+    });
     const res = await fetch(`${BASE}/export`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ results, originalData, fileName, originalFormat }),
+      credentials: 'include',
+      body: JSON.stringify({ results: safeResults, originalData: safeOriginal, fileName, originalFormat, language }),
     });
     if (!res.ok) throw new Error('Export failed');
     return res.blob();

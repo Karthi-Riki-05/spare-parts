@@ -36,6 +36,7 @@ const envSchema = z.object({
   NOTIFY_FROM_EMAIL: z.string().default('noreply@spareparts.app'),
   APP_URL: z.string().default('http://localhost:3000'),
   BACKGROUND_THRESHOLD: z.coerce.number().default(20),
+  APP_TIMEZONE: z.string().default('Europe/Stockholm'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -76,6 +77,7 @@ const config = {
   notifyFromEmail: parsed.data.NOTIFY_FROM_EMAIL,
   appUrl: parsed.data.APP_URL,
   backgroundThreshold: parsed.data.BACKGROUND_THRESHOLD,
+  appTimezone: parsed.data.APP_TIMEZONE,
 };
 
 module.exports = { config };

@@ -2,6 +2,7 @@ const { Router } = require('express');
 const { config } = require('../config');
 const cacheService = require('../services/cacheService');
 const geminiPool = require('../services/geminiPool');
+const { formatTimestamp, getTimezoneAbbr } = require('../utils/timeUtils');
 
 const router = Router();
 const startTime = Date.now();
@@ -52,6 +53,9 @@ router.get('/health', (_req, res) => {
         model: 'gemini-2.5-flash',
         mockMode: config.geminiMockMode,
       },
+      timezone: config.appTimezone,
+      timezoneAbbr: getTimezoneAbbr(),
+      serverTime: formatTimestamp(new Date()),
     });
   } catch (err) {
     res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });

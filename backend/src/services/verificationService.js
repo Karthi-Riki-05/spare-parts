@@ -132,7 +132,12 @@ async function processRows(rows, options = {}) {
       result = mirrorOriginalLayout(result, deduped);
       result.rowIndex = row.rowIndex;
       result.internalItemNumber = internalItemNumber;
-      
+
+      // Supplementary protection: always restore original unless explicitly flagged as changed
+      if (!result.supplementaryChanged) {
+        result.supplementary = row.supplementary || '';
+      }
+
       if (result.supplementaryChanged && result.supplementaryOriginal !== result.supplementary) {
         changeLogs.push(createChangeLog(row.rowIndex, result.supplementaryOriginal, result.supplementary, result.verificationScore, result.verificationScore < 70 ? 'claude-sonnet-4-6' : 'gemini-2.5-flash'));
       }

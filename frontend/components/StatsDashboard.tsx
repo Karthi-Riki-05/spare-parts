@@ -22,7 +22,7 @@ export default function StatsDashboard({ stats, rowCount }: StatsDashboardProps)
   };
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 mb-3">
+    <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-1.5 sm:gap-2 mb-3">
       <StatCard 
         value={s.totalRows === 0 ? '...' : s.totalRows} 
         label="Total Rows" 

@@ -30,6 +30,7 @@ export default function SparePartsApp() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [activityOpen, setActivityOpen] = useState(false);
   const [activeJobCount, setActiveJobCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('app-theme') as 'light' | 'dark' | null;
@@ -56,14 +57,21 @@ export default function SparePartsApp() {
     checkUser();
   }, []);
 
-  // Poll active job count for badge
+  // Poll active job count for badge + auto-open Activity on login if jobs are active
   useEffect(() => {
     if (!user) return;
+    let firstPoll = true;
     const poll = async () => {
       try {
         const res = await api.listJobs();
         const active = res.jobs.filter((j: any) => j.status === 'processing' || j.status === 'pending' || j.status === 'awaiting_review');
         setActiveJobCount(active.length);
+
+        // On first load after login: if there are active or recently completed jobs, auto-open Activity Center
+        if (firstPoll && active.length > 0 && !hasData && v.phase === 'idle') {
+          setActivityOpen(true);
+        }
+        firstPoll = false;
       } catch {}
     };
     poll();
@@ -79,7 +87,15 @@ export default function SparePartsApp() {
     }
   }, [searchParams, v.loadJobData, v.phase]);
 
+  const isProcessing = v.phase === 'detecting' || v.phase === 'normalizing' || v.phase === 'verifying';
+
   const handleLogout = async () => {
+    if (isProcessing) {
+      const confirmed = window.confirm(
+        'Processing is in progress. Background jobs will continue, but inline processing will stop.\n\nAre you sure you want to logout?'
+      );
+      if (!confirmed) return;
+    }
     await logout();
     router.push('/login');
   };
@@ -111,52 +127,67 @@ export default function SparePartsApp() {
   return (
     <>
       {/* Header */}
-      <header className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-5 py-3 border-b border-border bg-bg-surface mb-4 gap-3 sm:gap-0">
-        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-start">
-          <div className="w-[30px] h-[30px] bg-brand-cyan rounded flex items-center justify-center font-bold text-[13px] text-white">
-            SP1
-          </div>
-          <h1 className="text-lg font-bold text-text-primary">Spare Parts Web Verifier</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} 
-            className="text-xs px-2 py-1 bg-border hover:bg-border-hover border border-border rounded text-text-primary transition-colors flex items-center gap-1"
-            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-          >
-            <span>{theme === 'light' ? '🌙' : '☀️'}</span>
-            <span className="hidden sm:inline">{theme === 'light' ? 'Dark' : 'Light'}</span>
-          </button>
-          <a href="/jobs" className="text-xs text-brand-cyan hover:underline">
-            Jobs
-          </a>
-          <a href="/docs" className="text-xs text-brand-cyan hover:underline">
-            Docs
-          </a>
-          <button
-            onClick={() => setActivityOpen(true)}
-            className="relative flex items-center gap-1.5 text-xs px-2 py-1 bg-brand-cyan/10 hover:bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/20 rounded transition-colors"
-          >
-            <span>📊</span>
-            <span className="hidden sm:inline">Activity</span>
-            {activeJobCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-brand-red text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                {activeJobCount}
-              </span>
-            )}
-          </button>
-          {user && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-text-secondary">{user.email}</span>
-              <button
-                onClick={handleLogout}
-                className="px-2 py-1 bg-brand-red/20 hover:bg-brand-red/30 text-brand-red rounded text-xs transition-colors"
-              >
-                Logout
-              </button>
+      <header className="border-b border-border bg-bg-surface mb-4">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-[30px] h-[30px] bg-brand-cyan rounded flex items-center justify-center font-bold text-[13px] text-white">
+              SP1
             </div>
-          )}
+            <h1 className="text-lg font-bold text-text-primary hidden sm:block">Spare Parts Web Verifier</h1>
+            <h1 className="text-base font-bold text-text-primary sm:hidden">SP Verifier</h1>
+          </div>
+
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-4">
+            <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="text-xs px-2 py-1 bg-border hover:bg-border-hover border border-border rounded text-text-primary transition-colors">
+              {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+            </button>
+            <a href="/jobs" className="text-xs text-brand-cyan hover:underline">Jobs</a>
+            <a href="/docs" className="text-xs text-brand-cyan hover:underline">Docs</a>
+            <button onClick={() => setActivityOpen(true)} className="relative flex items-center gap-1.5 text-xs px-2 py-1 bg-brand-cyan/10 hover:bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/20 rounded transition-colors">
+              <span>📊</span><span>Activity</span>
+              {activeJobCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-brand-red text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">{activeJobCount}</span>
+              )}
+            </button>
+            {user && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-text-secondary">{user.email}</span>
+                <button onClick={handleLogout} className="px-2 py-1 bg-brand-red/20 hover:bg-brand-red/30 text-brand-red rounded text-xs transition-colors">Logout</button>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile: Activity + Hamburger */}
+          <div className="flex md:hidden items-center gap-2">
+            <button onClick={() => setActivityOpen(true)} className="relative p-2 text-brand-cyan">
+              <span>📊</span>
+              {activeJobCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 bg-brand-red text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">{activeJobCount}</span>
+              )}
+            </button>
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-text-primary text-xl" aria-label="Menu">
+              {mobileMenuOpen ? '✕' : '☰'}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-border px-4 py-2 space-y-1 bg-bg-surface">
+            <a href="/jobs" className="block py-2.5 text-sm text-brand-cyan">Jobs</a>
+            <a href="/docs" className="block py-2.5 text-sm text-brand-cyan">Docs</a>
+            <button onClick={() => { setTheme(t => t === 'light' ? 'dark' : 'light'); setMobileMenuOpen(false); }} className="block w-full text-left py-2.5 text-sm text-text-primary">
+              {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+            </button>
+            {user && (
+              <>
+                <div className="py-2.5 text-sm text-text-secondary">{user.email}</div>
+                <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }} className="block w-full text-left py-2.5 text-sm text-brand-red">Logout</button>
+              </>
+            )}
+          </div>
+        )}
       </header>
 
       {/* Background job tracking banner */}
@@ -188,8 +219,22 @@ export default function SparePartsApp() {
         </div>
       )}
 
+      {/* Validation error — file rejected */}
+      {v.validationError && (
+        <div className="bg-brand-red/5 border border-brand-red/30 rounded-lg p-5 mb-4">
+          <h3 className="text-base font-bold text-brand-red mb-2">Invalid File</h3>
+          <p className="text-sm text-text-primary mb-2">This file doesn&apos;t appear to contain spare parts data.</p>
+          <p className="text-xs text-text-secondary mb-1"><strong>Detected:</strong> {v.validationError.detectedType}</p>
+          <p className="text-xs text-text-secondary mb-3"><strong>Reason:</strong> {v.validationError.reason}</p>
+          <p className="text-xs text-text-muted mb-3">Please upload a file containing part descriptions, manufacturer names, and item/part numbers.</p>
+          <button onClick={v.reset} className="px-4 py-2 bg-brand-cyan text-white text-sm font-medium rounded hover:bg-brand-cyan/90 transition-colors">
+            Try Another File
+          </button>
+        </div>
+      )}
+
       {/* Upload zone — shown when no data loaded */}
-      {!hasData && v.phase !== 'detecting' && v.phase !== 'normalizing' && v.phase !== 'verifying' && !v.jobTrackingMode && (
+      {!hasData && v.phase !== 'detecting' && v.phase !== 'normalizing' && v.phase !== 'verifying' && !v.jobTrackingMode && !v.validationError && (
         <FileUpload onFileSelected={v.uploadFile} disabled={v.phase !== 'idle'} />
       )}
 
@@ -225,6 +270,14 @@ export default function SparePartsApp() {
             </div>
           )}
 
+          {/* Language detection badge */}
+          {v.detectedLanguage && v.detectedLanguage.language !== 'English' && v.detectedLanguage.translationNeeded && (
+            <div className="bg-brand-blue/5 border border-brand-blue/20 rounded-lg px-4 py-2 mb-3 text-[12px] text-brand-blue flex items-center gap-2">
+              <span>🌐</span>
+              <span>{v.detectedLanguage.language} detected — translated to English for verification</span>
+            </div>
+          )}
+
           <StatsDashboard stats={v.stats} rowCount={v.rowCount} />
 
           <ActionBar
@@ -237,7 +290,7 @@ export default function SparePartsApp() {
             onStop={v.cancelVerification}
             onReset={v.reset}
             onBack={v.handleBack}
-            onExport={v.exportData}
+            onExport={() => v.exportData()}
             onManualMapping={() => v.setShowMappingDialog(true)}
             isTracking={v.jobTrackingMode}
           />

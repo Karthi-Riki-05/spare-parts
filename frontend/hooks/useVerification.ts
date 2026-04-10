@@ -13,7 +13,7 @@ import type {
   ColumnMapping,
   FormatType,
 } from '@spare-parts/types';
-import { api, JobStatus } from '@/lib/api';
+import { api, ApiError, JobStatus } from '@/lib/api';
 import { fileToBase64 } from '@/lib/utils';
 import { BACKGROUND_THRESHOLD } from '@/lib/constants';
 import { useSSE } from './useSSE';
@@ -46,6 +46,8 @@ export function useVerification() {
   const [showMappingDialog, setShowMappingDialog] = useState(false);
   const [rowCount, setRowCount] = useState(0);
   const [showBackgroundModal, setShowBackgroundModal] = useState(false);
+  const [validationError, setValidationError] = useState<{ detectedType: string; reason: string; suggestion: string } | null>(null);
+  const [detectedLanguage, setDetectedLanguage] = useState<{ language: string; code: string; translationNeeded: boolean } | null>(null);
   const [pendingJobId, setPendingJobId] = useState<string | null>(null);
   const [jobTrackingMode, setJobTrackingMode] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -59,6 +61,7 @@ export function useVerification() {
     try {
       setPhase('detecting');
       setError(null);
+      setValidationError(null);
       setFileName(file.name);
       const base64 = await fileToBase64(file);
       setFileBase64(base64);
@@ -94,6 +97,15 @@ export function useVerification() {
       setFormatResult(detection);
       setRowCount(detection.rowCount);
 
+      // Store detected language
+      if ((detection as any).detectedLanguage) {
+        setDetectedLanguage({
+          language: (detection as any).detectedLanguage,
+          code: (detection as any).languageCode || 'en',
+          translationNeeded: (detection as any).translationNeeded || false,
+        });
+      }
+
       if (detection.confidence < 80) {
         const rawResult = await api.normalize(base64, sheetIndex, detection.format);
         rawDataRef.current = rawResult.originalData;
@@ -104,6 +116,16 @@ export function useVerification() {
 
       await normalizeData(base64, sheetIndex, detection.format, detection.rowCount);
     } catch (err) {
+      // Handle content validation rejection (422)
+      if (err instanceof ApiError && err.status === 422 && err.details.error === 'invalid_file_content') {
+        setPhase('idle');
+        setValidationError({
+          detectedType: String(err.details.detectedType || 'Unknown'),
+          reason: String(err.details.reason || err.message),
+          suggestion: String(err.details.suggestion || ''),
+        });
+        return;
+      }
       // If detection times out or fails (likely > 30s), try background job
       if ((err as Error).message.includes('504') || (err as Error).message.includes('timeout')) {
         try {
@@ -135,14 +157,16 @@ export function useVerification() {
 
         if (count > backgroundThreshold) {
           addLog(`Background normalization started (${count} rows)...`, 'success');
-          
+
           // Request notification permission proactively
           import('@/lib/notifications').then(({ notifications }) => notifications.requestPermission());
 
           const response = await api.submitNormalizeJob(base64, sheetIndex, format, mapping, fileName);
           setPendingJobId(response.jobId);
           setJobTrackingMode(true);
-          setProgressMessage('Background normalization in progress...');
+          setPhase('idle'); // Don't block UI — let user see background banner
+          setNormalizedRows([]); // Clear so background tracking banner shows
+          setProgressMessage('Processing in background — you can safely logout or close this browser.');
           return;
         }
 
@@ -470,13 +494,18 @@ export function useVerification() {
     doSSEVerification();
   }, [doSSEVerification]);
 
-  const exportData = useCallback(async () => {
+  const [exportLanguage, setExportLanguage] = useState<string>('en');
+
+  const exportData = useCallback(async (lang?: string) => {
     try {
+      // Guard: lang must be a string (prevents event object leak from onClick)
+      const safeLang = typeof lang === 'string' ? lang : exportLanguage;
       const blob = await api.exportData(
         results,
         originalDataRef.current,
         fileName,
-        formatResult?.format
+        formatResult?.format,
+        safeLang
       );
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -493,11 +522,13 @@ export function useVerification() {
     abortRef.current?.abort();
     setPhase('idle');
     setError(null);
+    setValidationError(null);
     setFileBase64(null);
     setFileName('');
     setSheetNames([]);
     setSelectedSheet(0);
     setFormatResult(null);
+    setDetectedLanguage(null);
     setNormalizedRows([]);
     originalDataRef.current = [];
     rawDataRef.current = [];
@@ -511,6 +542,9 @@ export function useVerification() {
     setShowSheetSelector(false);
     setShowLargeFileWarning(false);
     setShowMappingDialog(false);
+    setShowBackgroundModal(false);
+    setPendingJobId(null);
+    setJobTrackingMode(false);
     setRowCount(0);
   }, []);
 
@@ -583,6 +617,8 @@ export function useVerification() {
     showMappingDialog,
     rowCount,
     rawData: rawDataRef.current,
+    validationError,
+    detectedLanguage,
     uploadFile,
     selectSheet,
     processSheet: (idx: number) => fileBase64 && processSheet(fileBase64, idx),
@@ -599,6 +635,8 @@ export function useVerification() {
     setShowBackgroundModal,
     pendingJobId,
     jobTrackingMode,
+    exportLanguage,
+    setExportLanguage,
     submitBackgroundJob,
     continueSSEVerification,
     startVerificationAfterReview,
@@ -641,7 +679,20 @@ export function useVerification() {
 
           if (isVerified) {
             setResults(rows);
-            setStats(resultsResponse.stats);
+
+            // Compute stats from rows directly (backend stats may be snake_case or missing)
+            const computed = {
+              totalRows: rows.length,
+              webVerified: rows.filter((r: any) => (r.verificationScore || 0) > 0).length,
+              emptyCells: rows.reduce((acc: number, r: any) => acc + [r.description, r.manufacturer, r.itemNumber, r.websiteId].filter(f => !f || String(f).trim() === '').length, 0),
+              scoreAbove90: rows.filter((r: any) => (r.verificationScore || 0) >= 90).length,
+              score50to89: rows.filter((r: any) => { const s = r.verificationScore || 0; return s >= 50 && s < 90; }).length,
+              scoreBelow50: rows.filter((r: any) => (r.verificationScore || 0) < 50).length,
+              officialSourceFound: rows.filter((r: any) => r.sourceType === 'official').length,
+              externalSourceFound: rows.filter((r: any) => r.sourceType === 'external' || r.sourceType === 'distributor').length,
+              notFound: rows.filter((r: any) => r.sourceType === 'not_found' || r.sourceType === 'unknown').length,
+            };
+            setStats(computed);
             setPhase('done');
             setProgress(100);
             setProgressMessage(`${rows.length} rows verified`);

@@ -4,6 +4,8 @@ services:
     ports:
       - "3001:3001"
     env_file: ./backend/.env
+    environment:
+      - TZ=${APP_TIMEZONE:-Europe/Stockholm}
     volumes:
       - ./backend/logs:/app/logs
       - ./backend/data:/app/data
@@ -27,6 +29,7 @@ services:
     environment:
       - BACKEND_URL=http://backend:3001
       - NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
+      - NEXT_PUBLIC_APP_TIMEZONE=${APP_TIMEZONE:-Europe/Stockholm}
       - WATCHPACK_POLLING=true
     depends_on:
       backend:

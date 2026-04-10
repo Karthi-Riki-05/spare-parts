@@ -47,12 +47,14 @@ export default function FileUpload({ onFileSelected, disabled }: FileUploadProps
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
       >
-        <div className="text-4xl mb-3">&#128196;</div>
+        <div className="text-4xl sm:text-4xl mb-3">&#128196;</div>
         <div className="text-[15px] font-bold text-cyan-300 mb-1.5">
           Drop your Excel file here
         </div>
         <div className="text-xs text-[#4b5563] mb-4">
-          or click to browse &middot; .xlsx / .xls
+          <span className="hidden sm:inline">or click to browse</span>
+          <span className="sm:hidden">or tap to browse</span>
+          {' '}&middot; .xlsx / .xls
         </div>
         <input
           ref={inputRef}

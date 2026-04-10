@@ -214,8 +214,10 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
                 ? {
                     position: 'sticky',
                     left: 0,
-                    zIndex: 1,
-                    backgroundColor: isHovered ? 'rgba(128,128,128,0.05)' : 'var(--bg-surface)',
+                    zIndex: 10,
+                    backgroundColor: 'var(--bg-surface, #ffffff)',
+                    borderRight: '1px solid var(--border, #e2e8f0)',
+                    boxShadow: '2px 0 4px rgba(0,0,0,0.06)',
                   }
                 : {}),
             };
@@ -291,8 +293,10 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
                   ? {
                       position: 'sticky',
                       left: 0,
-                      zIndex: 4,
-                      backgroundColor: 'var(--bg-card)',
+                      zIndex: 20,
+                      backgroundColor: 'var(--bg-card, #f8fafc)',
+                      borderRight: '1px solid var(--border, #e2e8f0)',
+                      boxShadow: '2px 0 4px rgba(0,0,0,0.06)',
                     }
                   : {}),
               }}

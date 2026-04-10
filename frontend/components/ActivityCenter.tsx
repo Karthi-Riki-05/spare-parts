@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import { notifications } from '@/lib/notifications';
+import { formatDateTimeWithZone } from '@/lib/timeUtils';
 
 interface ActivityCenterProps {
   open: boolean;
@@ -208,7 +209,7 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
     <div className="fixed inset-0 z-50 overflow-hidden">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="absolute top-0 right-0 h-full w-full sm:max-w-md bg-bg-surface border-l border-border shadow-2xl transition-transform duration-300">
+      <div className="absolute inset-0 md:inset-auto md:top-0 md:right-0 md:h-full w-full md:max-w-md bg-bg-surface md:border-l border-border shadow-2xl">
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
@@ -275,24 +276,30 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
                         : 'border-border bg-bg-muted/50'
                     }`}
                   >
-                    {/* Job Header */}
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-text-primary truncate">
-                          {getPhaseIcon(job)} {job.fileName}
-                        </p>
-                        <p className="text-[11px] text-text-secondary">
-                          {new Date(job.createdAt).toLocaleString()}
-                        </p>
+                    {/* Job Header — stacked layout */}
+                    <div className="mb-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span>{getPhaseIcon(job)}</span>
+                        <span className="text-sm font-medium text-text-primary truncate" title={job.fileName}>
+                          {job.fileName}
+                        </span>
                       </div>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${
-                        job.status === 'awaiting_review' ? 'bg-brand-yellow/20 text-brand-yellow' :
-                        job.status === 'completed' ? 'bg-brand-green/10 text-brand-green' :
-                        job.status === 'failed' ? 'bg-brand-red/10 text-brand-red' :
-                        'bg-brand-cyan/10 text-brand-cyan'
-                      }`}>
-                        {getPhaseLabel(job)}
-                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${
+                          job.status === 'awaiting_review' ? 'bg-brand-yellow/20 text-brand-yellow' :
+                          job.status === 'completed' ? 'bg-brand-green/10 text-brand-green' :
+                          job.status === 'failed' ? 'bg-brand-red/10 text-brand-red' :
+                          'bg-brand-cyan/10 text-brand-cyan'
+                        }`}>
+                          {getPhaseLabel(job)}
+                        </span>
+                        <span className="text-[10px] text-text-secondary">
+                          {formatDateTimeWithZone(job.createdAt)}
+                        </span>
+                        {job.totalRows > 0 && (
+                          <span className="text-[10px] text-text-muted">{job.totalRows} rows</span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Phase description */}
@@ -313,9 +320,9 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
                             {job.totalRows === 0 ? 'Preparing...' : `${job.processedRows} / ${job.totalRows} (${job.progress}%)`}
                           </span>
                         </div>
-                        <div className="w-full bg-border rounded-full h-1.5 overflow-hidden">
+                        <div className="w-full bg-border rounded-full h-2 overflow-hidden">
                           <div
-                            className="h-full transition-all duration-500 bg-brand-cyan"
+                            className="h-full transition-all duration-500 bg-brand-cyan rounded-full"
                             style={{ width: `${job.progress}%` }}
                           />
                         </div>
@@ -324,6 +331,7 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
                             {job.processedRows} / {job.totalRows} rows
                           </p>
                         )}
+                        <p className="text-[10px] text-text-muted mt-1">You can safely close this browser</p>
                       </div>
                     )}
 
@@ -363,68 +371,99 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
                           </div>
                         )}
 
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleDelete(job.id)}
-                            className="flex-1 py-1.5 border border-border text-text-secondary text-[11px] font-bold rounded hover:bg-border transition-colors"
-                          >
-                            Cancel & Re-upload
-                          </button>
+                        <div className="flex flex-col sm:flex-row gap-1.5">
                           <button
                             onClick={() => onReview(job.id)}
-                            className="flex-1 py-1.5 bg-brand-cyan text-white text-[11px] font-bold rounded hover:bg-brand-cyan/90 transition-colors"
+                            className="flex-1 py-2 bg-brand-cyan text-white text-[11px] font-bold rounded-lg hover:bg-brand-cyan/90 transition-colors"
                           >
                             Review Full Data →
+                          </button>
+                          <button
+                            onClick={() => handleDelete(job.id)}
+                            className="flex-1 py-2 border border-border text-text-secondary text-[11px] font-bold rounded-lg hover:bg-border transition-colors"
+                          >
+                            Cancel & Re-upload
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* Completed Job Actions */}
-                    {job.status === 'completed' && (
-                      <div className="mt-2">
-                        <p className="text-[11px] text-text-secondary mb-2">{getPhaseDescription(job)}</p>
+                    {/* Completed Job — Redesigned card */}
+                    {job.status === 'completed' && (() => {
+                      const st = (job as any).stats || {};
+                      const s90 = st.score_above_90 ?? st.scoreAbove90 ?? 0;
+                      const s50 = st.score_50_to_89 ?? st.score50to89 ?? 0;
+                      const sLow = st.score_below_50 ?? st.scoreBelow50 ?? 0;
+                      const official = st.official_source ?? st.officialSourceFound ?? 0;
+                      const external = st.external_source ?? st.externalSourceFound ?? 0;
+                      const nf = st.not_found ?? st.notFound ?? 0;
+                      return (
+                      <div className="mt-2 space-y-3">
+                        <hr className="border-border" />
+                        <p className="text-[11px] text-text-secondary font-medium">📊 Results Summary</p>
 
-                        {/* Stats summary if available */}
-                        {(job as any).stats && (
-                          <div className="grid grid-cols-3 gap-1 mb-3 text-[10px]">
-                            <div className="bg-brand-green/10 rounded p-1.5 text-center">
-                              <div className="font-bold text-brand-green">{(job as any).stats.score_above_90 ?? (job as any).stats.scoreAbove90 ?? '—'}</div>
-                              <div className="text-text-secondary">Score ≥90</div>
+                        {/* Score cards — always render */}
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <div className="border-l-[3px] border-brand-green bg-brand-green/5 rounded-r-lg p-2">
+                            <div className="flex justify-between items-start">
+                              <div className="text-lg font-bold text-brand-green">{s90}</div>
+                              <span className="text-[10px]">✅</span>
                             </div>
-                            <div className="bg-brand-yellow/10 rounded p-1.5 text-center">
-                              <div className="font-bold text-brand-yellow">{(job as any).stats.score_50_to_89 ?? (job as any).stats.score50to89 ?? '—'}</div>
-                              <div className="text-text-secondary">Score 50-89</div>
-                            </div>
-                            <div className="bg-brand-red/10 rounded p-1.5 text-center">
-                              <div className="font-bold text-brand-red">{(job as any).stats.score_below_50 ?? (job as any).stats.scoreBelow50 ?? '—'}</div>
-                              <div className="text-text-secondary">Score &lt;50</div>
-                            </div>
+                            <div className="text-[9px] text-text-secondary mt-0.5">Score ≥90</div>
                           </div>
-                        )}
+                          <div className="border-l-[3px] border-brand-yellow bg-brand-yellow/5 rounded-r-lg p-2">
+                            <div className="flex justify-between items-start">
+                              <div className="text-lg font-bold text-brand-yellow">{s50}</div>
+                              <span className="text-[10px]">⚠️</span>
+                            </div>
+                            <div className="text-[9px] text-text-secondary mt-0.5">Score 50-89</div>
+                          </div>
+                          <div className="border-l-[3px] border-brand-red bg-brand-red/5 rounded-r-lg p-2">
+                            <div className="flex justify-between items-start">
+                              <div className="text-lg font-bold text-brand-red">{sLow}</div>
+                              <span className="text-[10px]">❌</span>
+                            </div>
+                            <div className="text-[9px] text-text-secondary mt-0.5">Score &lt;50</div>
+                          </div>
+                        </div>
 
-                        <div className="flex gap-2">
+                        {/* Source type pills */}
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-brand-green/10 px-2 py-0.5 text-[10px] font-medium text-brand-green">
+                            🟢 Official: {official}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-brand-blue/10 px-2 py-0.5 text-[10px] font-medium text-brand-blue">
+                            🔵 External: {external}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-bg-muted px-2 py-0.5 text-[10px] font-medium text-text-secondary">
+                            ⚪ Not found: {nf}
+                          </span>
+                        </div>
+
+                        {/* Action buttons — stack on mobile */}
+                        <div className="flex flex-col sm:flex-row gap-1.5">
                           <button
                             onClick={() => handleDownload(job.id, job.fileName)}
-                            className="flex-1 py-1.5 bg-brand-cyan text-white text-[11px] font-bold rounded hover:bg-brand-cyan-hover transition-colors"
+                            className="flex-1 py-2 bg-brand-cyan text-white text-[11px] font-bold rounded-lg hover:bg-brand-cyan/90 transition-colors flex items-center justify-center gap-1.5"
                           >
                             📥 Download Excel
                           </button>
                           <button
                             onClick={() => onReview(job.id)}
-                            className="flex-1 py-1.5 border border-brand-cyan text-brand-cyan text-[11px] font-bold rounded hover:bg-brand-cyan/10 transition-colors"
+                            className="flex-1 py-2 border border-brand-cyan text-brand-cyan text-[11px] font-bold rounded-lg hover:bg-brand-cyan/10 transition-colors flex items-center justify-center gap-1.5"
                           >
                             👁 View Results
                           </button>
-                          <button
-                            onClick={() => handleDelete(job.id)}
-                            className="px-3 py-1.5 border border-brand-red/30 text-brand-red text-[11px] font-bold rounded hover:bg-brand-red/10 transition-colors"
-                          >
-                            Clear
-                          </button>
                         </div>
+                        <button
+                          onClick={() => handleDelete(job.id)}
+                          className="text-[10px] text-brand-red/60 hover:text-brand-red underline"
+                        >
+                          Clear job
+                        </button>
                       </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Failed Job Actions */}
                     {job.status === 'failed' && (
