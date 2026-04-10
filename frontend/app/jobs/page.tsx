@@ -104,8 +104,8 @@ export default function JobsPage() {
           <p>No jobs yet. Upload a file to get started.</p>
         </div>
       ) : (
-        <div className="bg-bg-surface border border-border rounded overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-bg-surface border border-border rounded overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
             <thead>
               <tr className="border-b border-border bg-bg-primary/50">
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary">Created</th>

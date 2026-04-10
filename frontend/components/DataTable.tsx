@@ -45,7 +45,7 @@ const COLUMNS_VERIFIED = [
 ];
 
 const ROW_HEIGHT = 36;
-const TABLE_HEIGHT = 600;
+const TABLE_HEIGHT = 500; // Reduced from 600
 const STICKY_COL_WIDTH = 140;
 
 function ScoreBadge({ score }: { score: number }) {
@@ -263,7 +263,7 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
   if (rows.length === 0) return null;
 
   return (
-    <div className="bg-bg-surface rounded-[10px] overflow-hidden mb-3 border border-border">
+    <div className="bg-bg-surface rounded-lg overflow-hidden mb-3 border border-border flex flex-col h-full max-h-[80vh] sm:max-h-none">
       <style jsx>{`
         @keyframes sp-pulse {
           0%, 100% { opacity: 0.3; transform: scale(0.85); }

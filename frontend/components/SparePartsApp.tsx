@@ -111,8 +111,8 @@ export default function SparePartsApp() {
   return (
     <>
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-3 border-b border-border bg-bg-surface mb-4">
-        <div className="flex items-center gap-2.5">
+      <header className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-5 py-3 border-b border-border bg-bg-surface mb-4 gap-3 sm:gap-0">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-start">
           <div className="w-[30px] h-[30px] bg-brand-cyan rounded flex items-center justify-center font-bold text-[13px] text-white">
             SP1
           </div>
@@ -121,9 +121,11 @@ export default function SparePartsApp() {
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} 
-            className="text-xs px-2 py-1 bg-border hover:bg-border-hover border border-border rounded text-text-primary transition-colors"
+            className="text-xs px-2 py-1 bg-border hover:bg-border-hover border border-border rounded text-text-primary transition-colors flex items-center gap-1"
+            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
           >
-            {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+            <span>{theme === 'light' ? '🌙' : '☀️'}</span>
+            <span className="hidden sm:inline">{theme === 'light' ? 'Dark' : 'Light'}</span>
           </button>
           <a href="/jobs" className="text-xs text-brand-cyan hover:underline">
             Jobs
@@ -136,7 +138,7 @@ export default function SparePartsApp() {
             className="relative flex items-center gap-1.5 text-xs px-2 py-1 bg-brand-cyan/10 hover:bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/20 rounded transition-colors"
           >
             <span>📊</span>
-            <span>Activity</span>
+            <span className="hidden sm:inline">Activity</span>
             {activeJobCount > 0 && (
               <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-brand-red text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
                 {activeJobCount}
