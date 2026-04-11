@@ -61,11 +61,25 @@ async function del<T>(path: string): Promise<T> {
   return res.json();
 }
 
+export interface JobStatsShape {
+  totalRows: number;
+  webVerified: number;
+  emptyCells: number;
+  scoreAbove90: number;
+  score50to89: number;
+  scoreBelow50: number;
+  officialSourceFound: number;
+  externalSourceFound: number;
+  notFound: number;
+}
+
 export interface JobStatus {
   success: boolean;
   job: {
     id: string;
     status: string;
+    jobType?: string;
+    currentPhase?: string | null;
     fileName: string;
     totalRows: number;
     processedRows: number;
@@ -74,20 +88,18 @@ export interface JobStatus {
     startedAt: string | null;
     completedAt: string | null;
     errorMessage: string | null;
+    excelDownloaded?: boolean;
+    excelDownloadedAt?: string | null;
   };
-  stats: {
-    totalRows: number;
-    webVerified: number;
-    scoreAbove90: number;
-    score50to89: number;
-    scoreBelow50: number;
-  } | null;
+  stats: JobStatsShape | null;
+  previewRows?: unknown[] | null;
 }
 
 export interface JobResults {
   success: boolean;
   results: VerificationResult[];
-  stats: any;
+  stats: JobStatsShape | null;
+  dataType?: 'verified' | 'normalized' | 'empty';
 }
 
 export interface JobList {

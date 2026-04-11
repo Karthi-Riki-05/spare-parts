@@ -121,7 +121,16 @@ async function processRows(rows, options = {}) {
         r = ruleResult || r;
         
         if (urlResult) {
-          if (urlResult.status === 'redirected' && urlResult.finalUrl) r.websiteId = urlResult.finalUrl;
+          if (urlResult.status === 'redirected' && urlResult.finalUrl) {
+            r.websiteId = urlResult.finalUrl;
+          } else if (urlResult.status === 'broken') {
+            // R26 / D-006 — stricter validator flagged this URL (relative, error page, 4xx). Clear it.
+            logger.warn(`[VERIFY] Clearing broken websiteId for row ${row.rowIndex} (${urlResult.reason || 'unknown'}): ${r.websiteId}`);
+            r.websiteId = '';
+            if (r.sourceType === 'official' || r.sourceType === 'external' || r.sourceType === 'distributor') {
+              r.sourceType = 'not_found';
+            }
+          }
           r.urlValidationStatus = urlResult.status;
         }
         

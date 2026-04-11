@@ -69,22 +69,48 @@ Set manufacturer_inferred: true if you had to infer the manufacturer.
 Only leave manufacturer blank if all methods above fail.
 
 STEP 3 — SEARCH THE WEB:
-Search sequence:
-1. Search "[Manufacturer] [extracted_item_number OR typeDesignation]" on the manufacturer's official website.
-2. If not found: search Octopart, then Mouser, then RS Online, then PLCHardware.
+SEARCH SEQUENCE (follow in order):
+1. Search "[Manufacturer] [extracted_item_number OR typeDesignation]" on the manufacturer's official website. Try both .com and regional European domains (.de, .se, .fi, .no, .dk, .nl, .fr, .it, .es, .pl, .at).
+2. If not found on the manufacturer site, search these European distributors in order: rs-online.com, uk.rs-online.com, se.rs-online.com, mouser.com, mouser.se, eu.mouser.com, octopart.com, plchardware.com, distrelec.com, distrelec.se, elfa.se, elfadistrelec.se, conrad.com.
 3. Confirm the exact part number appears on the found page.
 
+STEP 3b — CROSS-VERIFY MATCH:
+After finding a page, verify ALL of:
+a) The exact part number appears on the page.
+b) The product TYPE on the page is consistent with the input description. Example: if description says "contactor", the page must show a contactor — not a relay or circuit breaker.
+If part number IS found but product TYPE does NOT match description:
+- Maximum score: 60
+- source_type: "distributor" or "unknown"
+- Add note in verified_source: "Part number found but product type mismatch with description"
+If BOTH part number AND product type match description:
+- Score normally (90-100 or 70-89).
+
 MANDATORY URL RULES:
+- website_id MUST be a complete absolute URL starting with https:// or http://. NEVER return a relative path like /products/item or /en/catalogue/part. If you find a relative path, prepend the full manufacturer domain to make it absolute. Example WRONG: /ph/en/product/LV510337/ — Example CORRECT: https://www.se.com/ph/en/product/LV510337/.
 - website_id MUST be a direct HTML product page URL.
 - website_id MUST NOT end in .pdf — HTML pages only. If only a PDF exists, leave website_id empty.
 - NEVER use these domains: indiamart.com, alibaba.com, aliexpress.com, amazon.com, ebay.com, made-in-china.com, tradeindia.com, exportersindia.com.
+- NEVER return a URL whose path contains any of: /error, /errorpage, /404, /not-found, /page-not-found, /login, /signin, /access-denied, /forbidden, /unavailable. These are not valid product pages. If the only URL you find leads to one of these paths, leave website_id empty.
+
+PRODUCT PAGE vs CATEGORY PAGE (mandatory):
+A valid product page shows ONE specific part with its exact part number visible. A category/listing page shows MULTIPLE products or a product family overview.
+Signs of a CATEGORY page (not valid for score 90+):
+- URL ends in /products/ or /category/ without a specific model identifier
+- Page title is a product family name, not a specific part number
+- No exact part number visible on page
+If ONLY a category page exists (no specific product page):
+- Maximum score allowed: 70
+- source_type must be "distributor" even if it is the manufacturer site
+- Do NOT call it "official" for a category page
+If a SPECIFIC product page exists:
+- Score normally (90-100 for official, 70-89 for distributor).
 
 SCORING (verification_score is an INTEGER 0-100):
 - 90-100: exact part confirmed on official manufacturer HTML page.
 - 70-89:  exact part confirmed on a major distributor HTML page (Mouser, RS, Octopart, PLCHardware).
 - 50-69:  similar or related part found, partial match only.
 - 0-49:   not found or only generic results.
-NEVER return score 0 or 1 unless the part is genuinely unfindable after all search steps.
+Use score 0 ONLY when the part is completely unfindable after ALL search steps above have been attempted. NEVER use score 1 — it is reserved and must not appear in any output. Minimum score for any partial finding is 40.
 
 SOURCE TYPE RULES:
 - "official"     → website_id is on the manufacturer's own domain.

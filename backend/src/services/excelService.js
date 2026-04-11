@@ -54,28 +54,141 @@ function applyHeaderStyle(sheet) {
   sheet.views = [{ state: 'frozen', ySplit: 1 }];
 }
 
-async function buildVerifiedExcel(results, originalData, originalFormat) {
+function applyTealHeaderStyle(sheet) {
+  sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D9488' } };
+  sheet.views = [{ state: 'frozen', ySplit: 1 }];
+}
+
+function applyGreyHeaderStyle(sheet) {
+  sheet.getRow(1).font = { bold: true, color: { argb: 'FF111827' } };
+  sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE5E7EB' } };
+  sheet.views = [{ state: 'frozen', ySplit: 1 }];
+}
+
+function truncate(str, max) {
+  const s = String(str || '');
+  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+}
+
+function applyScoreFill(cell, score) {
+  let argb = null;
+  if (score >= 90) argb = 'FFD1FAE5';        // green
+  else if (score >= 70) argb = 'FFFEF3C7';   // yellow
+  else if (score >= 50) argb = 'FFFED7AA';   // orange
+  else argb = 'FFFEE2E2';                    // red (incl. 0)
+  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb } };
+  cell.alignment = { horizontal: 'center' };
+}
+
+function setHyperlinkCell(cell, url) {
+  if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+    cell.value = url ? String(url) : '—';
+    return;
+  }
+  cell.value = { text: truncate(url, 35), hyperlink: url };
+  cell.font = { color: { argb: 'FF0066CC' }, underline: true };
+}
+
+function setSourceTypeCell(cell, sourceType) {
+  const st = String(sourceType || '').toLowerCase();
+  cell.value = sourceType || '';
+  if (st === 'official') cell.font = { color: { argb: 'FF059669' }, bold: true };          // green
+  else if (st === 'external' || st === 'distributor') cell.font = { color: { argb: 'FF2563EB' }, bold: true }; // blue
+  else cell.font = { color: { argb: 'FF6B7280' } };                                        // grey
+}
+
+/**
+ * Build the Original Data sheet from raw input rows.
+ * Accepts either NormalizedRow shape (camelCase fields) or raw col_N rows.
+ */
+function buildOriginalDataSheet(sheet, originalData) {
+  sheet.columns = [
+    { header: 'Internal Item #',                   key: 'internalItemNumber', width: 18 },
+    { header: 'Description',                       key: 'description',        width: 32 },
+    { header: 'Manufacturer',                      key: 'manufacturer',       width: 20 },
+    { header: "Manufacturer's Item #",             key: 'itemNumber',         width: 22 },
+    { header: "Manufacturer's Type Designation",   key: 'typeDesignation',    width: 26 },
+    { header: 'Supplementary Information',         key: 'supplementary',      width: 30 },
+  ];
+  applyGreyHeaderStyle(sheet);
+
+  if (!Array.isArray(originalData) || originalData.length === 0) return;
+
+  for (const row of originalData) {
+    // Prefer camelCase (NormalizedRow); fall back to col_N for raw Excel rows.
+    sheet.addRow({
+      internalItemNumber: row.internalItemNumber ?? row.col_0 ?? '',
+      description:        row.description        ?? row.col_1 ?? '',
+      manufacturer:       row.manufacturer       ?? row.col_2 ?? '',
+      itemNumber:         row.itemNumber         ?? row.col_3 ?? '',
+      typeDesignation:    row.typeDesignation    ?? row.col_4 ?? '',
+      supplementary:      row.supplementary      ?? row.col_5 ?? '',
+    });
+  }
+}
+
+/**
+ * Import Ready — 10 fixed columns, one field per cell, score color-coded,
+ * Website ID as a clickable hyperlink, Source Type color-coded text.
+ */
+function buildImportReadySheet(sheet, results) {
+  sheet.columns = [
+    { header: 'Internal Item #',                   key: 'internalItemNumber', width: 15 },
+    { header: 'Description',                       key: 'description',        width: 30 },
+    { header: 'Manufacturer',                      key: 'manufacturer',       width: 20 },
+    { header: "Manufacturer's Item Number",        key: 'itemNumber',         width: 20 },
+    { header: "Manufacturer's Type Designation",   key: 'typeDesignation',    width: 25 },
+    { header: 'Supplementary Information',         key: 'supplementary',      width: 30 },
+    { header: 'Verified Source',                   key: 'verifiedSource',     width: 25 },
+    { header: 'Verification Score',                key: 'verificationScore',  width: 10 },
+    { header: 'Website ID',                        key: 'websiteId',          width: 40 },
+    { header: 'Source Type',                       key: 'sourceType',         width: 15 },
+  ];
+  applyTealHeaderStyle(sheet);
+
+  for (const row of results) {
+    const excelRow = sheet.addRow({
+      internalItemNumber: row.internalItemNumber || '',
+      description:        row.description        || '',
+      manufacturer:       row.manufacturer       || '',
+      itemNumber:         row.itemNumber         || '',
+      typeDesignation:    row.typeDesignation    || '',
+      supplementary:      row.supplementary      || '',
+      verifiedSource:     row.verifiedSource     || '',
+      verificationScore:  row.verificationScore  ?? 0,
+      websiteId:          '',   // set below as hyperlink
+      sourceType:         '',   // set below color-coded
+    });
+
+    applyScoreFill(excelRow.getCell('verificationScore'), row.verificationScore || 0);
+    setHyperlinkCell(excelRow.getCell('websiteId'), row.websiteId);
+    setSourceTypeCell(excelRow.getCell('sourceType'), row.sourceType);
+  }
+}
+
+async function buildVerifiedExcel(results, originalData, _originalFormat) {
   const workbook = new ExcelJS.Workbook();
 
-  // Sheet 1: Verified Data
+  // -------- Sheet 1: Verified Data --------
   const sheet1 = workbook.addWorksheet('Verified Data');
   sheet1.columns = [
-    { header: 'Internal Item Number', key: 'internalItemNumber', width: 20 },
-    { header: 'Description', key: 'description', width: 30 },
-    { header: 'Manufacturer', key: 'manufacturer', width: 20 },
-    { header: "Manufacturer's Item Number", key: 'itemNumber', width: 25 },
-    { header: "Manufacturer's Type Designation", key: 'typeDesignation', width: 25 },
-    { header: 'Supplementary Information', key: 'supplementary', width: 30 },
-    { header: 'Spare Part Category', key: 'sparePartCategory', width: 20 },
-    { header: 'Verified Source', key: 'verifiedSource', width: 25 },
-    { header: 'Verification Score', key: 'verificationScore', width: 18 },
-    { header: 'Website ID', key: 'websiteId', width: 50 },
-    { header: 'Source Type', key: 'sourceType', width: 15 },
+    { header: 'Internal Item Number',              key: 'internalItemNumber', width: 20 },
+    { header: 'Description',                       key: 'description',        width: 30 },
+    { header: 'Manufacturer',                      key: 'manufacturer',       width: 20 },
+    { header: "Manufacturer's Item Number",        key: 'itemNumber',         width: 25 },
+    { header: "Manufacturer's Type Designation",   key: 'typeDesignation',    width: 25 },
+    { header: 'Supplementary Information',         key: 'supplementary',      width: 30 },
+    { header: 'Spare Part Category',               key: 'sparePartCategory',  width: 20 },
+    { header: 'Verified Source',                   key: 'verifiedSource',     width: 25 },
+    { header: 'Verification Score',                key: 'verificationScore',  width: 18 },
+    { header: 'Website ID',                        key: 'websiteId',          width: 50 },
+    { header: 'Source Type',                       key: 'sourceType',         width: 15 },
   ];
   applyHeaderStyle(sheet1);
 
   for (const row of results) {
-    const data = { ...row, sparePartCategory: row.sparePartCategory || '' };
+    const data = { ...row, sparePartCategory: row.sparePartCategory || '', websiteId: '', sourceType: '' };
     const r = sheet1.addRow(data);
     const score = row.verificationScore || 0;
     const scoreCell = r.getCell('verificationScore');
@@ -83,77 +196,18 @@ async function buildVerifiedExcel(results, originalData, originalFormat) {
     else if (score >= 70) scoreCell.font = { color: { argb: 'FFFBBF24' } };
     else if (score >= 50) scoreCell.font = { color: { argb: 'FFF97316' } };
     else if (score > 0) scoreCell.font = { color: { argb: 'FFEF4444' } };
+
+    setHyperlinkCell(r.getCell('websiteId'), row.websiteId);
+    setSourceTypeCell(r.getCell('sourceType'), row.sourceType);
   }
 
-  // Sheet 2: Original Data
+  // -------- Sheet 2: Original Data --------
   const sheet2 = workbook.addWorksheet('Original Data');
-  if (originalData && originalData.length > 0) {
-    const keys = Object.keys(originalData[0]);
-    sheet2.addRow(keys);
-    sheet2.getRow(1).font = { bold: true };
-    for (const row of originalData) {
-      sheet2.addRow(keys.map(k => row[k] != null ? row[k] : ''));
-    }
-  }
+  buildOriginalDataSheet(sheet2, originalData);
 
-  // Sheet 3: Import Ready (format-specific)
+  // -------- Sheet 3: Import Ready (10 columns, one field per cell) --------
   const sheet3 = workbook.addWorksheet('Import Ready');
-  const format = originalFormat || 'A';
-
-  if (format === 'B') {
-    // Format B: 2 columns matching Company B ERP structure
-    sheet3.columns = [
-      { header: 'Item Number', key: 'itemNumber', width: 20 },
-      { header: 'Description', key: 'description', width: 80 },
-    ];
-    applyHeaderStyle(sheet3);
-    for (const row of results) {
-      const parts = [row.description, row.manufacturer, row.itemNumber || row.typeDesignation].filter(Boolean);
-      sheet3.addRow({ itemNumber: row.internalItemNumber, description: parts.join('  ') });
-    }
-  } else if (format === 'C') {
-    // Format C: 5 columns (no Manufacturer's Item Number)
-    sheet3.columns = [
-      { header: 'Internal Item Number', key: 'internalItemNumber', width: 20 },
-      { header: 'Description', key: 'description', width: 30 },
-      { header: 'Manufacturer', key: 'manufacturer', width: 20 },
-      { header: "Manufacturer's Type Designation", key: 'typeDesignation', width: 25 },
-      { header: 'Spare Part Category', key: 'sparePartCategory', width: 20 },
-    ];
-    applyHeaderStyle(sheet3);
-    for (const row of results) {
-      sheet3.addRow({
-        internalItemNumber: row.internalItemNumber,
-        description: row.description,
-        manufacturer: row.manufacturer,
-        typeDesignation: row.typeDesignation,
-        sparePartCategory: row.sparePartCategory || '',
-      });
-    }
-  } else {
-    // Format A: 7 columns matching Company A ERP structure
-    sheet3.columns = [
-      { header: 'Internal Item Number', key: 'internalItemNumber', width: 20 },
-      { header: 'Description', key: 'description', width: 30 },
-      { header: 'Manufacturer', key: 'manufacturer', width: 20 },
-      { header: "Manufacturer's Item Number", key: 'itemNumber', width: 25 },
-      { header: "Manufacturer's Type Designation", key: 'typeDesignation', width: 25 },
-      { header: 'Supplementary Information', key: 'supplementary', width: 30 },
-      { header: 'Spare Part Category', key: 'sparePartCategory', width: 20 },
-    ];
-    applyHeaderStyle(sheet3);
-    for (const row of results) {
-      sheet3.addRow({
-        internalItemNumber: row.internalItemNumber,
-        description: row.description,
-        manufacturer: row.manufacturer,
-        itemNumber: row.itemNumber,
-        typeDesignation: row.typeDesignation,
-        supplementary: row.supplementary,
-        sparePartCategory: row.sparePartCategory || '',
-      });
-    }
-  }
+  buildImportReadySheet(sheet3, results);
 
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }

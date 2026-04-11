@@ -16,11 +16,61 @@ import type {
 import { api, ApiError, JobStatus } from '@/lib/api';
 import { fileToBase64 } from '@/lib/utils';
 import { BACKGROUND_THRESHOLD } from '@/lib/constants';
+import { notifications } from '@/lib/notifications';
 import { useSSE } from './useSSE';
 
 export interface LogEntry {
   text: string;
   type: 'success' | 'fail' | 'change';
+}
+
+/**
+ * Compute ProcessingStats from verified rows.
+ * Single source of truth — used by poll-completion, loadJobData,
+ * and any other path that needs to populate the stats bar from
+ * raw verified rows instead of trusting a backend stats payload.
+ * Handles null/undefined verificationScore gracefully.
+ */
+function computeStatsFromRows(rows: any[]): ProcessingStats {
+  const s: ProcessingStats = {
+    totalRows: rows.length,
+    webVerified: 0,
+    emptyCells: 0,
+    scoreAbove90: 0,
+    score50to89: 0,
+    scoreBelow50: 0,
+    officialSourceFound: 0,
+    externalSourceFound: 0,
+    notFound: 0,
+  };
+  for (const r of rows) {
+    const score = Number(r?.verificationScore) || 0;
+    if (score > 0) s.webVerified++;
+    if (score >= 90) s.scoreAbove90++;
+    else if (score >= 50) s.score50to89++;
+    else s.scoreBelow50++;
+
+    const st = String(r?.sourceType || '').toLowerCase();
+    if (st === 'official') s.officialSourceFound++;
+    else if (st === 'external' || st === 'distributor') s.externalSourceFound++;
+    else if (st === 'not_found' || st === 'unknown' || st === 'timeout' || !st) s.notFound++;
+
+    s.emptyCells += [r?.description, r?.manufacturer, r?.itemNumber, r?.websiteId]
+      .filter((f) => !f || String(f).trim() === '')
+      .length;
+  }
+  return s;
+}
+
+/**
+ * Given rows, return true iff at least one row carries verification data.
+ * Guards the poll against treating awaiting_review rows as verified.
+ */
+function rowsHaveVerificationData(rows: any[]): boolean {
+  if (!Array.isArray(rows) || rows.length === 0) return false;
+  return rows.some(
+    (r) => r && r.verificationScore !== null && r.verificationScore !== undefined,
+  );
 }
 
 export function useVerification() {
@@ -51,6 +101,9 @@ export function useVerification() {
   const [detectedLanguage, setDetectedLanguage] = useState<{ language: string; code: string; translationNeeded: boolean } | null>(null);
   const [pendingJobId, setPendingJobId] = useState<string | null>(null);
   const [jobTrackingMode, setJobTrackingMode] = useState(false);
+  // True while the background job has finished normalizing and is parked
+  // in awaiting_review. Drives the banner's "Review Data" CTA.
+  const [awaitingReview, setAwaitingReview] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const { connect: connectSSE } = useSSE();
 
@@ -343,6 +396,7 @@ export function useVerification() {
     try {
       setShowBackgroundModal(false);
       setPhase('idle');
+      setAwaitingReview(false);
       setLogEntries([]);
       setProgress(0);
       setProgressMessage('Verification running in background...');
@@ -378,6 +432,7 @@ export function useVerification() {
   const startVerificationAfterReview = useCallback(async (jobId: string) => {
     try {
       setPhase('idle'); // Don't block UI
+      setAwaitingReview(false);
       setProgress(0);
       setProgressMessage('Background search started...');
       await api.startJobSearch(jobId);
@@ -409,27 +464,27 @@ export function useVerification() {
         const jobType = (response.job as any).jobType || 'verify';
 
         // Notifications for major state transitions
-        if (lastStatus === 'processing' && currentStatus === 'awaiting_review') {
-          import('@/lib/notifications').then(({ notifications }) => {
-            notifications.send('📋 Data Ready for Review', `${response.job.fileName} extracted. Click to review.`);
-          });
+        // Fire when status changes OR on first detection of a terminal state
+        if (currentStatus === 'awaiting_review' && lastStatus !== 'awaiting_review') {
+          console.log('[NOTIFY] awaiting_review detected, sending notification');
+          notifications.send('📋 Data Ready for Review', `${response.job.fileName} extracted. Click to review.`);
         }
-        if (lastStatus === 'processing' && currentStatus === 'completed') {
-          import('@/lib/notifications').then(({ notifications }) => {
-            notifications.send('✅ Verification Complete', `${response.job.fileName} verification finished.`);
-          });
+        if (currentStatus === 'completed' && lastStatus !== 'completed') {
+          notifications.send('✅ Verification Complete', `${response.job.fileName} verification finished.`);
         }
         lastStatus = currentStatus;
 
         if (currentStatus === 'awaiting_review') {
-          // Normalization done — stop tracking, let ActivityCenter handle review
           setProgress(100);
-          setProgressMessage('Data ready for review. Open Activity Center.');
-          // Don't stop tracking — keep polling so ActivityCenter can see updates
+          setProgressMessage('Data ready for review.');
+          setAwaitingReview(true);
           return;
         }
 
         if (currentStatus === 'processing' || currentStatus === 'pending') {
+          // Clear the review banner if we were parked in awaiting_review
+          // and the user has since started the verify phase.
+          setAwaitingReview(false);
           const total = response.job.totalRows || 0;
           const processed = response.job.processedRows || 0;
           const progress = response.job.progress || 0;
@@ -451,28 +506,57 @@ export function useVerification() {
         } else if (currentStatus === 'completed') {
           setProgress(100);
           setProgressMessage('Job complete!');
-          
+
           const resultsResponse = await api.getJobResults(pendingJobId);
           if (!isMounted) return;
 
-          if (jobType === 'verify') {
-            setResults(resultsResponse.results);
-            setStats(resultsResponse.stats);
+          // Prefer the backend-supplied dataType flag (added to /:jobId/results).
+          // Fall back to shape inspection for older responses / normalize jobs.
+          const rawResults: any = resultsResponse.results;
+          const backendDataType: string | undefined = (resultsResponse as any).dataType;
+          const rowsArray: any[] = Array.isArray(rawResults)
+            ? rawResults
+            : (rawResults && Array.isArray(rawResults.rows) ? rawResults.rows : []);
+
+          const isVerifiedData =
+            backendDataType === 'verified' ||
+            (jobType === 'verify' && rowsHaveVerificationData(rowsArray));
+
+          if (isVerifiedData) {
+            // Auto-transition to verified DataTable with fully populated stats.
+            setResults(rowsArray);
+            setNormalizedRows([]); // clear any normalized-review rows
+
+            // Source of truth = rows. If backend returned camelCase stats, trust
+            // them; otherwise compute locally so the stats bar is never empty.
+            const backendStats = (resultsResponse as any).stats;
+            const hasCamelCase =
+              backendStats &&
+              typeof backendStats === 'object' &&
+              backendStats.scoreAbove90 !== undefined;
+            setStats(hasCamelCase ? backendStats : computeStatsFromRows(rowsArray));
+
             setPhase('done');
+            setProgressMessage(`${rowsArray.length} rows verified`);
           } else {
-            // Normalization or Detection
-            const data = resultsResponse.results as any;
-            if (data.rows) setNormalizedRows(data.rows);
+            // Normalization or Detection job — rows have no verification fields.
+            setNormalizedRows(rowsArray);
+            setResults([]);
+            setStats(null);
+            setRowCount(rowsArray.length);
             setPhase('idle');
+            setProgressMessage(rowsArray.length ? `${rowsArray.length} rows ready — review and click Verify All` : '');
           }
 
           setJobTrackingMode(false);
           setPendingJobId(null);
+          setAwaitingReview(false);
         } else if (currentStatus === 'failed') {
           setPhase('error');
           setError(response.job.errorMessage || 'Background job failed');
           setJobTrackingMode(false);
           setPendingJobId(null);
+          setAwaitingReview(false);
           addLog(`Background job failed: ${response.job.errorMessage}`, 'fail');
         }
       } catch (err) {
@@ -551,6 +635,7 @@ export function useVerification() {
     setShowBackgroundModal(false);
     setPendingJobId(null);
     setJobTrackingMode(false);
+    setAwaitingReview(false);
     setRowCount(0);
   }, []);
 
@@ -654,6 +739,7 @@ export function useVerification() {
     cancelBack,
     pendingJobId,
     jobTrackingMode,
+    awaitingReview,
     exportLanguage,
     setExportLanguage,
     submitBackgroundJob,
@@ -668,6 +754,7 @@ export function useVerification() {
         setStats(null);
         setPendingJobId(null);
         setJobTrackingMode(false);
+        setAwaitingReview(false);
         setShowBackgroundModal(false);
         setLogEntries([]);
         setProgress(0);
@@ -703,39 +790,39 @@ export function useVerification() {
         const resultsResponse = await api.getJobResults(jobId);
 
         if (jobStatus === 'completed') {
-          // Check if results have verification fields (verificationScore exists)
-          const rows = resultsResponse.results;
-          const isVerified = Array.isArray(rows) && rows.length > 0
-            && rows[0].verificationScore !== undefined && rows[0].verificationScore !== null;
+          const rawResults: any = resultsResponse.results;
+          const backendDataType: string | undefined = (resultsResponse as any).dataType;
+          const rowsArray: any[] = Array.isArray(rawResults)
+            ? rawResults
+            : (rawResults && Array.isArray(rawResults.rows) ? rawResults.rows : []);
+
+          const isVerified =
+            backendDataType === 'verified' || rowsHaveVerificationData(rowsArray);
 
           if (isVerified) {
-            setResults(rows);
+            setResults(rowsArray);
+            setNormalizedRows([]);
 
-            // Compute stats from rows directly (backend stats may be snake_case or missing)
-            const computed = {
-              totalRows: rows.length,
-              webVerified: rows.filter((r: any) => (r.verificationScore || 0) > 0).length,
-              emptyCells: rows.reduce((acc: number, r: any) => acc + [r.description, r.manufacturer, r.itemNumber, r.websiteId].filter(f => !f || String(f).trim() === '').length, 0),
-              scoreAbove90: rows.filter((r: any) => (r.verificationScore || 0) >= 90).length,
-              score50to89: rows.filter((r: any) => { const s = r.verificationScore || 0; return s >= 50 && s < 90; }).length,
-              scoreBelow50: rows.filter((r: any) => (r.verificationScore || 0) < 50).length,
-              officialSourceFound: rows.filter((r: any) => r.sourceType === 'official').length,
-              externalSourceFound: rows.filter((r: any) => r.sourceType === 'external' || r.sourceType === 'distributor').length,
-              notFound: rows.filter((r: any) => r.sourceType === 'not_found' || r.sourceType === 'unknown').length,
-            };
-            setStats(computed);
+            // Trust backend stats only if already camelCase; otherwise recompute.
+            const backendStats = (resultsResponse as any).stats;
+            const hasCamelCase =
+              backendStats &&
+              typeof backendStats === 'object' &&
+              backendStats.scoreAbove90 !== undefined;
+            setStats(hasCamelCase ? backendStats : computeStatsFromRows(rowsArray));
+
             setPhase('done');
             setProgress(100);
-            setProgressMessage(`${rows.length} rows verified`);
+            setProgressMessage(`${rowsArray.length} rows verified`);
           } else {
-            // Normalize/detect job results stored as JSON
-            const data = rows as any;
-            const normalizedData = data.rows || (Array.isArray(data) ? data : []);
-            setNormalizedRows(normalizedData);
-            setRowCount(normalizedData.length);
+            // Normalize / detect job results stored as JSON
+            setNormalizedRows(rowsArray);
+            setResults([]);
+            setStats(null);
+            setRowCount(rowsArray.length);
             setPhase('idle');
             setProgress(0);
-            setProgressMessage(`${normalizedData.length} rows loaded`);
+            setProgressMessage(`${rowsArray.length} rows loaded`);
           }
         } else {
           // Other statuses (shouldn't normally reach here)

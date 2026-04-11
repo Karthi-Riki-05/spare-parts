@@ -35,7 +35,8 @@ export const notifications = {
       const notif = new Notification(title, {
         body,
         icon: '/favicon.ico',
-        tag: 'spare-parts-verifier',
+        // Use unique tag per notification to prevent dedup/suppression
+        tag: `sp-${Date.now()}`,
         ...options,
       });
       return notif;

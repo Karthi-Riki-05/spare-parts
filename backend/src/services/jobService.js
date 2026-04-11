@@ -34,18 +34,24 @@ function initSchema() {
       started_at DATETIME,
       completed_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      error_message TEXT
+      error_message TEXT,
+      excel_downloaded INTEGER DEFAULT 0,
+      excel_downloaded_at DATETIME
     )
   `);
-  
-  // Migration for existing databases
-  try {
-    db.prepare("ALTER TABLE verification_jobs ADD COLUMN job_type TEXT DEFAULT 'verify'").run();
-    db.prepare("ALTER TABLE verification_jobs ADD COLUMN meta_json TEXT").run();
-    db.prepare("ALTER TABLE verification_jobs ADD COLUMN results_json TEXT").run();
-    db.prepare("ALTER TABLE verification_jobs ADD COLUMN current_phase TEXT").run();
-  } catch (e) {
-    // Columns already exist, ignore
+
+  // Migration for existing databases — each ALTER wrapped so a single "column
+  // already exists" failure does not skip the remaining migrations.
+  const migrations = [
+    "ALTER TABLE verification_jobs ADD COLUMN job_type TEXT DEFAULT 'verify'",
+    "ALTER TABLE verification_jobs ADD COLUMN meta_json TEXT",
+    "ALTER TABLE verification_jobs ADD COLUMN results_json TEXT",
+    "ALTER TABLE verification_jobs ADD COLUMN current_phase TEXT",
+    "ALTER TABLE verification_jobs ADD COLUMN excel_downloaded INTEGER DEFAULT 0",
+    "ALTER TABLE verification_jobs ADD COLUMN excel_downloaded_at DATETIME",
+  ];
+  for (const sql of migrations) {
+    try { db.prepare(sql).run(); } catch (e) { /* already exists */ }
   }
   
   // Job results table
@@ -237,24 +243,26 @@ function saveJobResults(jobId, results, stats) {
         );
       }
       
-      // Save stats
+      // Save stats — INSERT OR REPLACE so a repeated completion (resume, retry)
+      // does not trip the PK constraint and roll back the whole transaction,
+      // which previously left job_stats empty → ActivityCenter showed all zeros.
       if (stats) {
         db.prepare(`
-          INSERT INTO job_stats (
+          INSERT OR REPLACE INTO job_stats (
             job_id, total_rows, web_verified, empty_cells, score_above_90,
             score_50_to_89, score_below_50, official_source, external_source, not_found
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           jobId,
-          stats.totalRows,
-          stats.webVerified,
-          stats.emptyCells,
-          stats.scoreAbove90,
-          stats.score50to89,
-          stats.scoreBelow50,
-          stats.officialSourceFound,
-          stats.externalSourceFound,
-          stats.notFound
+          stats.totalRows           || 0,
+          stats.webVerified         || 0,
+          stats.emptyCells          || 0,
+          stats.scoreAbove90        || 0,
+          stats.score50to89         || 0,
+          stats.scoreBelow50        || 0,
+          stats.officialSourceFound || 0,
+          stats.externalSourceFound || 0,
+          stats.notFound            || 0
         );
       }
     });
@@ -291,6 +299,57 @@ function getJobStats(jobId) {
   } catch (err) {
     logger.error(`[JOB] Failed to get stats for job ${jobId}: ${err.message}`);
     return null;
+  }
+}
+
+/**
+ * Upsert job_stats mid-job. Allows the background worker to flush running
+ * totals every N rows so ActivityCenter reflects real counts before completion.
+ */
+function updateJobStats(jobId, stats) {
+  const db = getDb();
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO job_stats (
+        job_id, total_rows, web_verified, empty_cells, score_above_90,
+        score_50_to_89, score_below_50, official_source, external_source, not_found
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      jobId,
+      stats.totalRows           || 0,
+      stats.webVerified         || 0,
+      stats.emptyCells          || 0,
+      stats.scoreAbove90        || 0,
+      stats.score50to89         || 0,
+      stats.scoreBelow50        || 0,
+      stats.officialSourceFound || 0,
+      stats.externalSourceFound || 0,
+      stats.notFound            || 0
+    );
+    return true;
+  } catch (err) {
+    logger.error(`[JOB] Failed to update stats for job ${jobId}: ${err.message}`);
+    return false;
+  }
+}
+
+/**
+ * Mark a verification job as having produced a downloaded Excel file.
+ * Used by the "download check before clear" feature in Activity Center.
+ */
+function markExcelDownloaded(jobId) {
+  const db = getDb();
+  try {
+    db.prepare(`
+      UPDATE verification_jobs
+      SET excel_downloaded = 1, excel_downloaded_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(jobId);
+    logger.info(`[JOB] Marked ${jobId} as excel_downloaded`);
+    return true;
+  } catch (err) {
+    logger.error(`[JOB] Failed to mark downloaded ${jobId}: ${err.message}`);
+    return false;
   }
 }
 
@@ -389,6 +448,8 @@ module.exports = {
   saveJobResults,
   getJobResults,
   getJobStats,
+  updateJobStats,
+  markExcelDownloaded,
   saveJobResultData,
   deleteJob,
   resumeJobs,

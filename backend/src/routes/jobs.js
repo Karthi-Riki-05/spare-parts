@@ -15,16 +15,16 @@ const router = express.Router();
  */
 async function startBackgroundVerification(jobId, rows) {
   try {
-    // If resuming, rows might be empty or partial. We need to fetch all rows 
-    // but skip ones already in job_results. 
+    // If resuming, rows might be empty or partial. We need to fetch all rows
+    // but skip ones already in job_results.
     // For now, we assume rows are passed in.
-    
+
     jobService.updateJobStatus(jobId, 'processing', { started_at: new Date() });
-    
+
     // Check for existing results to skip
     const existingResults = jobService.getJobResults(jobId);
     const finishedIndexes = new Set(existingResults.map(r => r.row_index));
-    const rowsToProcess = finishedIndexes.size > 0 
+    const rowsToProcess = finishedIndexes.size > 0
       ? rows.filter(r => !finishedIndexes.has(r.rowIndex))
       : rows;
 
@@ -33,14 +33,51 @@ async function startBackgroundVerification(jobId, rows) {
       return;
     }
 
+    // Running stat accumulator — flushed to SQLite every 10 completed rows so
+    // ActivityCenter reflects real numbers before the job finishes, and so the
+    // row exists in job_stats even if final saveJobResults never runs (crash).
+    const runningStats = {
+      totalRows:           rows.length,
+      webVerified:         0,
+      emptyCells:          0,
+      scoreAbove90:        0,
+      score50to89:         0,
+      scoreBelow50:        0,
+      officialSourceFound: 0,
+      externalSourceFound: 0,
+      notFound:            0,
+    };
+
+    // Seed the row immediately so getJobStats never returns null mid-job.
+    try { jobService.updateJobStats(jobId, runningStats); }
+    catch (err) { logger.warn(`[JOB] Initial stats seed failed for ${jobId}: ${err.message}`); }
+
     await verificationService.processRows(rowsToProcess, {
       correlationId: `job-${jobId}`,
+      onRowComplete: (result) => {
+        const score = result?.verificationScore || 0;
+        const srcRaw = result?.sourceType || 'unknown';
+        if (score > 0) runningStats.webVerified++;
+        if (score >= 90) runningStats.scoreAbove90++;
+        else if (score >= 50) runningStats.score50to89++;
+        else runningStats.scoreBelow50++;
+        if (srcRaw === 'official') runningStats.officialSourceFound++;
+        else if (srcRaw === 'external' || srcRaw === 'distributor') runningStats.externalSourceFound++;
+        else if (srcRaw === 'not_found') runningStats.notFound++;
+        runningStats.emptyCells += [result?.description, result?.manufacturer, result?.itemNumber, result?.websiteId]
+          .filter(f => !f || String(f).trim() === '').length;
+      },
       onProgress: (p) => {
         const totalDone = finishedIndexes.size + p.completed;
-        jobService.updateJobStatus(jobId, 'processing', { 
+        jobService.updateJobStatus(jobId, 'processing', {
           processed_rows: totalDone,
-          current_phase: 'verifying' 
+          current_phase: 'verifying'
         });
+        // Flush stats every 10 rows to keep Activity Center live without thrashing SQLite.
+        if (p.completed % 10 === 0) {
+          try { jobService.updateJobStats(jobId, runningStats); }
+          catch (err) { logger.warn(`[JOB] Mid-job stats flush failed for ${jobId}: ${err.message}`); }
+        }
       },
       onComplete: async (summary) => {
         jobService.saveJobResults(jobId, summary.results, summary.stats);
@@ -133,8 +170,23 @@ router.get('/:jobId/status', requireAuth, (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
-    const stats = jobService.getJobStats(jobId);
-    
+    const rawStats = jobService.getJobStats(jobId);
+
+    // Normalise to both snake_case (legacy) and camelCase (frontend types)
+    // so ActivityCenter.tsx / jobs detail pages never see undefined fields.
+    const stats = rawStats ? {
+      ...rawStats,
+      totalRows:           rawStats.total_rows        || 0,
+      webVerified:         rawStats.web_verified      || 0,
+      emptyCells:          rawStats.empty_cells       || 0,
+      scoreAbove90:        rawStats.score_above_90    || 0,
+      score50to89:         rawStats.score_50_to_89    || 0,
+      scoreBelow50:        rawStats.score_below_50    || 0,
+      officialSourceFound: rawStats.official_source   || 0,
+      externalSourceFound: rawStats.external_source   || 0,
+      notFound:            rawStats.not_found         || 0,
+    } : null;
+
     // Include preview rows for awaiting_review jobs
     let previewRows = null;
     if (job.status === 'awaiting_review' && job.results_json) {
@@ -160,8 +212,10 @@ router.get('/:jobId/status', requireAuth, (req, res) => {
         startedAt: job.started_at,
         completedAt: job.completed_at,
         errorMessage: job.error_message,
+        excelDownloaded: !!job.excel_downloaded,
+        excelDownloadedAt: job.excel_downloaded_at || null,
       },
-      stats: stats || null,
+      stats,
       previewRows,
     });
   } catch (err) {
@@ -194,8 +248,14 @@ router.get('/:jobId/results', requireAuth, (req, res) => {
     
     const results = jobService.getJobResults(jobId);
     let finalResults;
+    // dataType lets the frontend branch unambiguously:
+    //   'verified'   → job_results has row-indexed verified cells (background verify completed)
+    //   'normalized' → only results_json has normalized rows (awaiting review / normalize-only job)
+    //   'empty'      → neither
+    let dataType = 'empty';
 
     if (results && results.length > 0) {
+      dataType = 'verified';
       // Convert back to camelCase for frontend
       finalResults = results.map(r => ({
         rowIndex: r.row_index,
@@ -221,19 +281,38 @@ router.get('/:jobId/results', requireAuth, (req, res) => {
       // For normalization / detect jobs that save to results_json
       try {
         finalResults = JSON.parse(job.results_json).rows || JSON.parse(job.results_json);
+        if (Array.isArray(finalResults) && finalResults.length > 0) {
+          dataType = 'normalized';
+        }
       } catch (e) {
         finalResults = [];
       }
     } else {
       finalResults = [];
     }
-    
-    const stats = jobService.getJobStats(jobId);
-    
+
+    // Normalise job_stats row to BOTH snake_case (legacy) and camelCase (frontend).
+    // Previously only /:jobId/status did this — /:jobId/results returned raw snake_case,
+    // which was the root cause of the empty stats bar after background completion.
+    const rawStats = jobService.getJobStats(jobId);
+    const stats = rawStats ? {
+      ...rawStats,
+      totalRows:           rawStats.total_rows        || 0,
+      webVerified:         rawStats.web_verified      || 0,
+      emptyCells:          rawStats.empty_cells       || 0,
+      scoreAbove90:        rawStats.score_above_90    || 0,
+      score50to89:         rawStats.score_50_to_89    || 0,
+      scoreBelow50:        rawStats.score_below_50    || 0,
+      officialSourceFound: rawStats.official_source   || 0,
+      externalSourceFound: rawStats.external_source   || 0,
+      notFound:            rawStats.not_found         || 0,
+    } : null;
+
     res.json({
       success: true,
       results: finalResults,
-      stats: stats || null,
+      stats,
+      dataType,
     });
   } catch (err) {
     logger.error(`[JOB] Results error: ${err.message}`);

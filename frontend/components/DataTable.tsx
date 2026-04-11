@@ -49,16 +49,20 @@ const TABLE_HEIGHT = 500; // Reduced from 600
 const STICKY_COL_WIDTH = 140;
 
 function ScoreBadge({ score }: { score: number }) {
-  if (score == null || Number.isNaN(score)) return <span style={{ opacity: 0.5, fontSize: 11 }}>—</span>;
-  let bg = '#dc2626';
-  if (score >= 90) bg = '#16a34a';
-  else if (score >= 70) bg = '#ca8a04';
-  else if (score >= 50) bg = '#ea580c';
+  // Not yet verified (null / undefined / NaN) → em-dash, no badge.
+  if (score == null || Number.isNaN(score)) {
+    return <span style={{ opacity: 0.5, fontSize: 11 }}>—</span>;
+  }
+  // Light background + dark text pills per design spec.
+  let bg = '#FEE2E2', fg = '#991B1B';       // <50 (and 0) → red
+  if (score >= 90)      { bg = '#D1FAE5'; fg = '#065F46'; }  // green
+  else if (score >= 70) { bg = '#FEF3C7'; fg = '#92400E'; }  // yellow
+  else if (score >= 50) { bg = '#FED7AA'; fg = '#9A3412'; }  // orange
   return (
     <span
       style={{
-        background: bg, color: '#fff', borderRadius: 9999,
-        padding: '2px 8px', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+        background: bg, color: fg, borderRadius: 9999,
+        padding: '2px 8px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
       }}
     >
       {score}
@@ -66,20 +70,23 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
+function truncateText(str: string, max: number): string {
+  if (!str) return '';
+  return str.length > max ? str.slice(0, max - 1) + '…' : str;
+}
+
 function WebsiteLink({ url }: { url: string }) {
   if (!url) return <span style={{ opacity: 0.5, fontStyle: 'italic', fontSize: 12 }}>—</span>;
-  let domain = url;
-  try { domain = new URL(url).hostname.replace('www.', ''); } catch {}
   return (
     <a
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-brand-cyan hover:underline"
-      style={{ fontSize: 11 }}
+      title={url}
+      className="text-blue-600 hover:underline text-xs truncate block max-w-[180px]"
       onClick={(e) => e.stopPropagation()}
     >
-      {domain}
+      {truncateText(url, 25)}
     </a>
   );
 }

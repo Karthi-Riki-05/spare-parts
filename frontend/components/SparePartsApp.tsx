@@ -203,18 +203,56 @@ export default function SparePartsApp() {
       {v.jobTrackingMode && !hasData && v.phase === 'idle' && (
         <div className="bg-bg-surface border border-brand-cyan/30 rounded-lg p-6 mb-4 text-center">
           <p className="text-lg font-bold text-text-primary mb-2">
-            ✅ Your {v.rowCount || ''} rows are being processed in the background.
+            {v.awaitingReview
+              ? `✅ Your ${v.rowCount || ''} rows are ready for review.`
+              : `✅ Your ${v.rowCount || ''} rows are being processed in the background.`}
           </p>
           <p className="text-sm text-text-secondary mb-1">📧 Email: {user?.email}</p>
-          <p className="text-sm text-text-secondary mb-3">🔔 Browser notification when ready</p>
-          <p className="text-xs text-text-muted mb-4">You can safely close this browser.</p>
+          {!v.awaitingReview && (
+            <p className="text-sm text-text-secondary mb-3">🔔 Browser notification when ready</p>
+          )}
+          <p className="text-xs text-text-muted mb-4">
+            {v.awaitingReview
+              ? 'Click Review Data to inspect and confirm before verification.'
+              : 'You can safely close this browser.'}
+          </p>
+
+          {/* Live progress bar — updates every poll cycle while status === 'processing'.
+              Auto-disappears when the poll's completed branch flips phase to 'done'. */}
+          {v.progress > 0 && !v.awaitingReview && (
+            <div className="max-w-md mx-auto mb-4">
+              <div className="flex justify-between items-center mb-1 text-[11px] font-mono text-brand-cyan">
+                <span>{v.progressMessage || 'Processing…'}</span>
+                <span className="font-bold">{v.progress}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-brand-cyan transition-all duration-300 ease-out"
+                  style={{ width: `${Math.min(100, Math.max(0, v.progress))}%` }}
+                />
+              </div>
+              {v.progressSubMessage && (
+                <p className="text-[10px] text-text-muted mt-1">{v.progressSubMessage}</p>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-center gap-3">
-            <button
-              onClick={() => setActivityOpen(true)}
-              className="px-4 py-2 bg-brand-cyan text-white text-sm font-bold rounded hover:bg-brand-cyan/90 transition-colors"
-            >
-              Open Activity Center
-            </button>
+            {v.awaitingReview && v.pendingJobId ? (
+              <button
+                onClick={() => v.pendingJobId && v.loadJobData(v.pendingJobId)}
+                className="px-4 py-2 bg-brand-cyan text-white text-sm font-bold rounded hover:bg-brand-cyan/90 transition-colors"
+              >
+                Review Data
+              </button>
+            ) : (
+              <button
+                onClick={() => setActivityOpen(true)}
+                className="px-4 py-2 bg-brand-cyan text-white text-sm font-bold rounded hover:bg-brand-cyan/90 transition-colors"
+              >
+                Open Activity Center
+              </button>
+            )}
             <button
               onClick={v.reset}
               className="px-4 py-2 border border-border text-text-secondary text-sm rounded hover:bg-border transition-colors"
@@ -222,7 +260,7 @@ export default function SparePartsApp() {
               Upload New File
             </button>
           </div>
-          {v.progressMessage && (
+          {v.progressMessage && v.progress === 0 && !v.awaitingReview && (
             <p className="text-xs text-brand-cyan mt-3">{v.progressMessage}</p>
           )}
         </div>
