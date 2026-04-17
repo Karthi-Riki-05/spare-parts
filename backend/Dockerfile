@@ -8,7 +8,7 @@ RUN npm ci --only=production \
 COPY src/ ./src/
 COPY views/ ./views/
 COPY public/ ./public/
-RUN mkdir -p /app/logs/ai /app/data && chown -R node:node /app/logs /app/data
+RUN mkdir -p /app/logs/ai /app/logs/error /app/logs/api /app/logs/access /app/data && chown -R node:node /app/logs /app/data
 USER node
 EXPOSE 3001
 CMD ["node", "src/server.js"]

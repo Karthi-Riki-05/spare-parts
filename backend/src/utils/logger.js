@@ -6,11 +6,16 @@ const { config } = require('../config');
 
 const LOG_DIR = process.env.LOG_DIR || path.resolve(__dirname, '../../logs');
 
-// Ensure log subdirectories exist
+// Ensure log subdirectories exist — wrapped in try/catch so
+// permission errors on volume-mounted dirs don't crash the app.
 ['error', 'api', 'access', 'ai'].forEach(dir => {
   const fullPath = path.join(LOG_DIR, dir);
-  if (!fs.existsSync(fullPath)) {
-    fs.mkdirSync(fullPath, { recursive: true });
+  try {
+    if (!fs.existsSync(fullPath)) {
+      fs.mkdirSync(fullPath, { recursive: true });
+    }
+  } catch (err) {
+    console.warn(`[logger] Could not create ${fullPath}: ${err.message}. File logging for '${dir}' may be disabled.`);
   }
 });
 
