@@ -15,6 +15,7 @@ export default function ResultsPage() {
   const [error, setError] = useState('');
   const [results, setResults] = useState<VerificationResult[]>([]);
   const [stats, setStats] = useState<any>(null);
+  const [originalHeaders, setOriginalHeaders] = useState<Record<string, string> | null>(null);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export default function ResultsPage() {
         const data = await api.getJobResults(jobId);
         setResults(data.results || []);
         setStats(data.stats);
+        if ((data as any).originalHeaders) setOriginalHeaders((data as any).originalHeaders);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load results');
       } finally {
@@ -36,7 +38,7 @@ export default function ResultsPage() {
   const handleExport = async () => {
     try {
       setExporting(true);
-      const blob = await api.exportData(results, [], 'results.xlsx');
+      const blob = await api.exportData(results, [], 'results.xlsx', 'A', undefined, originalHeaders, jobId);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -110,7 +112,7 @@ export default function ResultsPage() {
         </button>
       </div>
 
-      <DataTable rows={results} isVerified={true} onUpdateRow={() => {}} />
+      <DataTable rows={results} isVerified={true} onUpdateRow={() => {}} originalHeaders={originalHeaders} />
     </div>
   );
 }

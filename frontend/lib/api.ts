@@ -172,6 +172,8 @@ export const api = {
     fileName: string,
     originalFormat?: string,
     language?: string,
+    originalHeaders?: Record<string, string> | null,
+    jobId?: string | null,
   ): Promise<Blob> => {
     // Sanitize to plain objects — prevents circular JSON from React refs/DOM elements
     const safeResults = results.map(r => ({
@@ -206,15 +208,15 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ results: safeResults, originalData: safeOriginal, fileName, originalFormat, language }),
+      body: JSON.stringify({ results: safeResults, originalData: safeOriginal, fileName, originalFormat, language, originalHeaders, jobId }),
     });
     if (!res.ok) throw new Error('Export failed');
     return res.blob();
   },
 
   // Job API
-  submitJob: (rows: NormalizedRow[], fileName: string) =>
-    post<{ success: boolean; jobId: string; message: string }>('/jobs/submit', { rows, fileName }),
+  submitJob: (rows: NormalizedRow[], fileName: string, originalHeaders?: Record<string, string> | null) =>
+    post<{ success: boolean; jobId: string; message: string }>('/jobs/submit', { rows, fileName, originalHeaders }),
 
   submitDetectJob: (fileData: string, sheetIndex: number, fileName: string) =>
     post<{ success: boolean; jobId: string; message: string }>('/jobs/detect/submit', { fileData, sheetIndex, fileName }),

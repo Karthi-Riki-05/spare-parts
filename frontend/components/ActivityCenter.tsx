@@ -113,7 +113,11 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
   const handleDownload = async (jobId: string, fileName: string) => {
     try {
       const results = await api.getJobResults(jobId);
-      const blob = await api.exportData(results.results as any, [], fileName, 'A');
+      const blob = await api.exportData(
+        results.results as any, [], fileName, 'A', undefined,
+        (results as any).originalHeaders || null,
+        jobId,
+      );
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

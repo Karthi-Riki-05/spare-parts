@@ -99,7 +99,9 @@ export function useVerification() {
   const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [validationError, setValidationError] = useState<{ detectedType: string; reason: string; suggestion: string } | null>(null);
   const [detectedLanguage, setDetectedLanguage] = useState<{ language: string; code: string; translationNeeded: boolean } | null>(null);
+  const [originalHeaders, setOriginalHeaders] = useState<Record<string, string> | null>(null);
   const [pendingJobId, setPendingJobId] = useState<string | null>(null);
+  const [lastCompletedJobId, setLastCompletedJobId] = useState<string | null>(null);
   const [jobTrackingMode, setJobTrackingMode] = useState(false);
   // True while the background job has finished normalizing and is parked
   // in awaiting_review. Drives the banner's "Review Data" CTA.
@@ -150,6 +152,9 @@ export function useVerification() {
       const detection = await api.detectFormat(base64, sheetIndex);
       setFormatResult(detection);
       setRowCount(detection.rowCount);
+      if ((detection as any).originalHeaders) {
+        setOriginalHeaders((detection as any).originalHeaders);
+      }
 
       // Store detected language
       if ((detection as any).detectedLanguage) {
@@ -408,7 +413,7 @@ export function useVerification() {
         await api.startJobSearch(pendingJobId);
         jobId = pendingJobId;
       } else {
-        const response = await api.submitJob(normalizedRows, fileName);
+        const response = await api.submitJob(normalizedRows, fileName, originalHeaders);
         jobId = response.jobId;
         setPendingJobId(jobId);
       }
@@ -507,8 +512,18 @@ export function useVerification() {
           setProgress(100);
           setProgressMessage('Job complete!');
 
+          // Set originalHeaders from status response if available
+          if ((response as any).originalHeaders && !originalHeaders) {
+            setOriginalHeaders((response as any).originalHeaders);
+          }
+
           const resultsResponse = await api.getJobResults(pendingJobId);
           if (!isMounted) return;
+
+          // Also try from results response
+          if ((resultsResponse as any).originalHeaders && !originalHeaders) {
+            setOriginalHeaders((resultsResponse as any).originalHeaders);
+          }
 
           // Prefer the backend-supplied dataType flag (added to /:jobId/results).
           // Fall back to shape inspection for older responses / normalize jobs.
@@ -548,6 +563,7 @@ export function useVerification() {
             setProgressMessage(rowsArray.length ? `${rowsArray.length} rows ready — review and click Verify All` : '');
           }
 
+          setLastCompletedJobId(pendingJobId);
           setJobTrackingMode(false);
           setPendingJobId(null);
           setAwaitingReview(false);
@@ -595,7 +611,9 @@ export function useVerification() {
         originalDataRef.current,
         fileName,
         formatResult?.format,
-        safeLang
+        safeLang,
+        originalHeaders,
+        pendingJobId || lastCompletedJobId
       );
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -606,7 +624,7 @@ export function useVerification() {
     } catch (err) {
       setError(`Download failed: ${(err as Error).message}`);
     }
-  }, [results, fileName, formatResult]);
+  }, [results, fileName, formatResult, originalHeaders, exportLanguage, pendingJobId, lastCompletedJobId]);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
@@ -618,6 +636,7 @@ export function useVerification() {
     setSheetNames([]);
     setSelectedSheet(0);
     setFormatResult(null);
+    setOriginalHeaders(null);
     setDetectedLanguage(null);
     setNormalizedRows([]);
     originalDataRef.current = [];
@@ -634,6 +653,7 @@ export function useVerification() {
     setShowMappingDialog(false);
     setShowBackgroundModal(false);
     setPendingJobId(null);
+    setLastCompletedJobId(null);
     setJobTrackingMode(false);
     setAwaitingReview(false);
     setRowCount(0);
@@ -705,6 +725,7 @@ export function useVerification() {
     sheetNames,
     selectedSheet,
     formatResult,
+    originalHeaders,
     normalizedRows,
     results,
     stats,
@@ -767,6 +788,9 @@ export function useVerification() {
         const job = statusResponse.job;
         setFileName(job.fileName);
         setRowCount(job.totalRows);
+        if ((statusResponse as any).originalHeaders) {
+          setOriginalHeaders((statusResponse as any).originalHeaders);
+        }
 
         const jobStatus = job.status;
         const type = (job as any).jobType || 'verify';
@@ -811,6 +835,7 @@ export function useVerification() {
               backendStats.scoreAbove90 !== undefined;
             setStats(hasCamelCase ? backendStats : computeStatsFromRows(rowsArray));
 
+            setLastCompletedJobId(jobId);
             setPhase('done');
             setProgress(100);
             setProgressMessage(`${rowsArray.length} rows verified`);

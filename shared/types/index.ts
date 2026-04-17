@@ -60,6 +60,10 @@ export interface ColumnMapping {
   sparePartCategory?: string;
 }
 
+export interface ColumnHeaders {
+  [key: string]: string | undefined;
+}
+
 export interface FormatDetectionResult {
   format: FormatType;
   confidence: number;
@@ -67,6 +71,7 @@ export interface FormatDetectionResult {
   suggestedMapping: ColumnMapping;
   rowCount: number;
   sheetIndex: number;
+  originalHeaders?: ColumnHeaders | null;
 }
 
 export interface SupplementaryChangeLog {

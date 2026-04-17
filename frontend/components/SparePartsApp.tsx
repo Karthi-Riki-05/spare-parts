@@ -403,6 +403,7 @@ export default function SparePartsApp() {
             isVerified={v.results.length > 0 || isVerifyingPhase}
             onUpdateRow={v.updateRow}
             pendingRowIndexes={isVerifyingPhase ? new Set(v.normalizedRows.map((n) => n.rowIndex).filter((i) => !verifiedRowIndexes.has(i))) : undefined}
+            originalHeaders={v.originalHeaders}
           />
         </>
       )}

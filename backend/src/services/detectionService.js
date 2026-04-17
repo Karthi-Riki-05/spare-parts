@@ -7,7 +7,7 @@ const { logger } = require('../utils/logger');
 async function processDetection(fileData, sheetIndex = 0, options = {}) {
   const { correlationId = 'internal' } = options;
 
-  const { rows } = await readExcelFromBase64(fileData, sheetIndex);
+  const { rows, originalHeaders } = await readExcelFromBase64(fileData, sheetIndex);
   if (rows.length === 0) {
     throw new Error('No data found in sheet');
   }
@@ -40,6 +40,7 @@ async function processDetection(fileData, sheetIndex = 0, options = {}) {
     ...formatResult,
     rowCount: rows.length,
     sheetIndex,
+    originalHeaders: originalHeaders || null,
     detectedLanguage: langResult.language,
     languageCode: langResult.languageCode,
     translationNeeded: langResult.translationNeeded,

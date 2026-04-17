@@ -74,18 +74,24 @@ async function startBackgroundVerification(jobId, rows, auditCtx = null) {
         }
       },
       onComplete: async (summary) => {
-        await jobService.saveJobResults(jobId, summary.results, summary.stats);
+        try {
+          await jobService.saveJobResults(jobId, summary.results, summary.stats);
+        } catch (saveErr) {
+          logger.error(`[JOB] saveJobResults failed for ${jobId}: ${saveErr.message}`);
+        }
+
+        // Always mark completed — even if saveJobResults had a partial failure
         await jobService.updateJobStatus(jobId, 'completed', {
           processed_rows: rows.length,
           current_phase: 'complete'
         });
-        logger.info(`[JOB] Job ${jobId} completed successfully`);
+        logger.info(`[JOB] Job ${jobId} completed successfully (${summary.cacheHits || 0} cache hits)`);
 
         if (auditCtx) {
-          await audit.log('job_completed', {
+          audit.log('job_completed', {
             companyId: auditCtx.companyId,
-            details: { jobId, totalRows: rows.length, stats: summary.stats },
-          });
+            details: { jobId, totalRows: rows.length, cacheHits: summary.cacheHits, stats: summary.stats },
+          }).catch(() => {});
         }
 
         try {
@@ -134,7 +140,7 @@ async function startBackgroundVerification(jobId, rows, auditCtx = null) {
  */
 router.post('/submit', requireAuth, async (req, res) => {
   try {
-    const { rows, fileName } = req.body;
+    const { rows, fileName, originalHeaders } = req.body;
     const companyId = req.user.companyId;
 
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
@@ -145,7 +151,7 @@ router.post('/submit', requireAuth, async (req, res) => {
     }
 
     const jobId = uuidv4();
-    const created = await jobService.createJob(jobId, companyId, fileName, rows.length);
+    const created = await jobService.createJob(jobId, companyId, fileName, rows.length, 'verify', null, originalHeaders || null);
 
     if (!created) {
       return res.status(500).json({ error: 'Failed to create job' });
@@ -182,6 +188,27 @@ router.get('/:jobId/status', requireAuth, async (req, res) => {
     if (!job) return res.status(404).json({ error: 'Job not found' });
     if (job.company_id !== req.user.companyId) {
       return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Safety net: auto-complete jobs that processed all rows but status is still 'processing'.
+    // This catches the race where late onProgress callbacks overwrote 'completed' back to 'processing'.
+    if (job.status === 'processing'
+        && job.total_rows > 0
+        && job.processed_rows >= job.total_rows) {
+      // Check if results actually exist in DB
+      const resultCount = await db.getOne(
+        "SELECT COUNT(*)::int as cnt FROM job_results WHERE job_id = $1 AND row_type = 'verified'",
+        [jobId]
+      );
+      if (resultCount && resultCount.cnt >= job.total_rows) {
+        logger.warn(`[JOB STATUS] All ${job.total_rows} rows verified but status still processing — auto-completing ${jobId}`);
+        await jobService.updateJobStatus(jobId, 'completed', {
+          processed_rows: job.total_rows,
+          current_phase: 'complete'
+        });
+        const refreshed = await jobService.getJob(jobId);
+        if (refreshed) Object.assign(job, refreshed);
+      }
     }
 
     const rawStats = await jobService.getJobStats(jobId);
@@ -228,6 +255,7 @@ router.get('/:jobId/status', requireAuth, async (req, res) => {
       },
       stats,
       previewRows,
+      originalHeaders: job.original_headers || null,
     });
   } catch (err) {
     logger.error(`[JOB] Status error: ${err.message}`);
@@ -311,6 +339,7 @@ router.get('/:jobId/results', requireAuth, async (req, res) => {
       results: finalResults,
       stats,
       dataType,
+      originalHeaders: job.original_headers || null,
     });
   } catch (err) {
     logger.error(`[JOB] Results error: ${err.message}`);
@@ -375,7 +404,15 @@ router.post('/normalize/submit', requireAuth, async (req, res) => {
     (async () => {
       try {
         await jobService.updateJobStatus(jobId, 'processing', { started_at: new Date() });
-        const { rows } = await readExcelFromBase64(fileData, sheetIndex);
+        const { rows, originalHeaders } = await readExcelFromBase64(fileData, sheetIndex);
+
+        // Store original headers from the Excel file
+        if (originalHeaders) {
+          await db.execute(
+            'UPDATE verification_jobs SET original_headers = $2 WHERE job_id = $1',
+            [jobId, JSON.stringify(originalHeaders)]
+          );
+        }
 
         await jobService.updateJobStatus(jobId, 'processing', {
           total_rows: rows.length,

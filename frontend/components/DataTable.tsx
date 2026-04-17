@@ -12,6 +12,7 @@ interface DataTableProps {
   isVerified: boolean;
   onUpdateRow: (rowIndex: number, col: string, value: string) => void;
   pendingRowIndexes?: Set<number>;
+  originalHeaders?: Record<string, string> | null;
 }
 
 function PendingPulse() {
@@ -26,23 +27,66 @@ function PendingPulse() {
   );
 }
 
-const COLUMNS_NORMALIZED = [
-  { key: 'internalItemNumber', label: 'Internal Item #', width: 140, editable: false },
-  { key: 'description', label: 'Description', width: 220, editable: true },
-  { key: 'manufacturer', label: 'Manufacturer', width: 150, editable: true },
-  { key: 'itemNumber', label: 'Item Number', width: 170, editable: true },
-  { key: 'typeDesignation', label: 'Type Designation', width: 180, editable: true },
-  { key: 'supplementary', label: 'Supplementary', width: 200, editable: true },
-  { key: 'sparePartCategory', label: 'Category', width: 140, editable: true },
-];
+// Map field keys to col_N positions for dynamic header resolution
+const FIELD_TO_COL: Record<string, string> = {
+  internalItemNumber: 'col_0',
+  description: 'col_1',
+  manufacturer: 'col_2',
+  itemNumber: 'col_3',
+  typeDesignation: 'col_4',
+  supplementary: 'col_5',
+  sparePartCategory: 'col_6',
+};
 
-const COLUMNS_VERIFIED = [
-  ...COLUMNS_NORMALIZED,
-  { key: 'verifiedSource', label: 'Verified Source', width: 160, editable: false },
-  { key: 'verificationScore', label: 'Score', width: 80, editable: false },
-  { key: 'websiteId', label: 'Website ID', width: 220, editable: false },
-  { key: 'sourceType', label: 'Source Type', width: 110, editable: false },
-];
+const DEFAULT_LABELS: Record<string, string> = {
+  internalItemNumber: 'Internal Item #',
+  description: 'Description',
+  manufacturer: 'Manufacturer',
+  itemNumber: 'Item Number',
+  typeDesignation: 'Type Designation',
+  supplementary: 'Supplementary',
+  sparePartCategory: 'Category',
+};
+
+function truncateLabel(str: string, max = 24): string {
+  if (str.length <= max) return str;
+  return str.substring(0, max) + '\u2026';
+}
+
+function getColumnLabel(field: string, headers: Record<string, string> | null | undefined): { short: string; full: string } {
+  const colKey = FIELD_TO_COL[field];
+  if (headers && colKey && headers[colKey]) {
+    const full = headers[colKey];
+    return { short: truncateLabel(full), full };
+  }
+  const fallback = DEFAULT_LABELS[field] || field;
+  return { short: fallback, full: fallback };
+}
+
+function buildColumns(isVerified: boolean, headers: Record<string, string> | null | undefined) {
+  const norm = [
+    { key: 'internalItemNumber', width: 140, editable: false },
+    { key: 'description', width: 220, editable: true },
+    { key: 'manufacturer', width: 150, editable: true },
+    { key: 'itemNumber', width: 170, editable: true },
+    { key: 'typeDesignation', width: 180, editable: true },
+    { key: 'supplementary', width: 200, editable: true },
+    { key: 'sparePartCategory', width: 140, editable: true },
+  ].map(col => {
+    const { short, full } = getColumnLabel(col.key, headers);
+    return { ...col, label: short, fullLabel: full };
+  });
+
+  if (!isVerified) return norm;
+
+  return [
+    ...norm,
+    { key: 'verifiedSource', label: 'Verified Source', fullLabel: 'Verified Source', width: 160, editable: false },
+    { key: 'verificationScore', label: 'Score', fullLabel: 'Verification Score', width: 80, editable: false },
+    { key: 'websiteId', label: 'Website ID', fullLabel: 'Website ID', width: 220, editable: false },
+    { key: 'sourceType', label: 'Source Type', fullLabel: 'Source Type', width: 110, editable: false },
+  ];
+}
 
 const ROW_HEIGHT = 36;
 const TABLE_HEIGHT = 500; // Reduced from 600
@@ -91,8 +135,8 @@ function WebsiteLink({ url }: { url: string }) {
   );
 }
 
-export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowIndexes }: DataTableProps) {
-  const columns = isVerified ? COLUMNS_VERIFIED : COLUMNS_NORMALIZED;
+export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowIndexes, originalHeaders }: DataTableProps) {
+  const columns = buildColumns(isVerified, originalHeaders);
   const { startEdit, commitEdit, cancelEdit, isEditing, getEditedValue } = useEditState();
   const [, forceRender] = useState(0);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
@@ -308,7 +352,7 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
                   : {}),
               }}
             >
-              {col.label}
+              <span title={(col as any).fullLabel || col.label}>{col.label}</span>
               {col.editable && (
                 <span style={{ opacity: 0.4, fontSize: 11 }}> ↕</span>
               )}

@@ -19,6 +19,18 @@ function isMetadataRow(rowValues) {
   return false;
 }
 
+/**
+ * Extract the short display label from a full column header.
+ * Headers often contain descriptions after double-spaces:
+ *   "Item number  Company's (item owner's) internal..." → "Item number"
+ */
+function extractShortLabel(fullHeader) {
+  if (!fullHeader) return '';
+  const str = String(fullHeader).trim();
+  const parts = str.split(/\s{2,}/);
+  return parts[0].trim();
+}
+
 async function readExcelFromBase64(base64, sheetIndex) {
   const buffer = Buffer.from(base64, 'base64');
   const workbook = new ExcelJS.Workbook();
@@ -26,9 +38,38 @@ async function readExcelFromBase64(base64, sheetIndex) {
   const sheetNames = workbook.worksheets.map(s => s.name);
   const sheet = workbook.worksheets[sheetIndex];
   if (!sheet) throw new Error(`Sheet index ${sheetIndex} not found`);
+
+  // Extract original column headers — scan first 5 rows to find the header row.
+  // The header row is the first row with 3+ non-empty cells that look like column names.
+  let originalHeaders = null;
+  for (let rowNum = 1; rowNum <= Math.min(5, sheet.rowCount); rowNum++) {
+    const candidateRow = sheet.getRow(rowNum);
+    if (!candidateRow || candidateRow.cellCount < 3) continue;
+
+    const candidate = {};
+    let nonEmpty = 0;
+    candidateRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      const raw = cell.text != null ? cell.text : (cell.value != null ? String(cell.value) : '');
+      if (raw.trim()) {
+        candidate[`col_${colNumber - 1}`] = extractShortLabel(raw);
+        nonEmpty++;
+      }
+    });
+
+    // A header row has 3+ columns and cells are short text (not data values like part numbers)
+    if (nonEmpty >= 3) {
+      const avgLen = Object.values(candidate).reduce((s, v) => s + String(v).length, 0) / nonEmpty;
+      // Headers are typically short labels (< 50 chars avg); skip rows of long data
+      if (avgLen < 50) {
+        originalHeaders = candidate;
+        break;
+      }
+    }
+  }
+  if (originalHeaders && Object.keys(originalHeaders).length === 0) originalHeaders = null;
+
   const rows = [];
   sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    // Always skip row 1 (sheet title/annotation) and row 2 (column definitions) if they exist
     if (rowNumber <= 1) return;
     const rowData = {};
     row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
@@ -38,7 +79,7 @@ async function readExcelFromBase64(base64, sheetIndex) {
     if (isMetadataRow(values)) return;
     rows.push(rowData);
   });
-  return { rows, sheetNames };
+  return { rows, sheetNames, originalHeaders };
 }
 
 async function getSheetNames(base64) {
@@ -102,14 +143,15 @@ function setSourceTypeCell(cell, sourceType) {
  * Build the Original Data sheet from raw input rows.
  * Accepts either NormalizedRow shape (camelCase fields) or raw col_N rows.
  */
-function buildOriginalDataSheet(sheet, originalData) {
+function buildOriginalDataSheet(sheet, originalData, originalHeaders) {
+  const h = originalHeaders || {};
   sheet.columns = [
-    { header: 'Internal Item #',                   key: 'internalItemNumber', width: 18 },
-    { header: 'Description',                       key: 'description',        width: 32 },
-    { header: 'Manufacturer',                      key: 'manufacturer',       width: 20 },
-    { header: "Manufacturer's Item #",             key: 'itemNumber',         width: 22 },
-    { header: "Manufacturer's Type Designation",   key: 'typeDesignation',    width: 26 },
-    { header: 'Supplementary Information',         key: 'supplementary',      width: 30 },
+    { header: h.col_0 || 'Internal Item #',                   key: 'internalItemNumber', width: 18 },
+    { header: h.col_1 || 'Description',                       key: 'description',        width: 32 },
+    { header: h.col_2 || 'Manufacturer',                      key: 'manufacturer',       width: 20 },
+    { header: h.col_3 || "Manufacturer's Item #",             key: 'itemNumber',         width: 22 },
+    { header: h.col_4 || "Manufacturer's Type Designation",   key: 'typeDesignation',    width: 26 },
+    { header: h.col_5 || 'Supplementary Information',         key: 'supplementary',      width: 30 },
   ];
   applyGreyHeaderStyle(sheet);
 
@@ -132,14 +174,15 @@ function buildOriginalDataSheet(sheet, originalData) {
  * Import Ready — 10 fixed columns, one field per cell, score color-coded,
  * Website ID as a clickable hyperlink, Source Type color-coded text.
  */
-function buildImportReadySheet(sheet, results) {
+function buildImportReadySheet(sheet, results, originalHeaders) {
+  const h = originalHeaders || {};
   sheet.columns = [
-    { header: 'Internal Item #',                   key: 'internalItemNumber', width: 15 },
-    { header: 'Description',                       key: 'description',        width: 30 },
-    { header: 'Manufacturer',                      key: 'manufacturer',       width: 20 },
-    { header: "Manufacturer's Item Number",        key: 'itemNumber',         width: 20 },
-    { header: "Manufacturer's Type Designation",   key: 'typeDesignation',    width: 25 },
-    { header: 'Supplementary Information',         key: 'supplementary',      width: 30 },
+    { header: h.col_0 || 'Internal Item #',                   key: 'internalItemNumber', width: 15 },
+    { header: h.col_1 || 'Description',                       key: 'description',        width: 30 },
+    { header: h.col_2 || 'Manufacturer',                      key: 'manufacturer',       width: 20 },
+    { header: h.col_3 || "Manufacturer's Item Number",        key: 'itemNumber',         width: 20 },
+    { header: h.col_4 || "Manufacturer's Type Designation",   key: 'typeDesignation',    width: 25 },
+    { header: h.col_5 || 'Supplementary Information',         key: 'supplementary',      width: 30 },
     { header: 'Verified Source',                   key: 'verifiedSource',     width: 25 },
     { header: 'Verification Score',                key: 'verificationScore',  width: 10 },
     { header: 'Website ID',                        key: 'websiteId',          width: 40 },
@@ -167,19 +210,20 @@ function buildImportReadySheet(sheet, results) {
   }
 }
 
-async function buildVerifiedExcel(results, originalData, _originalFormat) {
+async function buildVerifiedExcel(results, originalData, _originalFormat, originalHeaders) {
+  const h = originalHeaders || {};
   const workbook = new ExcelJS.Workbook();
 
   // -------- Sheet 1: Verified Data --------
   const sheet1 = workbook.addWorksheet('Verified Data');
   sheet1.columns = [
-    { header: 'Internal Item Number',              key: 'internalItemNumber', width: 20 },
-    { header: 'Description',                       key: 'description',        width: 30 },
-    { header: 'Manufacturer',                      key: 'manufacturer',       width: 20 },
-    { header: "Manufacturer's Item Number",        key: 'itemNumber',         width: 25 },
-    { header: "Manufacturer's Type Designation",   key: 'typeDesignation',    width: 25 },
-    { header: 'Supplementary Information',         key: 'supplementary',      width: 30 },
-    { header: 'Spare Part Category',               key: 'sparePartCategory',  width: 20 },
+    { header: h.col_0 || 'Internal Item Number',              key: 'internalItemNumber', width: 20 },
+    { header: h.col_1 || 'Description',                       key: 'description',        width: 30 },
+    { header: h.col_2 || 'Manufacturer',                      key: 'manufacturer',       width: 20 },
+    { header: h.col_3 || "Manufacturer's Item Number",        key: 'itemNumber',         width: 25 },
+    { header: h.col_4 || "Manufacturer's Type Designation",   key: 'typeDesignation',    width: 25 },
+    { header: h.col_5 || 'Supplementary Information',         key: 'supplementary',      width: 30 },
+    { header: h.col_6 || 'Spare Part Category',               key: 'sparePartCategory',  width: 20 },
     { header: 'Verified Source',                   key: 'verifiedSource',     width: 25 },
     { header: 'Verification Score',                key: 'verificationScore',  width: 18 },
     { header: 'Website ID',                        key: 'websiteId',          width: 50 },
@@ -203,11 +247,11 @@ async function buildVerifiedExcel(results, originalData, _originalFormat) {
 
   // -------- Sheet 2: Original Data --------
   const sheet2 = workbook.addWorksheet('Original Data');
-  buildOriginalDataSheet(sheet2, originalData);
+  buildOriginalDataSheet(sheet2, originalData, originalHeaders);
 
   // -------- Sheet 3: Import Ready (10 columns, one field per cell) --------
   const sheet3 = workbook.addWorksheet('Import Ready');
-  buildImportReadySheet(sheet3, results);
+  buildImportReadySheet(sheet3, results, originalHeaders);
 
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }

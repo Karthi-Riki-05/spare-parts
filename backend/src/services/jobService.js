@@ -47,6 +47,7 @@ function mapJobRow(row) {
     meta_json:             row.meta ? JSON.stringify(row.meta) : null,
     results_json:          row.results_json || null,
     resultsData:           row.results_json || null,
+    original_headers:      row.original_headers || null,
   };
 }
 
@@ -56,13 +57,13 @@ const JOB_SELECT = `
     LEFT JOIN companies c ON c.id = vj.company_id
 `;
 
-async function createJob(jobId, companyId, fileName, totalRows, type = 'verify', meta = null) {
+async function createJob(jobId, companyId, fileName, totalRows, type = 'verify', meta = null, originalHeaders = null) {
   try {
     await db.execute(
       `INSERT INTO verification_jobs
-         (job_id, company_id, file_name, total_rows, status, job_type, meta)
-       VALUES ($1, $2, $3, $4, 'pending', $5, $6)`,
-      [jobId, companyId, fileName, totalRows, type, meta]
+         (job_id, company_id, file_name, total_rows, status, job_type, meta, original_headers)
+       VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7)`,
+      [jobId, companyId, fileName, totalRows, type, meta, originalHeaders ? JSON.stringify(originalHeaders) : null]
     );
     logger.info(`[JOB] Created ${type} job ${jobId} for company ${companyId} | file: ${fileName} | rows: ${totalRows}`);
     return true;
@@ -137,12 +138,20 @@ async function updateJobStatus(jobId, status, progressData = {}) {
       values.push(progressData.job_type);
     }
 
-    await db.execute(
-      `UPDATE verification_jobs SET ${sets.join(', ')} WHERE job_id = $1`,
+    // Guard: never downgrade from a terminal state (completed/failed) back to processing.
+    // This prevents late-arriving onProgress callbacks from overwriting completion.
+    const terminalGuard = (status === 'processing')
+      ? ` AND status NOT IN ('completed', 'failed')`
+      : '';
+
+    const result = await db.execute(
+      `UPDATE verification_jobs SET ${sets.join(', ')} WHERE job_id = $1${terminalGuard}`,
       values
     );
-    logger.info(`[JOB] Updated job ${jobId} status to ${status}`);
-    return true;
+    if (result.rowCount > 0) {
+      logger.info(`[JOB] Updated job ${jobId} status to ${status}`);
+    }
+    return result.rowCount > 0;
   } catch (err) {
     logger.error(`[JOB] Failed to update job ${jobId}: ${err.message}`);
     return false;

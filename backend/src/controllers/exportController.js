@@ -51,12 +51,36 @@ async function resolveOriginalData(body) {
 
 async function handleExport(req, res, next) {
   try {
-    const { results, fileName, originalFormat, language, jobId } = req.body;
+    const { results, fileName, originalFormat, language, jobId, originalHeaders: clientHeaders } = req.body;
     if (!Array.isArray(results)) {
       return res.status(400).json({ error: 'results array required' });
     }
     const format = originalFormat || results[0]?._originalFormat || 'A';
     const originalData = await resolveOriginalData(req.body);
+
+    // Resolve originalHeaders: prefer client-supplied, fall back to job DB record
+    let originalHeaders = clientHeaders || null;
+    if (!originalHeaders && jobId) {
+      try {
+        const job = await jobService.getJob(jobId);
+        if (job && job.original_headers) originalHeaders = job.original_headers;
+      } catch { /* ignore */ }
+    }
+    // Last resort: find most recent completed job for this company + filename
+    if (!originalHeaders && fileName && req.company) {
+      try {
+        const db = require('../services/pgService');
+        const recent = await db.getOne(
+          `SELECT original_headers FROM verification_jobs
+           WHERE company_id = $1 AND file_name = $2 AND original_headers IS NOT NULL
+           ORDER BY created_at DESC LIMIT 1`,
+          [req.company.id, fileName]
+        );
+        if (recent && recent.original_headers) originalHeaders = recent.original_headers;
+      } catch { /* ignore */ }
+    }
+
+    logger.info(`[EXPORT] jobId=${jobId || 'none'} clientHeaders=${!!clientHeaders} dbHeaders=${!!originalHeaders} headerKeys=${originalHeaders ? Object.keys(originalHeaders).join(',') : 'none'}`);
 
     let exportResults = results;
 
@@ -74,7 +98,7 @@ async function handleExport(req, res, next) {
       }));
     }
 
-    const buffer = await buildVerifiedExcel(exportResults, originalData, format);
+    const buffer = await buildVerifiedExcel(exportResults, originalData, format, originalHeaders);
     const baseName = (fileName || 'spare_parts').replace(/\.xlsx?$/i, '');
 
     if (jobId) {

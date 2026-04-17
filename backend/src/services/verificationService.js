@@ -258,7 +258,11 @@ async function processRows(rows, options = {}) {
     stats
   };
 
-  onComplete(summary);
+  try {
+    await onComplete(summary);
+  } catch (err) {
+    logger.error(`[VERIFY] onComplete callback failed: ${err.message}`);
+  }
   return summary;
 }
 
