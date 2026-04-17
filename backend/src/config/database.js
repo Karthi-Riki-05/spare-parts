@@ -7,7 +7,9 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
-  ssl: config.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
+  // SSL only for external managed databases (RDS, Supabase, etc.)
+  // Docker-internal Postgres doesn't support SSL.
+  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
 
 pool.on('error', (err) => {
