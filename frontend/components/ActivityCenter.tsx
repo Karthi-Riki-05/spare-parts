@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { notifications } from '@/lib/notifications';
 import { formatDateTimeWithZone } from '@/lib/timeUtils';
@@ -43,7 +43,6 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
   const [previewData, setPreviewData] = useState<Record<string, PreviewRow[]>>({});
   const [loadingSearch, setLoadingSearch] = useState<string | null>(null);
   const [notifPermission, setNotifPermission] = useState<string>('default');
-  const seenStatuses = useRef<Record<string, string>>({});
 
   // Check notification permission
   useEffect(() => {
@@ -63,27 +62,8 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
       const response = await api.listJobs();
       const newJobs = response.jobs as any[];
 
-      // Check for status transitions and fire notifications
-      for (const job of newJobs) {
-        const prev = seenStatuses.current[job.id];
-        if (prev && prev !== job.status) {
-          if (prev === 'processing' && job.status === 'awaiting_review') {
-            notifications.send(
-              'Data Ready for Review',
-              `${job.fileName} extracted. Click to review.`,
-              { tag: `review-${job.id}` }
-            );
-          }
-          if ((prev === 'processing' || prev === 'awaiting_review') && job.status === 'completed') {
-            notifications.send(
-              'Verification Complete',
-              `${job.fileName} verification finished.`,
-              { tag: `complete-${job.id}` }
-            );
-          }
-        }
-        seenStatuses.current[job.id] = job.status;
-      }
+      // Notification dispatch on status transitions is handled globally in
+      // SparePartsApp.tsx so it fires whether or not this modal is open.
 
       setJobs(newJobs);
 

@@ -3,13 +3,13 @@ const router = express.Router();
 const { requireAuth } = require('../middleware/authMiddleware');
 const cacheService = require('../services/cacheService');
 
-router.delete('/cache', requireAuth, (_req, res) => {
-  cacheService.flush();
+router.delete('/cache', requireAuth, async (_req, res) => {
+  await cacheService.flush();
   res.json({ success: true, message: 'Cache cleared' });
 });
 
-router.get('/cache/stats', requireAuth, (_req, res) => {
-  res.json(cacheService.getStats());
+router.get('/cache/stats', requireAuth, async (_req, res) => {
+  res.json(await cacheService.getStats());
 });
 
 module.exports = router;

@@ -6,6 +6,7 @@ const verificationService = require('../services/verificationService');
 const normalizationService = require('../services/normalizationService');
 const detectionService = require('../services/detectionService');
 const { readExcelFromBase64 } = require('../services/excelService');
+const audit = require('../services/auditService');
 const { logger } = require('../utils/logger');
 
 const router = express.Router();
@@ -13,29 +14,24 @@ const router = express.Router();
 /**
  * Common background verification logic
  */
-async function startBackgroundVerification(jobId, rows) {
+async function startBackgroundVerification(jobId, rows, auditCtx = null) {
   try {
-    // If resuming, rows might be empty or partial. We need to fetch all rows
-    // but skip ones already in job_results.
-    // For now, we assume rows are passed in.
+    await jobService.updateJobStatus(jobId, 'processing', { started_at: new Date() });
 
-    jobService.updateJobStatus(jobId, 'processing', { started_at: new Date() });
-
-    // Check for existing results to skip
-    const existingResults = jobService.getJobResults(jobId);
+    // Check for existing results to skip (resumed jobs).
+    const existingResults = await jobService.getJobResults(jobId);
     const finishedIndexes = new Set(existingResults.map(r => r.row_index));
     const rowsToProcess = finishedIndexes.size > 0
       ? rows.filter(r => !finishedIndexes.has(r.rowIndex))
       : rows;
 
     if (rowsToProcess.length === 0) {
-      jobService.updateJobStatus(jobId, 'completed');
+      await jobService.updateJobStatus(jobId, 'completed');
       return;
     }
 
-    // Running stat accumulator — flushed to SQLite every 10 completed rows so
-    // ActivityCenter reflects real numbers before the job finishes, and so the
-    // row exists in job_stats even if final saveJobResults never runs (crash).
+    // Running stat accumulator — flushed every 10 completed rows so Activity
+    // Center reflects real numbers before the job finishes.
     const runningStats = {
       totalRows:           rows.length,
       webVerified:         0,
@@ -48,8 +44,7 @@ async function startBackgroundVerification(jobId, rows) {
       notFound:            0,
     };
 
-    // Seed the row immediately so getJobStats never returns null mid-job.
-    try { jobService.updateJobStats(jobId, runningStats); }
+    try { await jobService.updateJobStats(jobId, runningStats); }
     catch (err) { logger.warn(`[JOB] Initial stats seed failed for ${jobId}: ${err.message}`); }
 
     await verificationService.processRows(rowsToProcess, {
@@ -67,29 +62,34 @@ async function startBackgroundVerification(jobId, rows) {
         runningStats.emptyCells += [result?.description, result?.manufacturer, result?.itemNumber, result?.websiteId]
           .filter(f => !f || String(f).trim() === '').length;
       },
-      onProgress: (p) => {
+      onProgress: async (p) => {
         const totalDone = finishedIndexes.size + p.completed;
-        jobService.updateJobStatus(jobId, 'processing', {
+        await jobService.updateJobStatus(jobId, 'processing', {
           processed_rows: totalDone,
           current_phase: 'verifying'
         });
-        // Flush stats every 10 rows to keep Activity Center live without thrashing SQLite.
         if (p.completed % 10 === 0) {
-          try { jobService.updateJobStats(jobId, runningStats); }
+          try { await jobService.updateJobStats(jobId, runningStats); }
           catch (err) { logger.warn(`[JOB] Mid-job stats flush failed for ${jobId}: ${err.message}`); }
         }
       },
       onComplete: async (summary) => {
-        jobService.saveJobResults(jobId, summary.results, summary.stats);
-        jobService.updateJobStatus(jobId, 'completed', {
+        await jobService.saveJobResults(jobId, summary.results, summary.stats);
+        await jobService.updateJobStatus(jobId, 'completed', {
           processed_rows: rows.length,
           current_phase: 'complete'
         });
         logger.info(`[JOB] Job ${jobId} completed successfully`);
 
-        // Send email notification (non-blocking)
+        if (auditCtx) {
+          await audit.log('job_completed', {
+            companyId: auditCtx.companyId,
+            details: { jobId, totalRows: rows.length, stats: summary.stats },
+          });
+        }
+
         try {
-          const job = jobService.getJob(jobId);
+          const job = await jobService.getJob(jobId);
           if (job) {
             const { sendJobCompletionEmail } = require('../services/emailService');
             await sendJobCompletionEmail(job, summary.stats);
@@ -105,47 +105,66 @@ async function startBackgroundVerification(jobId, rows) {
     });
   } catch (err) {
     logger.error(`[JOB] Job ${jobId} failed: ${err.message}`);
-    jobService.updateJobStatus(jobId, 'failed', { 
+    await jobService.updateJobStatus(jobId, 'failed', {
       error_message: err.message,
       current_phase: 'failed'
     });
+
+    if (auditCtx) {
+      await audit.log('job_failed', {
+        companyId: auditCtx.companyId,
+        details: { jobId, error: err.message, rowsProcessed: rows.length },
+      });
+    }
+
+    try {
+      const job = await jobService.getJob(jobId);
+      if (job) {
+        const { sendErrorEmail } = require('../services/emailService');
+        await sendErrorEmail(job, err.message);
+      }
+    } catch (emailErr) {
+      logger.error(`[JOB] Error email failed: ${emailErr.message}`);
+    }
   }
 }
 
 /**
  * POST /api/jobs/submit
- * Submit a verification job (for large files)
  */
-router.post('/submit', requireAuth, (req, res) => {
+router.post('/submit', requireAuth, async (req, res) => {
   try {
     const { rows, fileName } = req.body;
-    const userEmail = req.user.email;
-    
+    const companyId = req.user.companyId;
+
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
       return res.status(400).json({ error: 'rows array required' });
     }
     if (!fileName) {
       return res.status(400).json({ error: 'fileName required' });
     }
-    
+
     const jobId = uuidv4();
-    const created = jobService.createJob(jobId, userEmail, fileName, rows.length);
-    
+    const created = await jobService.createJob(jobId, companyId, fileName, rows.length);
+
     if (!created) {
       return res.status(500).json({ error: 'Failed to create job' });
     }
-    
-    logger.info(`[JOB] Job ${jobId} submitted by ${userEmail}`);
-    
-    
+
+    await audit.log('job_started', {
+      companyId,
+      details: { jobId, fileName, totalRows: rows.length, type: 'verify' },
+      ...audit.reqMeta(req),
+    });
+    logger.info(`[JOB] Job ${jobId} submitted by company ${companyId}`);
+
     res.json({
       success: true,
       jobId,
       message: `Job submitted. ${rows.length} rows queued for verification.`,
     });
 
-    // Start background processing
-    startBackgroundVerification(jobId, rows);
+    startBackgroundVerification(jobId, rows, { companyId });
   } catch (err) {
     logger.error(`[JOB] Submit error: ${err.message}`);
     res.status(500).json({ error: err.message });
@@ -154,26 +173,19 @@ router.post('/submit', requireAuth, (req, res) => {
 
 /**
  * GET /api/jobs/:jobId/status
- * Get job status and progress
  */
-router.get('/:jobId/status', requireAuth, (req, res) => {
+router.get('/:jobId/status', requireAuth, async (req, res) => {
   try {
     const { jobId } = req.params;
-    const job = jobService.getJob(jobId);
-    
-    if (!job) {
+    const job = await jobService.getJob(jobId);
+
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    if (job.company_id !== req.user.companyId) {
       return res.status(404).json({ error: 'Job not found' });
     }
-    
-    // Verify user owns this job
-    if (job.user_email !== req.user.email) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-    
-    const rawStats = jobService.getJobStats(jobId);
 
-    // Normalise to both snake_case (legacy) and camelCase (frontend types)
-    // so ActivityCenter.tsx / jobs detail pages never see undefined fields.
+    const rawStats = await jobService.getJobStats(jobId);
+
     const stats = rawStats ? {
       ...rawStats,
       totalRows:           rawStats.total_rows        || 0,
@@ -187,11 +199,10 @@ router.get('/:jobId/status', requireAuth, (req, res) => {
       notFound:            rawStats.not_found         || 0,
     } : null;
 
-    // Include preview rows for awaiting_review jobs
     let previewRows = null;
     if (job.status === 'awaiting_review' && job.results_json) {
       try {
-        const parsed = JSON.parse(job.results_json);
+        const parsed = job.results_json; // JSONB → already parsed
         const rows = parsed.rows || parsed;
         previewRows = Array.isArray(rows) ? rows.slice(0, 20) : null;
       } catch { previewRows = null; }
@@ -226,37 +237,27 @@ router.get('/:jobId/status', requireAuth, (req, res) => {
 
 /**
  * GET /api/jobs/:jobId/results
- * Get verification results for a completed job
  */
-router.get('/:jobId/results', requireAuth, (req, res) => {
+router.get('/:jobId/results', requireAuth, async (req, res) => {
   try {
     const { jobId } = req.params;
-    const job = jobService.getJob(jobId);
-    
-    if (!job) {
+    const job = await jobService.getJob(jobId);
+
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    if (job.company_id !== req.user.companyId) {
       return res.status(404).json({ error: 'Job not found' });
     }
-    
-    // Verify user owns this job
-    if (job.user_email !== req.user.email) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-    
+
     if (job.status !== 'completed' && job.status !== 'awaiting_review') {
       return res.status(400).json({ error: `Job not completed yet (status: ${job.status})` });
     }
-    
-    const results = jobService.getJobResults(jobId);
+
+    const results = await jobService.getJobResults(jobId);
     let finalResults;
-    // dataType lets the frontend branch unambiguously:
-    //   'verified'   → job_results has row-indexed verified cells (background verify completed)
-    //   'normalized' → only results_json has normalized rows (awaiting review / normalize-only job)
-    //   'empty'      → neither
     let dataType = 'empty';
 
     if (results && results.length > 0) {
       dataType = 'verified';
-      // Convert back to camelCase for frontend
       finalResults = results.map(r => ({
         rowIndex: r.row_index,
         internalItemNumber: r.internal_item_number,
@@ -278,9 +279,9 @@ router.get('/:jobId/results', requireAuth, (req, res) => {
         urlValidationStatus: r.url_validation_status,
       }));
     } else if (job.results_json) {
-      // For normalization / detect jobs that save to results_json
       try {
-        finalResults = JSON.parse(job.results_json).rows || JSON.parse(job.results_json);
+        const parsed = job.results_json; // JSONB → already parsed
+        finalResults = parsed.rows || parsed;
         if (Array.isArray(finalResults) && finalResults.length > 0) {
           dataType = 'normalized';
         }
@@ -291,10 +292,7 @@ router.get('/:jobId/results', requireAuth, (req, res) => {
       finalResults = [];
     }
 
-    // Normalise job_stats row to BOTH snake_case (legacy) and camelCase (frontend).
-    // Previously only /:jobId/status did this — /:jobId/results returned raw snake_case,
-    // which was the root cause of the empty stats bar after background completion.
-    const rawStats = jobService.getJobStats(jobId);
+    const rawStats = await jobService.getJobStats(jobId);
     const stats = rawStats ? {
       ...rawStats,
       totalRows:           rawStats.total_rows        || 0,
@@ -322,13 +320,12 @@ router.get('/:jobId/results', requireAuth, (req, res) => {
 
 /**
  * GET /api/jobs
- * Get all jobs for the current user
  */
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
-    const userEmail = req.user.email;
-    const jobs = jobService.getJobsByUser(userEmail);
-    
+    const companyId = req.user.companyId;
+    const jobs = await jobService.getJobsByCompany(companyId);
+
     res.json({
       success: true,
       jobs: jobs.map(j => ({
@@ -354,28 +351,33 @@ router.get('/', requireAuth, (req, res) => {
 
 /**
  * POST /api/jobs/normalize/submit
- * Submit a normalization job
  */
-router.post('/normalize/submit', requireAuth, (req, res) => {
+router.post('/normalize/submit', requireAuth, async (req, res) => {
   try {
     const { fileData, sheetIndex, format, mapping, fileName } = req.body;
-    const userEmail = req.user.email;
-    
+    const companyId = req.user.companyId;
+
     if (!fileData) return res.status(400).json({ error: 'fileData required' });
-    
+
     const jobId = uuidv4();
-    // We don't know the row count yet without reading, 0 is fine
-    jobService.createJob(jobId, userEmail, fileName || 'unnamed', 0, 'normalize', { sheetIndex, format, mapping });
-    
+    await jobService.createJob(
+      jobId, companyId, fileName || 'unnamed', 0, 'normalize',
+      { sheetIndex, format, mapping }
+    );
+    await audit.log('file_uploaded', {
+      companyId,
+      details: { jobId, fileName, type: 'normalize', format },
+      ...audit.reqMeta(req),
+    });
+
     res.json({ success: true, jobId, message: 'Normalization job submitted.' });
 
-    // Background process
     (async () => {
       try {
-        jobService.updateJobStatus(jobId, 'processing', { started_at: new Date() });
+        await jobService.updateJobStatus(jobId, 'processing', { started_at: new Date() });
         const { rows } = await readExcelFromBase64(fileData, sheetIndex);
-        
-        jobService.updateJobStatus(jobId, 'processing', { 
+
+        await jobService.updateJobStatus(jobId, 'processing', {
           total_rows: rows.length,
           current_phase: 'formatting'
         });
@@ -384,26 +386,25 @@ router.post('/normalize/submit', requireAuth, (req, res) => {
           format,
           mapping,
           correlationId: `job-norm-${jobId}`,
-          onProgress: (p) => {
-            jobService.updateJobStatus(jobId, 'processing', { 
+          onProgress: async (p) => {
+            await jobService.updateJobStatus(jobId, 'processing', {
               processed_rows: p.completed,
               current_phase: 'formatting'
             });
           }
         });
 
-        jobService.saveJobResultData(jobId, { rows: normalized, rowCount: normalized.length });
+        await jobService.saveJobResultData(jobId, { rows: normalized, rowCount: normalized.length });
 
-        // Stop at formatting - wait for user review before verification
         logger.info(`[JOB] Normalization job ${jobId} finished. ${normalized.length} rows ready for review.`);
-        jobService.updateJobStatus(jobId, 'awaiting_review', {
+        await jobService.updateJobStatus(jobId, 'awaiting_review', {
           processed_rows: normalized.length,
           total_rows: normalized.length,
           current_phase: 'formatting'
         });
       } catch (err) {
         logger.error(`[JOB] Normalize ${jobId} failed: ${err.message}`);
-        jobService.updateJobStatus(jobId, 'failed', { 
+        await jobService.updateJobStatus(jobId, 'failed', {
           error_message: err.message,
           current_phase: 'failed'
         });
@@ -416,16 +417,15 @@ router.post('/normalize/submit', requireAuth, (req, res) => {
 
 /**
  * POST /api/jobs/:jobId/start-search
- * Transition from awaiting_review to actual verification (search phase)
  */
-router.post('/:jobId/start-search', requireAuth, (req, res) => {
+router.post('/:jobId/start-search', requireAuth, async (req, res) => {
   try {
     const { jobId } = req.params;
-    const job = jobService.getJob(jobId);
-    
+    const job = await jobService.getJob(jobId);
+
     if (!job) return res.status(404).json({ error: 'Job not found' });
-    if (job.user_email !== req.user.email) return res.status(403).json({ error: 'Unauthorized' });
-    
+    if (job.company_id !== req.user.companyId) return res.status(404).json({ error: 'Job not found' });
+
     if (job.status !== 'awaiting_review' && job.status !== 'completed') {
       return res.status(400).json({ error: `Job is in state ${job.status}, cannot start search.` });
     }
@@ -434,10 +434,10 @@ router.post('/:jobId/start-search', requireAuth, (req, res) => {
       return res.status(400).json({ error: 'No normalized data found for this job.' });
     }
 
-    const parsed = JSON.parse(job.results_json);
+    const parsed = job.results_json; // JSONB → already parsed
     const rows = parsed.rows || parsed;
 
-    const rowsPerMin = 15; // rough estimate
+    const rowsPerMin = 15;
     const estimatedMinutes = Math.ceil(rows.length / rowsPerMin);
 
     res.json({
@@ -448,16 +448,19 @@ router.post('/:jobId/start-search', requireAuth, (req, res) => {
       message: 'Deep verification started in background.'
     });
 
-    // Start verification phase — update job_type to 'verify' so results load correctly
-    jobService.updateJobStatus(jobId, 'processing', {
+    await jobService.updateJobStatus(jobId, 'processing', {
       processed_rows: 0,
       total_rows: rows.length,
       current_phase: 'verifying',
       job_type: 'verify'
     });
-    
-    // Start verification
-    startBackgroundVerification(jobId, rows);
+
+    await audit.log('job_started', {
+      companyId: req.user.companyId,
+      details: { jobId, totalRows: rows.length, type: 'verify-resume' },
+      ...audit.reqMeta(req),
+    });
+    startBackgroundVerification(jobId, rows, { companyId: req.user.companyId });
   } catch (err) {
     logger.error(`[JOB] Start search error: ${err.message}`);
     res.status(500).json({ error: err.message });
@@ -466,33 +469,31 @@ router.post('/:jobId/start-search', requireAuth, (req, res) => {
 
 /**
  * POST /api/jobs/detect/submit
- * Submit a format detection job
  */
-router.post('/detect/submit', requireAuth, (req, res) => {
+router.post('/detect/submit', requireAuth, async (req, res) => {
   try {
     const { fileData, sheetIndex, fileName } = req.body;
-    const userEmail = req.user.email;
-    
+    const companyId = req.user.companyId;
+
     if (!fileData) return res.status(400).json({ error: 'fileData required' });
-    
+
     const jobId = uuidv4();
-    jobService.createJob(jobId, userEmail, fileName || 'unnamed', 1, 'detect', { sheetIndex });
-    
+    await jobService.createJob(jobId, companyId, fileName || 'unnamed', 1, 'detect', { sheetIndex });
+
     res.json({ success: true, jobId, message: 'Detection job submitted.' });
 
-    // Background process
     (async () => {
       try {
-        jobService.updateJobStatus(jobId, 'processing', { started_at: new Date() });
+        await jobService.updateJobStatus(jobId, 'processing', { started_at: new Date() });
         const result = await detectionService.processDetection(fileData, sheetIndex, {
           correlationId: `job-det-${jobId}`
         });
-        
-        jobService.saveJobResultData(jobId, result);
-        jobService.updateJobStatus(jobId, 'completed', { processed_rows: 1 });
+
+        await jobService.saveJobResultData(jobId, result);
+        await jobService.updateJobStatus(jobId, 'completed', { processed_rows: 1 });
       } catch (err) {
         logger.error(`[JOB] Detect ${jobId} failed: ${err.message}`);
-        jobService.updateJobStatus(jobId, 'failed', { error_message: err.message });
+        await jobService.updateJobStatus(jobId, 'failed', { error_message: err.message });
       }
     })();
   } catch (err) {
@@ -502,18 +503,17 @@ router.post('/detect/submit', requireAuth, (req, res) => {
 
 /**
  * DELETE /api/jobs/completed/all
- * Clear all completed jobs for current user
  */
-router.delete('/completed/all', requireAuth, (req, res) => {
+router.delete('/completed/all', requireAuth, async (req, res) => {
   try {
-    const userEmail = req.user.email;
-    const jobs = jobService.getJobsByUser(userEmail);
+    const companyId = req.user.companyId;
+    const jobs = await jobService.getJobsByCompany(companyId);
     const completed = jobs.filter(j => j.status === 'completed' || j.status === 'failed');
     let deleted = 0;
     for (const job of completed) {
-      if (jobService.deleteJob(job.id)) deleted++;
+      if (await jobService.deleteJob(job.id)) deleted++;
     }
-    logger.info(`[JOB] Cleared ${deleted} completed jobs for ${userEmail}`);
+    logger.info(`[JOB] Cleared ${deleted} completed jobs for company ${companyId}`);
     res.json({ success: true, deleted });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -522,16 +522,15 @@ router.delete('/completed/all', requireAuth, (req, res) => {
 
 /**
  * DELETE /api/jobs/:jobId
- * Clear/Delete a job
  */
-router.delete('/:jobId', requireAuth, (req, res) => {
+router.delete('/:jobId', requireAuth, async (req, res) => {
   try {
     const { jobId } = req.params;
-    const job = jobService.getJob(jobId);
+    const job = await jobService.getJob(jobId);
     if (!job) return res.status(404).json({ error: 'Job not found' });
-    if (job.user_email !== req.user.email) return res.status(403).json({ error: 'Unauthorized' });
+    if (job.company_id !== req.user.companyId) return res.status(404).json({ error: 'Job not found' });
 
-    const deleted = jobService.deleteJob(jobId);
+    const deleted = await jobService.deleteJob(jobId);
     res.json({ success: deleted });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -541,17 +540,12 @@ router.delete('/:jobId', requireAuth, (req, res) => {
 /**
  * Initialize resume logic
  */
-function initResumption() {
-  jobService.resumeJobs((job) => {
-    // For resumption to work effectively, we'd need the original 'rows' 
-    // which are currently NOT stored in the SQLite DB (only results are).
-    // In a production app, we'd store the input JSON. 
-    // For now, we'll mark resumed jobs as failed if they don't have results 
-    // or just leave them as 'pending' for manual restart if needed.
-    // IMPROVEMENT: We will log that manual restart is required or 
-    // it will be picked up if rows are found.
+async function initResumption() {
+  await jobService.resumeJobs(async (job) => {
     logger.warn(`[JOB] Resumption of ${job.id} requires row data. Marking as failed for re-submit.`);
-    jobService.updateJobStatus(job.id, 'failed', { error_message: 'Job interrupted by server restart. Please re-submit.' });
+    await jobService.updateJobStatus(job.id, 'failed', {
+      error_message: 'Job interrupted by server restart. Please re-submit.'
+    });
   });
 }
 

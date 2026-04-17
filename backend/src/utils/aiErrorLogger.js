@@ -1,37 +1,9 @@
 const { logger } = require('./logger');
-
-let db = null;
-
-function getDb() {
-  if (db) return db;
-  try {
-    const Database = require('better-sqlite3');
-    const path = require('path');
-    const fs = require('fs');
-    const dbDir = process.env.SQLITE_DIR || path.join(__dirname, '../../data');
-    fs.mkdirSync(dbDir, { recursive: true });
-    db = new Database(path.join(dbDir, 'jobs.db'));
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS ai_errors (
-        id         INTEGER PRIMARY KEY AUTOINCREMENT,
-        job_id     TEXT,
-        model      TEXT,
-        error_type TEXT,
-        error_msg  TEXT,
-        row_data   TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-  } catch (err) {
-    logger.error('[AI_ERROR_LOG] Failed to init DB: ' + err.message);
-    db = null;
-  }
-  return db;
-}
+const db = require('../services/pgService');
 
 function classifyAiError(error) {
   const msg = (error && (error.message || String(error))) || '';
-  if (/429|Too Many Requests|quota|RESOURCE_EXHAUSTED/i.test(msg)) {
+  if (/429|Too Many Requests|quota|RESOURCE_EXHAUSTED|spending cap/i.test(msg)) {
     return { kind: 'QUOTA', short: 'AI NOT WORKING — Gemini quota exceeded / billing not enabled' };
   }
   if (/401|API key not valid|API_KEY_INVALID|PERMISSION_DENIED|403/i.test(msg)) {
@@ -46,38 +18,50 @@ function classifyAiError(error) {
   return { kind: 'UNKNOWN', short: 'AI NOT WORKING — unknown error' };
 }
 
-function logAiError(stage, correlationId, error, rowData) {
+/**
+ * Log an AI error. Fire-and-forget from the caller's perspective — exceptions
+ * never propagate up.
+ *
+ * jobId may be null for pre-job errors (e.g. format detection before a
+ * verification_jobs row exists). The schema allows job_id = NULL.
+ */
+async function logAiError(stage, correlationId, error, rowData, { jobId, companyId } = {}) {
   const { kind, short } = classifyAiError(error);
   logger.error(`[${stage}] Row ${correlationId} → ${short} (${kind})`);
   logger.error(`[${stage}] Row ${correlationId} → raw: ${(error.message || String(error)).split('\n')[0].slice(0, 300)}`);
 
-  // Persist to SQLite
   try {
-    const database = getDb();
-    if (database) {
-      database.prepare(`
-        INSERT INTO ai_errors (job_id, model, error_type, error_msg, row_data)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(
-        correlationId || null,
+    // Only use a job_id if one was explicitly passed by the caller.
+    // Never extract a UUID from the correlation ID — it's a request ID,
+    // not a verification_jobs FK, and causes FK violations.
+    const safeJobId = jobId || null;
+    const safeCompanyId = companyId || null;
+
+    await db.execute(
+      `INSERT INTO ai_errors (job_id, company_id, model, error_type, error_msg, row_data)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        safeJobId,
+        safeCompanyId,
         stage || null,
         kind,
         (error.message || String(error)).slice(0, 1000),
-        rowData ? JSON.stringify(rowData).slice(0, 2000) : null
-      );
-    }
+        rowData || null,
+      ]
+    );
   } catch (dbErr) {
-    logger.error('[AI_ERROR_LOG] DB write failed: ' + dbErr.message);
+    logger.error(`[AI_ERROR_LOG] DB write failed: ${dbErr.message}`);
   }
 }
 
-function getRecentErrors(limit = 50) {
+async function getRecentErrors(limit = 50) {
   try {
-    const database = getDb();
-    if (!database) return [];
-    return database.prepare('SELECT * FROM ai_errors ORDER BY created_at DESC LIMIT ?').all(limit);
+    return await db.getMany(
+      'SELECT * FROM ai_errors ORDER BY created_at DESC LIMIT $1',
+      [limit]
+    );
   } catch (err) {
-    logger.error('[AI_ERROR_LOG] Read failed: ' + err.message);
+    logger.error(`[AI_ERROR_LOG] Read failed: ${err.message}`);
     return [];
   }
 }

@@ -24,10 +24,10 @@ router.get('/ai-status', (_req, res) => {
   });
 });
 
-router.get('/ai-errors', (req, res) => {
+router.get('/ai-errors', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
-    const errors = getRecentErrors(Math.min(limit, 200));
+    const errors = await getRecentErrors(Math.min(limit, 200));
     res.json({ success: true, errors, count: errors.length });
   } catch (err) {
     res.status(500).json({ error: err.message });

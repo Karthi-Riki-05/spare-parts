@@ -12,11 +12,28 @@ const BASE = '/api';
 export class ApiError extends Error {
   status: number;
   details: Record<string, unknown>;
+  errorCode: string;
+  requestId?: string;
   constructor(message: string, status: number, details: Record<string, unknown> = {}) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.details = details;
+    this.errorCode = (details.errorCode as string) || 'INTERNAL';
+    this.requestId = (details.requestId as string) || undefined;
+  }
+}
+
+function getDefaultMessage(status: number): string {
+  switch (status) {
+    case 400: return 'Invalid request. Please check your data.';
+    case 401: return 'Session expired. Please log in again.';
+    case 403: return 'Access denied.';
+    case 413: return 'File too large. Maximum 50MB.';
+    case 422: return 'Could not process this file. Please check the format.';
+    case 429: return 'Too many requests. Please wait and try again.';
+    case 503: return 'Service temporarily unavailable. Please try again in a few minutes.';
+    default: return 'Something went wrong. Please try again.';
   }
 }
 
@@ -29,8 +46,9 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     cache: 'no-store',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new ApiError(err.error || err.message || `HTTP ${res.status}`, res.status, err);
+    const data = await res.json().catch(() => ({}));
+    const message = data.error || getDefaultMessage(res.status);
+    throw new ApiError(message, res.status, data);
   }
   return res.json();
 }
@@ -42,8 +60,9 @@ async function get<T>(path: string): Promise<T> {
     cache: 'no-store',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({}));
+    const message = data.error || getDefaultMessage(res.status);
+    throw new ApiError(message, res.status, data);
   }
   return res.json();
 }
@@ -55,8 +74,9 @@ async function del<T>(path: string): Promise<T> {
     cache: 'no-store',
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({}));
+    const message = data.error || getDefaultMessage(res.status);
+    throw new ApiError(message, res.status, data);
   }
   return res.json();
 }

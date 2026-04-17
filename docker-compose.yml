@@ -1,4 +1,22 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: spare-parts-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: spareparts
+      POSTGRES_USER: spare_partner_user
+      POSTGRES_PASSWORD: SuperAdmin@2026
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spare_partner_user -d spareparts"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: ./backend
     ports:
@@ -6,9 +24,14 @@ services:
     env_file: ./backend/.env
     environment:
       - TZ=${APP_TIMEZONE:-Europe/Stockholm}
+      - DATABASE_URL=postgresql://spare_partner_user:SuperAdmin%402026@postgres:5432/spareparts
     volumes:
+      - ./backend/src:/app/src
       - ./backend/logs:/app/logs
       - ./backend/data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r=>{if(!r.ok)throw r;process.exit(0)}).catch(()=>process.exit(1))"]
@@ -38,3 +61,4 @@ services:
 
 volumes:
   frontend_node_modules:
+  postgres_data:

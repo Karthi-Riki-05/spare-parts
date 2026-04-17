@@ -3,48 +3,46 @@ import type { NextRequest } from 'next/server';
 
 const API_URL = 'http://backend:3001';
 
+// Public paths — never gated.
+const PUBLIC_PREFIXES = [
+  '/login',
+  '/forgot-password',
+  '/reset-password',
+  '/confirm-email',
+  '/api/',
+  '/super-admin/login',
+];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow login page and public routes
-  if (pathname === '/login' || pathname.startsWith('/api/')) {
+  if (PUBLIC_PREFIXES.some(p => pathname === p || pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  // Check auth by verifying token on server-side
+  // Super admin portal — auth via /api/super-admin/me
+  if (pathname.startsWith('/super-admin')) {
+    try {
+      const res = await fetch(`${API_URL}/api/super-admin/me`, {
+        credentials: 'include',
+        headers: { Cookie: request.headers.get('cookie') || '' },
+      });
+      if (res.ok) return NextResponse.next();
+    } catch {}
+    return NextResponse.redirect(new URL('/super-admin/login', request.url));
+  }
+
+  // Company app — auth via /api/auth/me
   try {
     const res = await fetch(`${API_URL}/api/auth/me`, {
       credentials: 'include',
-      headers: {
-        Cookie: request.headers.get('cookie') || '',
-      },
+      headers: { Cookie: request.headers.get('cookie') || '' },
     });
-
-    if (res.status === 401) {
-      // Not authenticated, redirect to login
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-
-    if (!res.ok) {
-      // Other auth errors, redirect to login
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-  } catch (err) {
-    // Network error or other issues, redirect to login for security
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  return NextResponse.next();
+    if (res.ok) return NextResponse.next();
+  } catch {}
+  return NextResponse.redirect(new URL('/login', request.url));
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

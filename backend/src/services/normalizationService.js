@@ -55,7 +55,7 @@ async function processNormalization(rows, options = {}) {
     onProgress({ completed: total, total });
   } else if (format === 'B') {
     const pLimit = (await import('p-limit')).default;
-    const BATCH_SIZE = 20; 
+    const BATCH_SIZE = config.batchSize || 5;
     
     const uniqueKeys = new Set([config.geminiApiKey, config.geminiApiKey2, config.geminiApiKey3].filter(k => k && k.trim()));
     const keyCount = uniqueKeys.size;
@@ -134,7 +134,7 @@ async function processNormalization(rows, options = {}) {
     })));
   } else {
     // Format C
-    const BATCH_SIZE = 10;
+    const BATCH_SIZE = config.batchSize || 5;
     const pLimit = (await import('p-limit')).default;
     const limit = pLimit(4);
     

@@ -1,115 +1,70 @@
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const db = require('./pgService');
 const { logger } = require('../utils/logger');
 
-const dbPath = path.join(__dirname, '../../data/jobs.db');
-let db = null;
-
-function getDb() {
-  if (!db) {
-    db = new Database(dbPath);
-    db.pragma('journal_mode = WAL');
-    initSchema();
-  }
-  return db;
-}
-
-function initSchema() {
-  const db = getDb();
-  
-  // Verification jobs table (now a generic jobs table)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS verification_jobs (
-      id TEXT PRIMARY KEY,
-      user_email TEXT NOT NULL,
-      file_name TEXT NOT NULL,
-      status TEXT DEFAULT 'pending',
-      job_type TEXT DEFAULT 'verify',
-      meta_json TEXT,
-      results_json TEXT,
-      total_rows INTEGER DEFAULT 0,
-      processed_rows INTEGER DEFAULT 0,
-      current_phase TEXT,
-      started_at DATETIME,
-      completed_at DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      error_message TEXT,
-      excel_downloaded INTEGER DEFAULT 0,
-      excel_downloaded_at DATETIME
-    )
-  `);
-
-  // Migration for existing databases — each ALTER wrapped so a single "column
-  // already exists" failure does not skip the remaining migrations.
-  const migrations = [
-    "ALTER TABLE verification_jobs ADD COLUMN job_type TEXT DEFAULT 'verify'",
-    "ALTER TABLE verification_jobs ADD COLUMN meta_json TEXT",
-    "ALTER TABLE verification_jobs ADD COLUMN results_json TEXT",
-    "ALTER TABLE verification_jobs ADD COLUMN current_phase TEXT",
-    "ALTER TABLE verification_jobs ADD COLUMN excel_downloaded INTEGER DEFAULT 0",
-    "ALTER TABLE verification_jobs ADD COLUMN excel_downloaded_at DATETIME",
-  ];
-  for (const sql of migrations) {
-    try { db.prepare(sql).run(); } catch (e) { /* already exists */ }
-  }
-  
-  // Job results table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS job_results (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      job_id TEXT NOT NULL,
-      row_index INTEGER,
-      internal_item_number TEXT,
-      description TEXT,
-      manufacturer TEXT,
-      item_number TEXT,
-      type_designation TEXT,
-      supplementary TEXT,
-      verified_source TEXT,
-      verification_score INTEGER,
-      website_id TEXT,
-      source_type TEXT,
-      manufacturer_website TEXT,
-      manufacturer_inferred BOOLEAN,
-      supplementary_used BOOLEAN,
-      supplementary_changed BOOLEAN,
-      supplementary_original TEXT,
-      supplementary_type TEXT,
-      url_validation_status TEXT,
-      FOREIGN KEY (job_id) REFERENCES verification_jobs(id)
-    )
-  `);
-  
-  // Job stats summary table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS job_stats (
-      job_id TEXT PRIMARY KEY,
-      total_rows INTEGER,
-      web_verified INTEGER,
-      empty_cells INTEGER,
-      score_above_90 INTEGER,
-      score_50_to_89 INTEGER,
-      score_below_50 INTEGER,
-      official_source INTEGER,
-      external_source INTEGER,
-      not_found INTEGER,
-      FOREIGN KEY (job_id) REFERENCES verification_jobs(id)
-    )
-  `);
-}
+/**
+ * PG-backed replacement for the legacy SQLite jobService.
+ *
+ * Return shapes continue to use snake_case so routes/jobs.js and other callers
+ * don't require a shape migration alongside the P2 data-layer swap. Only the
+ * function signatures that can't be faked have changed:
+ *   - createJob's 2nd arg is now companyId (UUID), not userEmail
+ *   - getJobsByUser → getJobsByCompany(companyId, limit)
+ *
+ * Ownership checks in routes should compare job.company_id against
+ * req.user.companyId (attached by the bridge requireAuth middleware).
+ */
 
 /**
- * Create a new job
+ * Shape returned PG rows to match the legacy jobService contract.
+ * We expose `id` as an alias for `job_id`, and if results_json is present we
+ * set `resultsData` so legacy callers can access `.resultsData.rows` etc.
  */
-function createJob(jobId, userEmail, fileName, totalRows, type = 'verify', meta = null) {
-  const db = getDb();
+function mapJobRow(row) {
+  if (!row) return null;
+  return {
+    id:                    row.job_id,
+    job_id:                row.job_id,
+    company_id:            row.company_id,
+    // user_email is preserved (via LEFT JOIN on companies.email) so email
+    // templates and legacy owner-email logs keep working. Ownership checks
+    // in route handlers must use company_id, not this field.
+    user_email:            row.company_email || null,
+    file_name:             row.file_name,
+    status:                row.status,
+    job_type:              row.job_type || 'verify',
+    current_phase:         row.current_phase,
+    total_rows:            row.total_rows,
+    processed_rows:        row.processed_rows,
+    started_at:            row.started_at,
+    completed_at:          row.completed_at,
+    created_at:            row.created_at,
+    error_message:         row.error_message,
+    excel_downloaded:      !!row.excel_downloaded,
+    excel_downloaded_at:   row.excel_downloaded_at,
+    meta:                  row.meta,
+    meta_json:             row.meta ? JSON.stringify(row.meta) : null,
+    results_json:          row.results_json || null,
+    resultsData:           row.results_json || null,
+  };
+}
+
+const JOB_SELECT = `
+  SELECT vj.*, c.email AS company_email
+    FROM verification_jobs vj
+    LEFT JOIN companies c ON c.id = vj.company_id
+`;
+
+async function createJob(jobId, companyId, fileName, totalRows, type = 'verify', meta = null) {
   try {
-    db.prepare(`
-      INSERT INTO verification_jobs (id, user_email, file_name, total_rows, status, job_type, meta_json)
-      VALUES (?, ?, ?, ?, 'pending', ?, ?)
-    `).run(jobId, userEmail, fileName, totalRows, type, meta ? JSON.stringify(meta) : null);
-    logger.info(`[JOB] Created ${type} job ${jobId} for ${userEmail} | file: ${fileName} | rows: ${totalRows}`);
+    await db.execute(
+      `INSERT INTO verification_jobs
+         (job_id, company_id, file_name, total_rows, status, job_type, meta)
+       VALUES ($1, $2, $3, $4, 'pending', $5, $6)`,
+      [jobId, companyId, fileName, totalRows, type, meta]
+    );
+    logger.info(`[JOB] Created ${type} job ${jobId} for company ${companyId} | file: ${fileName} | rows: ${totalRows}`);
     return true;
   } catch (err) {
     logger.error(`[JOB] Failed to create job ${jobId}: ${err.message}`);
@@ -117,83 +72,75 @@ function createJob(jobId, userEmail, fileName, totalRows, type = 'verify', meta 
   }
 }
 
-/**
- * Get job by ID
- */
-function getJob(jobId) {
-  const db = getDb();
+async function getJob(jobId) {
   try {
-    const job = db.prepare('SELECT * FROM verification_jobs WHERE id = ?').get(jobId);
-    if (job) {
-      if (job.meta_json) job.meta = JSON.parse(job.meta_json);
-      if (job.results_json) job.resultsData = JSON.parse(job.results_json);
-    }
-    return job;
+    const row = await db.getOne(`${JOB_SELECT} WHERE vj.job_id = $1`, [jobId]);
+    return mapJobRow(row);
   } catch (err) {
     logger.error(`[JOB] Failed to get job ${jobId}: ${err.message}`);
     return null;
   }
 }
 
-/**
- * Get all jobs for a user
- */
-function getJobsByUser(userEmail, limit = 50) {
-  const db = getDb();
+async function getJobsByCompany(companyId, limit = 50) {
   try {
-    return db.prepare(`
-      SELECT * FROM verification_jobs 
-      WHERE user_email = ? 
-      ORDER BY created_at DESC 
-      LIMIT ?
-    `).all(userEmail, limit);
+    const rows = await db.getMany(
+      `${JOB_SELECT}
+       WHERE vj.company_id = $1
+       ORDER BY vj.created_at DESC
+       LIMIT $2`,
+      [companyId, limit]
+    );
+    return rows.map(mapJobRow);
   } catch (err) {
-    logger.error(`[JOB] Failed to get jobs for ${userEmail}: ${err.message}`);
+    logger.error(`[JOB] Failed to get jobs for company ${companyId}: ${err.message}`);
     return [];
   }
 }
 
-/**
- * Update job status
- */
-function updateJobStatus(jobId, status, progressData = {}) {
-  const db = getDb();
+async function updateJobStatus(jobId, status, progressData = {}) {
   try {
-    const updates = ['status = ?'];
-    const values = [status];
-    
+    const sets = ['status = $2', 'updated_at = NOW()'];
+    const values = [jobId, status];
+
     if (status === 'processing' && !progressData.started_at) {
-      updates.push('started_at = CURRENT_TIMESTAMP');
+      sets.push('started_at = NOW()');
     } else if (progressData.started_at) {
-      updates.push('started_at = ?');
-      values.push(progressData.started_at instanceof Date ? progressData.started_at.toISOString() : progressData.started_at);
+      sets.push(`started_at = $${values.length + 1}`);
+      values.push(
+        progressData.started_at instanceof Date
+          ? progressData.started_at.toISOString()
+          : progressData.started_at
+      );
     }
     if (status === 'completed' || status === 'failed') {
-      updates.push('completed_at = CURRENT_TIMESTAMP');
+      sets.push('completed_at = NOW()');
     }
     if (progressData.processed_rows !== undefined) {
-      updates.push('processed_rows = ?');
+      sets.push(`processed_rows = $${values.length + 1}`);
       values.push(progressData.processed_rows);
     }
     if (progressData.error_message !== undefined) {
-      updates.push('error_message = ?');
+      sets.push(`error_message = $${values.length + 1}`);
       values.push(progressData.error_message);
     }
     if (progressData.current_phase !== undefined) {
-      updates.push('current_phase = ?');
+      sets.push(`current_phase = $${values.length + 1}`);
       values.push(progressData.current_phase);
     }
     if (progressData.total_rows !== undefined) {
-      updates.push('total_rows = ?');
+      sets.push(`total_rows = $${values.length + 1}`);
       values.push(progressData.total_rows);
     }
     if (progressData.job_type !== undefined) {
-      updates.push('job_type = ?');
+      sets.push(`job_type = $${values.length + 1}`);
       values.push(progressData.job_type);
     }
 
-    values.push(jobId);
-    db.prepare(`UPDATE verification_jobs SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    await db.execute(
+      `UPDATE verification_jobs SET ${sets.join(', ')} WHERE job_id = $1`,
+      values
+    );
     logger.info(`[JOB] Updated job ${jobId} status to ${status}`);
     return true;
   } catch (err) {
@@ -202,72 +149,48 @@ function updateJobStatus(jobId, status, progressData = {}) {
   }
 }
 
-/**
- * Save verification results for a job
- */
-function saveJobResults(jobId, results, stats) {
-  const db = getDb();
+async function saveJobResults(jobId, results, stats) {
   try {
-    const stmt = db.prepare(`
-      INSERT INTO job_results (
-        job_id, row_index, internal_item_number, description, manufacturer,
-        item_number, type_designation, supplementary, verified_source,
-        verification_score, website_id, source_type, manufacturer_website,
-        manufacturer_inferred, supplementary_used, supplementary_changed,
-        supplementary_original, supplementary_type, url_validation_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    const transaction = db.transaction(() => {
+    await db.withTransaction(async (client) => {
+      // Insert one row per verified row; ON CONFLICT so repeated completes on
+      // resume don't break the whole transaction.
       for (const row of results) {
-        stmt.run(
-          jobId,
-          row.rowIndex,
-          row.internalItemNumber,
-          row.description,
-          row.manufacturer,
-          row.itemNumber,
-          row.typeDesignation,
-          row.supplementary,
-          row.verifiedSource,
-          row.verificationScore,
-          row.websiteId,
-          row.sourceType,
-          row.manufacturerWebsite,
-          row.manufacturerInferred ? 1 : 0,
-          row.supplementaryUsed ? 1 : 0,
-          row.supplementaryChanged ? 1 : 0,
-          row.supplementaryOriginal,
-          row.supplementaryType,
-          row.urlValidationStatus
+        await client.query(
+          `INSERT INTO job_results (job_id, row_index, row_data, row_type)
+           VALUES ($1, $2, $3, 'verified')
+           ON CONFLICT (job_id, row_index, row_type) DO UPDATE SET row_data = EXCLUDED.row_data`,
+          [jobId, row.rowIndex, row]
         );
       }
-      
-      // Save stats — INSERT OR REPLACE so a repeated completion (resume, retry)
-      // does not trip the PK constraint and roll back the whole transaction,
-      // which previously left job_stats empty → ActivityCenter showed all zeros.
       if (stats) {
-        db.prepare(`
-          INSERT OR REPLACE INTO job_stats (
-            job_id, total_rows, web_verified, empty_cells, score_above_90,
-            score_50_to_89, score_below_50, official_source, external_source, not_found
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
-          jobId,
-          stats.totalRows           || 0,
-          stats.webVerified         || 0,
-          stats.emptyCells          || 0,
-          stats.scoreAbove90        || 0,
-          stats.score50to89         || 0,
-          stats.scoreBelow50        || 0,
-          stats.officialSourceFound || 0,
-          stats.externalSourceFound || 0,
-          stats.notFound            || 0
+        await client.query(
+          `UPDATE verification_jobs SET
+             total_rows     = $2,
+             web_verified   = $3,
+             empty_cells    = $4,
+             score_above90  = $5,
+             score_50_to_89 = $6,
+             score_below_50 = $7,
+             official_source= $8,
+             external_source= $9,
+             not_found      = $10,
+             updated_at     = NOW()
+           WHERE job_id = $1`,
+          [
+            jobId,
+            stats.totalRows || 0,
+            stats.webVerified || 0,
+            stats.emptyCells || 0,
+            stats.scoreAbove90 || 0,
+            stats.score50to89 || 0,
+            stats.scoreBelow50 || 0,
+            stats.officialSourceFound || 0,
+            stats.externalSourceFound || 0,
+            stats.notFound || 0,
+          ]
         );
       }
     });
-    
-    transaction();
     logger.info(`[JOB] Saved ${results.length} results for job ${jobId}`);
     return true;
   } catch (err) {
@@ -277,54 +200,94 @@ function saveJobResults(jobId, results, stats) {
 }
 
 /**
- * Get job results
+ * Returns legacy snake_case result rows. row_data JSONB is camelCase (the
+ * shape produced by verificationService), so we flatten it to snake_case here
+ * to match the contract route handlers expect.
  */
-function getJobResults(jobId) {
-  const db = getDb();
+async function getJobResults(jobId) {
   try {
-    return db.prepare('SELECT * FROM job_results WHERE job_id = ? ORDER BY row_index').all(jobId);
+    const rows = await db.getMany(
+      `SELECT row_index, row_data FROM job_results
+       WHERE job_id = $1 AND row_type = 'verified'
+       ORDER BY row_index ASC`,
+      [jobId]
+    );
+    return rows.map(r => {
+      const d = r.row_data || {};
+      return {
+        row_index:              r.row_index,
+        internal_item_number:   d.internalItemNumber,
+        description:            d.description,
+        manufacturer:           d.manufacturer,
+        item_number:            d.itemNumber,
+        type_designation:       d.typeDesignation,
+        supplementary:          d.supplementary,
+        verified_source:        d.verifiedSource,
+        verification_score:     d.verificationScore,
+        website_id:             d.websiteId,
+        source_type:            d.sourceType,
+        manufacturer_website:   d.manufacturerWebsite,
+        manufacturer_inferred:  d.manufacturerInferred ? 1 : 0,
+        supplementary_used:     d.supplementaryUsed ? 1 : 0,
+        supplementary_changed:  d.supplementaryChanged ? 1 : 0,
+        supplementary_original: d.supplementaryOriginal,
+        supplementary_type:     d.supplementaryType,
+        url_validation_status:  d.urlValidationStatus,
+      };
+    });
   } catch (err) {
     logger.error(`[JOB] Failed to get results for job ${jobId}: ${err.message}`);
     return [];
   }
 }
 
-/**
- * Get job stats
- */
-function getJobStats(jobId) {
-  const db = getDb();
+async function getJobStats(jobId) {
   try {
-    return db.prepare('SELECT * FROM job_stats WHERE job_id = ?').get(jobId);
+    const row = await db.getOne(
+      `SELECT total_rows, web_verified, empty_cells,
+              score_above90    AS score_above_90,
+              score_50_to_89,
+              score_below_50,
+              official_source,
+              external_source,
+              not_found
+       FROM verification_jobs WHERE job_id = $1`,
+      [jobId]
+    );
+    return row;
   } catch (err) {
     logger.error(`[JOB] Failed to get stats for job ${jobId}: ${err.message}`);
     return null;
   }
 }
 
-/**
- * Upsert job_stats mid-job. Allows the background worker to flush running
- * totals every N rows so ActivityCenter reflects real counts before completion.
- */
-function updateJobStats(jobId, stats) {
-  const db = getDb();
+async function updateJobStats(jobId, stats) {
   try {
-    db.prepare(`
-      INSERT OR REPLACE INTO job_stats (
-        job_id, total_rows, web_verified, empty_cells, score_above_90,
-        score_50_to_89, score_below_50, official_source, external_source, not_found
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      jobId,
-      stats.totalRows           || 0,
-      stats.webVerified         || 0,
-      stats.emptyCells          || 0,
-      stats.scoreAbove90        || 0,
-      stats.score50to89         || 0,
-      stats.scoreBelow50        || 0,
-      stats.officialSourceFound || 0,
-      stats.externalSourceFound || 0,
-      stats.notFound            || 0
+    await db.execute(
+      `UPDATE verification_jobs SET
+         total_rows     = $2,
+         web_verified   = $3,
+         empty_cells    = $4,
+         score_above90  = $5,
+         score_50_to_89 = $6,
+         score_below_50 = $7,
+         official_source= $8,
+         external_source= $9,
+         not_found      = $10,
+         updated_at     = NOW()
+       WHERE job_id = $1`,
+      [
+        jobId,
+        stats.totalRows || 0,
+        stats.webVerified || 0,
+        stats.emptyCells || 0,
+        stats.scoreAbove90 || 0,
+        stats.score50to89 || 0,
+        stats.scoreBelow50 || 0,
+        stats.officialSourceFound || 0,
+        stats.externalSourceFound || 0,
+        stats.notFound || 0,
+      ]
     );
     return true;
   } catch (err) {
@@ -333,18 +296,14 @@ function updateJobStats(jobId, stats) {
   }
 }
 
-/**
- * Mark a verification job as having produced a downloaded Excel file.
- * Used by the "download check before clear" feature in Activity Center.
- */
-function markExcelDownloaded(jobId) {
-  const db = getDb();
+async function markExcelDownloaded(jobId) {
   try {
-    db.prepare(`
-      UPDATE verification_jobs
-      SET excel_downloaded = 1, excel_downloaded_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(jobId);
+    await db.execute(
+      `UPDATE verification_jobs
+       SET excel_downloaded = TRUE, excel_downloaded_at = NOW(), updated_at = NOW()
+       WHERE job_id = $1`,
+      [jobId]
+    );
     logger.info(`[JOB] Marked ${jobId} as excel_downloaded`);
     return true;
   } catch (err) {
@@ -353,14 +312,12 @@ function markExcelDownloaded(jobId) {
   }
 }
 
-/**
- * Save generic result data (JSON) for a job (e.g. for Detect/Normalize phases)
- */
-function saveJobResultData(jobId, resultsData) {
-  const db = getDb();
+async function saveJobResultData(jobId, resultsData) {
   try {
-    db.prepare('UPDATE verification_jobs SET results_json = ? WHERE id = ?')
-      .run(JSON.stringify(resultsData), jobId);
+    await db.execute(
+      'UPDATE verification_jobs SET results_json = $2, updated_at = NOW() WHERE job_id = $1',
+      [jobId, resultsData]
+    );
     return true;
   } catch (err) {
     logger.error(`[JOB] Failed to save result data for job ${jobId}: ${err.message}`);
@@ -368,26 +325,17 @@ function saveJobResultData(jobId, resultsData) {
   }
 }
 
-/**
- * Delete a job and its associated files
- */
-function deleteJob(jobId) {
-  const db = getDb();
+async function deleteJob(jobId) {
   try {
-    const job = getJob(jobId);
-    if (!job) return false;
+    const existing = await db.getOne('SELECT 1 FROM verification_jobs WHERE job_id = $1', [jobId]);
+    if (!existing) return false;
 
-    db.transaction(() => {
-      db.prepare('DELETE FROM job_stats WHERE job_id = ?').run(jobId);
-      db.prepare('DELETE FROM job_results WHERE job_id = ?').run(jobId);
-      db.prepare('DELETE FROM verification_jobs WHERE id = ?').run(jobId);
-    })();
+    // job_results has ON DELETE CASCADE on job_id, so one DELETE is enough.
+    await db.execute('DELETE FROM verification_jobs WHERE job_id = $1', [jobId]);
 
-    // Delete exported file if it exists
+    // Delete exported file if it exists (legacy on-disk artefact).
     const exportPath = path.join(__dirname, '../../data/exports', `${jobId}.xlsx`);
-    if (fs.existsSync(exportPath)) {
-      fs.unlinkSync(exportPath);
-    }
+    try { if (fs.existsSync(exportPath)) fs.unlinkSync(exportPath); } catch {}
 
     return true;
   } catch (err) {
@@ -397,20 +345,22 @@ function deleteJob(jobId) {
 }
 
 /**
- * Find and resume jobs that were processing when the server stopped
+ * Rowless resumption — flags any job stuck in 'processing' and hands them to
+ * the worker callback. The callback marks them failed; the input rows are not
+ * persisted so we can't truly resume (same behavior as pre-P2).
  */
-function resumeJobs(workerCallback) {
-  const db = getDb();
+async function resumeJobs(workerCallback) {
   try {
-    const jobs = db.prepare("SELECT * FROM verification_jobs WHERE status = 'processing' AND job_type = 'verify'").all();
+    const jobs = await db.getMany(
+      `${JOB_SELECT} WHERE vj.status = 'processing' AND vj.job_type = 'verify'`
+    );
     if (jobs.length > 0) {
       logger.info(`[JOB] Found ${jobs.length} interrupted jobs. Resuming...`);
       for (const job of jobs) {
-        // Mark as pending first to let the regular submission logic pick it up
-        updateJobStatus(job.id, 'pending', { error_message: 'Resumed after server restart' });
-        
-        // Trigger worker callback (calling routes/jobs logic ideally)
-        if (workerCallback) workerCallback(job);
+        await updateJobStatus(job.job_id, 'pending', {
+          error_message: 'Resumed after server restart',
+        });
+        if (workerCallback) await workerCallback(mapJobRow(job));
       }
     }
   } catch (err) {
@@ -418,20 +368,16 @@ function resumeJobs(workerCallback) {
   }
 }
 
-/**
- * Cleanup jobs and files older than specified hours
- */
-function cleanupOldJobs(hours = 48) {
-  const db = getDb();
+async function cleanupOldJobs(hours = 48) {
   try {
-    const threshold = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-    const oldJobs = db.prepare("SELECT id FROM verification_jobs WHERE created_at < ? AND status IN ('completed', 'failed')").all(threshold);
-    
-    if (oldJobs.length > 0) {
-      logger.info(`[JOB] Cleaning up ${oldJobs.length} old jobs...`);
-      for (const job of oldJobs) {
-        deleteJob(job.id);
-      }
+    const res = await db.execute(
+      `DELETE FROM verification_jobs
+       WHERE created_at < NOW() - ($1 || ' hours')::interval
+         AND status IN ('completed', 'failed')`,
+      [hours]
+    );
+    if (res.rowCount > 0) {
+      logger.info(`[JOB] Cleaned up ${res.rowCount} old jobs`);
     }
   } catch (err) {
     logger.error(`[JOB] Cleanup error: ${err.message}`);
@@ -439,11 +385,11 @@ function cleanupOldJobs(hours = 48) {
 }
 
 module.exports = {
-  getDb,
-  initSchema,
   createJob,
   getJob,
-  getJobsByUser,
+  getJobsByCompany,
+  // legacy alias kept for any straggler — routes use getJobsByCompany
+  getJobsByUser: getJobsByCompany,
   updateJobStatus,
   saveJobResults,
   getJobResults,

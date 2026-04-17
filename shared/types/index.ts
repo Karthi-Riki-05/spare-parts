@@ -164,3 +164,69 @@ export interface JobStatus {
     stats: JobStats | null;
   };
 }
+
+// ──────────────────────────────────────────────────────────
+// Multi-tenant auth (added in P4)
+// ──────────────────────────────────────────────────────────
+export interface Company {
+  id: string;
+  companyName: string;
+  email: string;
+  confirmed: boolean;
+  isActive: boolean;
+  creditsBalance: number;
+  jobCount?: number;
+  createdAt: string;
+  confirmedAt?: string | null;
+  deactivatedAt?: string | null;
+  deactivationReason?: string | null;
+  confirmationExpiresAt?: string | null;
+  lastLoginAt?: string | null;
+}
+
+export interface SuperAdmin {
+  id: string;
+  email: string;
+  role: 'super_admin';
+}
+
+export interface AuditLog {
+  id: string;
+  company_id?: string | null;
+  super_admin_id?: string | null;
+  action: string;
+  details: Record<string, unknown>;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+}
+
+export interface AuthPayload {
+  role: 'company' | 'super_admin';
+  company_id?: string;
+  super_admin_id?: string;
+  email: string;
+  company_name?: string;
+}
+
+export interface CompanyUser {
+  id: string;
+  email: string;
+  companyName: string;
+  creditsBalance?: number;
+}
+
+export interface DashboardStats {
+  companies: { total_companies: number; confirmed_companies: number; active_companies: number };
+  jobs: { jobs_today: number; jobs_this_month: number; jobs_total: number };
+  cache: {
+    totalCached: number;
+    officialCount: number;
+    distributorCount: number;
+    lowCount: number;
+    totalHits: number;
+    oldestEntry?: string | null;
+    newestEntry?: string | null;
+    estimatedCostSaved: string;
+  };
+}

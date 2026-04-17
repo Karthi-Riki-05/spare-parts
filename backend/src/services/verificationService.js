@@ -56,7 +56,7 @@ async function processRows(rows, options = {}) {
     const deduped = applyAllDeduplication(row);
     const internalItemNumber = deduped.internalItemNumber;
     const cacheKey = cacheService.makeCacheKey(deduped);
-    const cached = cacheService.get(cacheKey);
+    const cached = await cacheService.get(cacheKey);
     
     if (cached) {
       cacheHits++;
@@ -151,7 +151,7 @@ async function processRows(rows, options = {}) {
         changeLogs.push(createChangeLog(row.rowIndex, result.supplementaryOriginal, result.supplementary, result.verificationScore, result.verificationScore < 70 ? 'claude-sonnet-4-6' : 'gemini-2.5-flash'));
       }
       
-      cacheService.set(cacheKey, result, {
+      await cacheService.set(cacheKey, result, {
         manufacturer:     deduped.manufacturer     || null,
         item_number:      deduped.itemNumber       || null,
         type_designation: deduped.typeDesignation  || null,

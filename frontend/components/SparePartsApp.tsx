@@ -2,7 +2,8 @@
 
 import { useVerification } from '@/hooks/useVerification';
 import { useAlert } from '@/hooks/useAlert';
-import { useEffect, useState, useCallback } from 'react';
+import { notifications } from '@/lib/notifications';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { logout, getUser } from '@/lib/auth';
 import { api } from '@/lib/api';
@@ -61,15 +62,47 @@ export default function SparePartsApp() {
     checkUser();
   }, []);
 
-  // Poll active job count for badge + auto-open Activity on login if jobs are active
+  // Poll active job count for badge + auto-open Activity on login if jobs are active.
+  // Also drives global desktop-notification dispatch on status transitions, so
+  // notifications fire whether or not the Activity Center modal is open.
+  const seenJobStatuses = useRef<Record<string, string>>({});
   useEffect(() => {
     if (!user) return;
     let firstPoll = true;
+    notifications.requestPermission();
     const poll = async () => {
       try {
         const res = await api.listJobs();
         const active = res.jobs.filter((j: any) => j.status === 'processing' || j.status === 'pending' || j.status === 'awaiting_review');
         setActiveJobCount(active.length);
+
+        // Status-transition notifications. On the very first poll we just seed
+        // the map so we don't fire stale notifications for already-finished jobs.
+        for (const job of res.jobs as any[]) {
+          const prev = seenJobStatuses.current[job.id];
+          if (!firstPoll && prev && prev !== job.status) {
+            if (prev === 'processing' && job.status === 'awaiting_review') {
+              notifications.send(
+                'Data Ready for Review',
+                `${job.fileName} extracted. Click to review.`,
+                { tag: `review-${job.id}` }
+              );
+            } else if ((prev === 'processing' || prev === 'awaiting_review') && job.status === 'completed') {
+              notifications.send(
+                'Verification Complete',
+                `${job.fileName} verification finished.`,
+                { tag: `complete-${job.id}` }
+              );
+            } else if (job.status === 'failed') {
+              notifications.send(
+                'Verification Failed',
+                `${job.fileName}: ${job.errorMessage || 'unknown error'}`,
+                { tag: `failed-${job.id}` }
+              );
+            }
+          }
+          seenJobStatuses.current[job.id] = job.status;
+        }
 
         // On first load after login: if there are active or recently completed jobs, auto-open Activity Center
         if (firstPoll && active.length > 0 && !hasData && v.phase === 'idle') {
@@ -180,6 +213,9 @@ export default function SparePartsApp() {
                     <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
                     <div className="absolute right-0 top-full mt-2 bg-bg-surface border border-border rounded-xl shadow-lg min-w-[200px] z-50 py-1">
                       <div className="px-4 py-3 text-sm text-text-secondary font-medium border-b border-border">{user.email}</div>
+                      <a href="/profile" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-border/50 transition-colors">
+                        👤 Profile
+                      </a>
                       <a href="/jobs" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-border/50 transition-colors">
                         📋 Jobs
                       </a>
@@ -302,8 +338,19 @@ export default function SparePartsApp() {
 
       {/* Error display */}
       {v.error && (
-        <div className="bg-brand-red/10 border border-brand-red/30 rounded-lg p-3 mb-3 text-[13px] text-brand-red">
-          {v.error}
+        <div className="rounded-lg border border-brand-red/30 bg-brand-red/10 p-4 mb-3">
+          <div className="flex items-start gap-3">
+            <span className="text-brand-red text-lg shrink-0">&#9888;</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-brand-red">{v.error}</p>
+            </div>
+            <button
+              onClick={() => v.reset()}
+              className="text-text-secondary hover:text-text-primary text-sm shrink-0"
+            >
+              &#10005;
+            </button>
+          </div>
         </div>
       )}
 
