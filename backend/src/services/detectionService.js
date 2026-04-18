@@ -36,8 +36,13 @@ async function processDetection(fileData, sheetIndex = 0, options = {}) {
     detectLanguage(sampleRows).catch(() => ({ language: 'English', languageCode: 'en', translationNeeded: false, detectedWords: [] })),
   ]);
 
+  // Deterministic guardrail: if the data clearly matches Format B shape
+  // (col_1 has long free-text and col_2..col_5 are empty across data rows),
+  // override the AI verdict — headers can fool the model into picking A.
+  const corrected = correctFormatByContent(sampleRows, formatResult, correlationId);
+
   return {
-    ...formatResult,
+    ...corrected,
     rowCount: rows.length,
     sheetIndex,
     originalHeaders: originalHeaders || null,
@@ -45,6 +50,49 @@ async function processDetection(fileData, sheetIndex = 0, options = {}) {
     languageCode: langResult.languageCode,
     translationNeeded: langResult.translationNeeded,
   };
+}
+
+function correctFormatByContent(sampleRows, formatResult, correlationId) {
+  if (!sampleRows.length) return formatResult;
+
+  // Skip the header row if present — first row often holds labels.
+  const dataRows = sampleRows.slice(1).length > 0 ? sampleRows.slice(1) : sampleRows;
+
+  let longCol1 = 0;
+  let emptyOtherCols = 0;
+  for (const row of dataRows) {
+    const c1 = String(row.col_1 || '').trim();
+    const c2 = String(row.col_2 || '').trim();
+    const c3 = String(row.col_3 || '').trim();
+    const c4 = String(row.col_4 || '').trim();
+    const c5 = String(row.col_5 || '').trim();
+    if (c1.length >= 15) longCol1++;
+    if (!c2 && !c3 && !c4 && !c5) emptyOtherCols++;
+  }
+
+  const total = dataRows.length;
+  const longRatio = longCol1 / total;
+  const emptyRatio = emptyOtherCols / total;
+
+  if (longRatio >= 0.6 && emptyRatio >= 0.6 && formatResult.format !== 'B') {
+    logger.warn(`[FORMAT DETECT] ${correlationId} → AI said ${formatResult.format} but data shape is Format B (longRatio=${longRatio.toFixed(2)}, emptyRatio=${emptyRatio.toFixed(2)}). Overriding to B.`);
+    return {
+      ...formatResult,
+      format: 'B',
+      confidence: Math.max(formatResult.confidence || 0, 85),
+      reasoning: `Overridden from ${formatResult.format} to B: col_1 holds free-text and other product columns are empty across data rows.`,
+      suggestedMapping: {
+        internalItemNumber: 'col_0',
+        description: 'col_1',
+        manufacturer: '',
+        itemNumber: '',
+        typeDesignation: '',
+        supplementary: '',
+      },
+    };
+  }
+
+  return formatResult;
 }
 
 module.exports = {

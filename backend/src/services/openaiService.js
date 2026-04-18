@@ -47,7 +47,19 @@ async function detectFormat(sampleRows, correlationId) {
   const client = getNextClient();
   logger.info(`[FORMAT DETECT] ${correlationId} → calling Gemini (Key ...${client.suffix})`);
   
-  const prompt = `Analyze this Excel file structure. Respond ONLY with valid JSON:\n\nSample rows:\n${JSON.stringify(sampleRows, null, 2)}\n\n{"format":"A" or "B" or "C","confidence":0-100,"reasoning":"one sentence","suggestedMapping":{"internalItemNumber":"col_0","description":"col_X","manufacturer":"col_X","itemNumber":"col_X","typeDesignation":"col_X","supplementary":"col_X"}}`;
+  const prompt = `Classify this Excel data shape by INSPECTING THE CELL VALUES of the data rows (not the header names — headers can be misleading). Respond ONLY with valid JSON.
+
+Sample rows (col_0 is always the internal item number — ignore for classification):
+${JSON.stringify(sampleRows, null, 2)}
+
+Format definitions (decide by where the actual data lives in the data rows):
+- "A" = Manufacturer, item-number, and type-designation each appear in their OWN separate columns and are populated across most data rows. Description (if present) is short.
+- "B" = Only one column (typically col_1) holds free-text containing manufacturer + part number + type all crammed together. The other product columns (manufacturer / item number / type designation / supplementary) are EMPTY or nearly empty across the data rows. Headers may still look like Format A — IGNORE the headers and look at whether those cells are blank.
+- "C" = Hybrid: some product columns are populated, others are blank, and the description column also contains structured info that needs parsing.
+
+Critical: if col_1 contains long strings with brand + part number AND col_2..col_5 are mostly empty in the data rows → this is "B", regardless of header text.
+
+{"format":"A" or "B" or "C","confidence":0-100,"reasoning":"one sentence citing which cells are populated/empty","suggestedMapping":{"internalItemNumber":"col_0","description":"col_X","manufacturer":"col_X","itemNumber":"col_X","typeDesignation":"col_X","supplementary":"col_X"}}`;
 
   return withRetry(async () => {
     const start = Date.now();

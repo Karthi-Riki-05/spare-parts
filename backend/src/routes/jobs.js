@@ -7,6 +7,7 @@ const normalizationService = require('../services/normalizationService');
 const detectionService = require('../services/detectionService');
 const { readExcelFromBase64 } = require('../services/excelService');
 const audit = require('../services/auditService');
+const db = require('../services/pgService');
 const { logger } = require('../utils/logger');
 
 const router = express.Router();

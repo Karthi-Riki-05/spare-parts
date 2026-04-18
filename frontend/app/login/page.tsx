@@ -65,7 +65,7 @@ function LoginInner() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-              placeholder="you@company.com"
+              placeholder="Enter Email"
               className="w-full px-3 py-2 bg-bg-primary border border-border rounded text-text-primary text-sm placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-brand-cyan disabled:opacity-50"
               required
               autoComplete="email"
