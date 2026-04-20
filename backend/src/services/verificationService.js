@@ -124,12 +124,17 @@ async function processRows(rows, options = {}) {
           if (urlResult.status === 'redirected' && urlResult.finalUrl) {
             r.websiteId = urlResult.finalUrl;
           } else if (urlResult.status === 'broken') {
-            // R26 / D-006 — stricter validator flagged this URL (relative, error page, 4xx). Clear it.
-            logger.warn(`[VERIFY] Clearing broken websiteId for row ${row.rowIndex} (${urlResult.reason || 'unknown'}): ${r.websiteId}`);
+            // R26 / D-006 — stricter validator flagged this URL (relative, error
+            // page, 404, redirect-to-error). Clear it AND cap the score so a
+            // broken URL never surfaces with a 95% badge.
+            const prevScore = r.verificationScore || 0;
+            let capped = prevScore;
+            if (prevScore >= 90) capped = 60;
+            else if (prevScore >= 70) capped = 50;
+            logger.warn(`[VERIFY] URL_VALIDATION_FAILED row=${row.rowIndex} reason=${urlResult.reason || 'unknown'} score=${prevScore}->${capped} url=${r.websiteId}`);
             r.websiteId = '';
-            if (r.sourceType === 'official' || r.sourceType === 'external' || r.sourceType === 'distributor') {
-              r.sourceType = 'not_found';
-            }
+            r.verificationScore = capped;
+            r.sourceType = 'unknown';
           }
           r.urlValidationStatus = urlResult.status;
         }

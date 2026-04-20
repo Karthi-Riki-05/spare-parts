@@ -56,6 +56,9 @@ async function validateUrl(url) {
       method: 'HEAD',
       redirect: 'manual',
       signal: AbortSignal.timeout(15000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; SparePartsBot/1.0)',
+      },
     });
 
     if (res.status >= 300 && res.status < 400) {
@@ -79,12 +82,22 @@ async function validateUrl(url) {
       return { status: 'valid', finalUrl: raw };
     }
 
-    // 4xx/5xx — keep but flag as unverified so the caller still sees the URL.
+    // 404 is a hard reject — the AI claimed a product page that does not exist.
+    // Callers use this to clear websiteId AND cap the score (see verificationService).
+    if (res.status === 404) {
+      logger.warn(`[URL VALIDATOR] REJECTED 404_not_found: ${raw}`);
+      return { status: 'broken', finalUrl: null, reason: '404_not_found' };
+    }
+
+    // Other 4xx/5xx: keep-but-flag so we don't drop legitimate URLs behind
+    // auth walls / rate limits (common on manufacturer sites that throttle HEAD).
     logger.info(`[URL VALIDATOR] Non-200 status=${res.status} — keeping as unverified: ${raw}`);
-    return { status: 'unverified', finalUrl: raw };
+    return { status: 'unverified', finalUrl: raw, httpStatus: res.status };
   } catch (err) {
+    // Timeout / network — per rule, keep the URL (false negatives on slow sites
+    // are worse than accepting an unverified URL the user can eyeball).
     logger.info(`[URL VALIDATOR] Network/timeout — keeping as unverified: ${raw} (${err?.message || 'unknown'})`);
-    return { status: 'unverified', finalUrl: raw };
+    return { status: 'unverified', finalUrl: raw, reason: 'timeout_kept' };
   }
 }
 

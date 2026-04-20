@@ -3,9 +3,9 @@ const { logger } = require('../utils/logger');
 
 function shouldReVerify(row) {
   if (!row) return false;
-  if (row.score >= 90) return false;
   if (!row.verified_at) return false;
   const daysSince = (Date.now() - new Date(row.verified_at).getTime()) / 86400000;
+  if (row.score >= 90 && daysSince < 180) return false;
   if (row.score >= 70 && daysSince < 90) return false;
   if (row.score >= 50 && daysSince < 30) return false;
   if (row.score < 50 && daysSince < 7) return false;
@@ -13,8 +13,7 @@ function shouldReVerify(row) {
 }
 
 function computeReVerifyAfter(score) {
-  if (score >= 90) return null;
-  const days = score >= 70 ? 90 : score >= 50 ? 30 : 7;
+  const days = score >= 90 ? 180 : score >= 70 ? 90 : score >= 50 ? 30 : 7;
   const d = new Date();
   d.setDate(d.getDate() + days);
   return d;
