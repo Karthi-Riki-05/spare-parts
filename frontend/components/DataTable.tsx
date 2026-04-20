@@ -324,83 +324,101 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
         }
       `}</style>
       {/*
-        Single scroll container: header + virtualized rows share one horizontal
-        scroll axis so they can never desync. The header uses position: sticky
-        so it stays visible while rows scroll vertically inside react-window.
-        react-window is given an explicit width equal to totalWidth, so it no
-        longer clips horizontally — the outer div does all horizontal scrolling.
+        The header and the virtualized rows MUST share the same scroll container,
+        otherwise sticky-left on the first-column body cells anchors to the wrong
+        scroll context and they don't stay in place while the rest scrolls
+        horizontally. We do this by embedding the header inside react-window's
+        outerElementType — that way the List's own scrollable div holds both the
+        sticky header (top:0) AND the sticky first-column cells (left:0), and
+        they share one horizontal scroll axis that CSS position:sticky honors.
       */}
-      <div style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
-        <div style={{ width: totalWidth }}>
-          {/* Header — sticky to the top of the scrollable container */}
-          <div
-            className="flex bg-bg-card border-b-2 border-border"
-            style={{
-              width: totalWidth,
-              position: 'sticky',
-              top: 0,
-              zIndex: 3,
-              backgroundColor: 'var(--bg-card, #f8fafc)',
-            }}
-          >
-            {columns.map((col, colIdx) => (
+      <List
+        ref={listRef}
+        height={Math.min(TABLE_HEIGHT, rows.length * ROW_HEIGHT) + ROW_HEIGHT}
+        itemCount={rows.length}
+        itemSize={ROW_HEIGHT}
+        width="100%"
+        outerElementType={forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+          ({ style, children, ...rest }, ref) => (
+            <div
+              ref={ref}
+              style={{ ...style, WebkitOverflowScrolling: 'touch' }}
+              {...rest}
+            >
+              {/* Header lives INSIDE the scrollable outer so it shares the same
+                  scroll context as the rows. Sticky top keeps it visible on
+                  vertical scroll; sticky left on col_0 keeps the first cell
+                  anchored on horizontal scroll. */}
               <div
-                key={col.key}
-                className="flex-shrink-0 px-2.5 py-2 text-[9.5px] font-semibold uppercase tracking-[0.06em] text-text-muted whitespace-nowrap overflow-hidden"
+                className="flex bg-bg-card border-b-2 border-border"
                 style={{
-                  width: col.width,
-                  ...(colIdx === 0
-                    ? {
-                        position: 'sticky',
-                        left: 0,
-                        zIndex: 20,
-                        backgroundColor: 'var(--bg-card, #f8fafc)',
-                        borderRight: '1px solid var(--border, #e2e8f0)',
-                        boxShadow: '2px 0 4px rgba(0,0,0,0.06)',
-                      }
-                    : {}),
+                  width: totalWidth,
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 3,
+                  backgroundColor: 'var(--bg-card, #f8fafc)',
                 }}
               >
-                <span
-                  title={(col as any).fullLabel || col.label}
-                  style={{ cursor: 'default' }}
-                >
-                  {col.label}
-                </span>
-                {col.editable && (
-                  <span style={{ opacity: 0.4, fontSize: 11 }}> ↕</span>
-                )}
+                {columns.map((col, colIdx) => (
+                  <div
+                    key={col.key}
+                    className="flex-shrink-0 px-2.5 py-2 text-[9.5px] font-semibold uppercase tracking-[0.06em] text-text-muted whitespace-nowrap overflow-hidden"
+                    style={{
+                      width: col.width,
+                      ...(colIdx === 0
+                        ? {
+                            position: 'sticky',
+                            left: 0,
+                            zIndex: 20,
+                            backgroundColor: 'var(--bg-card, #f8fafc)',
+                            borderRight: '1px solid var(--border, #e2e8f0)',
+                            boxShadow: '2px 0 4px rgba(0,0,0,0.06)',
+                          }
+                        : {}),
+                    }}
+                  >
+                    <span
+                      title={(col as any).fullLabel || col.label}
+                      style={{ cursor: 'default' }}
+                    >
+                      {col.label}
+                    </span>
+                    {col.editable && (
+                      <span style={{ opacity: 0.4, fontSize: 11 }}> ↕</span>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          {/* Rows (react-window handles vertical virtualization only) */}
-          <List
-            ref={listRef}
-            height={Math.min(TABLE_HEIGHT, rows.length * ROW_HEIGHT)}
-            itemCount={rows.length}
-            itemSize={ROW_HEIGHT}
-            width={totalWidth}
-            innerElementType={forwardRef(({ style, ...rest }, ref) => (
-              <div
-                ref={ref as any}
-                style={{
-                  ...style,
-                  width: totalWidth,
-                }}
-                {...rest}
-              />
-            ))}
-            onItemsRendered={({ visibleStartIndex, visibleStopIndex }) => {
-              setVisibleRange({
-                start: visibleStartIndex + 1,
-                end: visibleStopIndex + 1,
-              });
-            }}
-          >
-            {Row}
-          </List>
-        </div>
-      </div>
+              {children}
+            </div>
+          ),
+        )}
+        innerElementType={forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { style?: React.CSSProperties }>(
+          ({ style, ...rest }, ref) => (
+            <div
+              ref={ref}
+              style={{
+                ...style,
+                // The inner element's height is driven by react-window from
+                // the total row count; we extend it by one row to compensate
+                // for the sticky header taking ROW_HEIGHT off the visible
+                // scroll viewport (see height prop above).
+                height: ((style && (style as any).height) || 0) as number,
+                width: totalWidth,
+              }}
+              {...rest}
+            />
+          ),
+        )}
+        onItemsRendered={({ visibleStartIndex, visibleStopIndex }) => {
+          setVisibleRange({
+            start: visibleStartIndex + 1,
+            end: visibleStopIndex + 1,
+          });
+        }}
+      >
+        {Row}
+      </List>
       {/* Footer */}
       <div className="px-4 py-1.5 text-[11px] text-text-muted bg-bg-card border-t border-border flex justify-between">
         <span>
