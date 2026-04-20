@@ -48,7 +48,7 @@ const DEFAULT_LABELS: Record<string, string> = {
   sparePartCategory: 'Category',
 };
 
-function truncateLabel(str: string, max = 24): string {
+function truncateLabel(str: string, max = 15): string {
   if (str.length <= max) return str;
   return str.substring(0, max) + '\u2026';
 }
@@ -323,76 +323,83 @@ export default function DataTable({ rows, isVerified, onUpdateRow, pendingRowInd
           50%      { opacity: 1;   transform: scale(1.15); }
         }
       `}</style>
-      {/* Container to prevent double scrollbars. react-window handles them natively now. */}
-      <div style={{ width: '100%' }}>
-        {/* Header */}
-        <div
-          id="table-header-container"
-          style={{ width: '100%', overflowX: 'hidden' }}
-        >
+      {/*
+        Single scroll container: header + virtualized rows share one horizontal
+        scroll axis so they can never desync. The header uses position: sticky
+        so it stays visible while rows scroll vertically inside react-window.
+        react-window is given an explicit width equal to totalWidth, so it no
+        longer clips horizontally — the outer div does all horizontal scrolling.
+      */}
+      <div style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
+        <div style={{ width: totalWidth }}>
+          {/* Header — sticky to the top of the scrollable container */}
           <div
             className="flex bg-bg-card border-b-2 border-border"
-            style={{ width: totalWidth, position: 'relative', top: 0, zIndex: 3 }}
+            style={{
+              width: totalWidth,
+              position: 'sticky',
+              top: 0,
+              zIndex: 3,
+              backgroundColor: 'var(--bg-card, #f8fafc)',
+            }}
           >
-          {columns.map((col, colIdx) => (
-            <div
-              key={col.key}
-              className="flex-shrink-0 px-2.5 py-2 text-[9.5px] font-semibold uppercase tracking-[0.06em] text-text-muted whitespace-nowrap"
-              style={{
-                width: col.width,
-                ...(colIdx === 0
-                  ? {
-                      position: 'sticky',
-                      left: 0,
-                      zIndex: 20,
-                      backgroundColor: 'var(--bg-card, #f8fafc)',
-                      borderRight: '1px solid var(--border, #e2e8f0)',
-                      boxShadow: '2px 0 4px rgba(0,0,0,0.06)',
-                    }
-                  : {}),
-              }}
-            >
-              <span title={(col as any).fullLabel || col.label}>{col.label}</span>
-              {col.editable && (
-                <span style={{ opacity: 0.4, fontSize: 11 }}> ↕</span>
-              )}
-            </div>
-          ))}
+            {columns.map((col, colIdx) => (
+              <div
+                key={col.key}
+                className="flex-shrink-0 px-2.5 py-2 text-[9.5px] font-semibold uppercase tracking-[0.06em] text-text-muted whitespace-nowrap overflow-hidden"
+                style={{
+                  width: col.width,
+                  ...(colIdx === 0
+                    ? {
+                        position: 'sticky',
+                        left: 0,
+                        zIndex: 20,
+                        backgroundColor: 'var(--bg-card, #f8fafc)',
+                        borderRight: '1px solid var(--border, #e2e8f0)',
+                        boxShadow: '2px 0 4px rgba(0,0,0,0.06)',
+                      }
+                    : {}),
+                }}
+              >
+                <span
+                  title={(col as any).fullLabel || col.label}
+                  style={{ cursor: 'default' }}
+                >
+                  {col.label}
+                </span>
+                {col.editable && (
+                  <span style={{ opacity: 0.4, fontSize: 11 }}> ↕</span>
+                )}
+              </div>
+            ))}
           </div>
+          {/* Rows (react-window handles vertical virtualization only) */}
+          <List
+            ref={listRef}
+            height={Math.min(TABLE_HEIGHT, rows.length * ROW_HEIGHT)}
+            itemCount={rows.length}
+            itemSize={ROW_HEIGHT}
+            width={totalWidth}
+            innerElementType={forwardRef(({ style, ...rest }, ref) => (
+              <div
+                ref={ref as any}
+                style={{
+                  ...style,
+                  width: totalWidth,
+                }}
+                {...rest}
+              />
+            ))}
+            onItemsRendered={({ visibleStartIndex, visibleStopIndex }) => {
+              setVisibleRange({
+                start: visibleStartIndex + 1,
+                end: visibleStopIndex + 1,
+              });
+            }}
+          >
+            {Row}
+          </List>
         </div>
-        {/* Rows */}
-        <List
-          ref={listRef}
-          height={Math.min(TABLE_HEIGHT, rows.length * ROW_HEIGHT)}
-          itemCount={rows.length}
-          itemSize={ROW_HEIGHT}
-          width="100%"
-          innerElementType={forwardRef(({ style, ...rest }, ref) => (
-            <div
-              ref={ref as any}
-              style={{
-                ...style,
-                width: totalWidth,
-              }}
-              {...rest}
-            />
-          ))}
-          onScroll={(props: any) => {
-            const scrollLeft = props.scrollLeft ?? 0;
-            const headerContainer = document.getElementById('table-header-container');
-            if (headerContainer) {
-              headerContainer.scrollLeft = scrollLeft;
-            }
-          }}
-          onItemsRendered={({ visibleStartIndex, visibleStopIndex }) => {
-            setVisibleRange({
-              start: visibleStartIndex + 1,
-              end: visibleStopIndex + 1,
-            });
-          }}
-        >
-          {Row}
-        </List>
       </div>
       {/* Footer */}
       <div className="px-4 py-1.5 text-[11px] text-text-muted bg-bg-card border-t border-border flex justify-between">

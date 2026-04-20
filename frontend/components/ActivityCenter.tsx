@@ -41,6 +41,11 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'progress' | 'done'>('progress');
   const [previewData, setPreviewData] = useState<Record<string, PreviewRow[]>>({});
+  // Stats are fetched from /jobs/:id/status and must persist across polls.
+  // Before this was stored on the job object itself — but listJobs() returns
+  // fresh objects every 10s with no stats, so on the next poll the cached value
+  // disappeared and the UI rendered 0 for every score bucket (Issue 5).
+  const [jobStats, setJobStats] = useState<Record<string, any>>({});
   const [loadingSearch, setLoadingSearch] = useState<string | null>(null);
   const [notifPermission, setNotifPermission] = useState<string>('default');
 
@@ -67,27 +72,30 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
 
       setJobs(newJobs);
 
-      // Fetch preview data for awaiting_review jobs and stats for completed jobs
+      // Fetch preview rows once (they don't change) and stats once per job,
+      // then persist in jobStats state so they survive subsequent polls.
       for (const job of newJobs) {
-        if ((job.status === 'awaiting_review' || job.status === 'completed') && !previewData[job.id]) {
-          try {
-            const statusRes = await api.getJobStatus(job.id);
-            if ((statusRes as any).previewRows) {
-              setPreviewData(prev => ({ ...prev, [job.id]: (statusRes as any).previewRows }));
-            }
-            // Attach stats to the job object for rendering
-            if ((statusRes as any).stats) {
-              job.stats = (statusRes as any).stats;
-            }
-          } catch {}
-        }
+        const needsPreview =
+          (job.status === 'awaiting_review' || job.status === 'completed') && !previewData[job.id];
+        const needsStats = job.status === 'completed' && !jobStats[job.id];
+        if (!needsPreview && !needsStats) continue;
+
+        try {
+          const statusRes = await api.getJobStatus(job.id);
+          if (needsPreview && (statusRes as any).previewRows) {
+            setPreviewData(prev => ({ ...prev, [job.id]: (statusRes as any).previewRows }));
+          }
+          if (needsStats && (statusRes as any).stats) {
+            setJobStats(prev => ({ ...prev, [job.id]: (statusRes as any).stats }));
+          }
+        } catch {}
       }
     } catch (err) {
       console.error('Failed to fetch jobs:', err);
     } finally {
       if (isInitial) setIsLoading(false);
     }
-  }, [previewData]);
+  }, [previewData, jobStats]);
 
   useEffect(() => {
     if (!open) return;
@@ -402,7 +410,7 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
 
                     {/* Completed Job — Redesigned card */}
                     {job.status === 'completed' && (() => {
-                      const st = (job as any).stats || {};
+                      const st = jobStats[job.id] || (job as any).stats || {};
                       const s90 = st.score_above_90 ?? st.scoreAbove90 ?? 0;
                       const s50 = st.score_50_to_89 ?? st.score50to89 ?? 0;
                       const sLow = st.score_below_50 ?? st.scoreBelow50 ?? 0;
