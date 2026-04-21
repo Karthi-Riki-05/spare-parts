@@ -7,8 +7,12 @@ beforeEach(truncateAll);
 afterAll(closeTestDb);
 
 describe('pgCacheService.shouldReVerify', () => {
-  it('score >= 90 never re-verifies', () => {
-    expect(pgCache.shouldReVerify({ score: 95, verified_at: daysAgo(365) })).toBe(false);
+  // Policy updated 2026-04-20: score >= 90 re-verifies every 180 days (was "never").
+  // Dedicated TTL tests live in pgCacheService.reverify.test.js — this block
+  // just covers the cross-bucket smoke cases.
+  it('score >= 90 re-verifies after 180 days', () => {
+    expect(pgCache.shouldReVerify({ score: 95, verified_at: daysAgo(100) })).toBe(false);
+    expect(pgCache.shouldReVerify({ score: 95, verified_at: daysAgo(365) })).toBe(true);
   });
 
   it('score 70-89 re-verifies after 90 days', () => {

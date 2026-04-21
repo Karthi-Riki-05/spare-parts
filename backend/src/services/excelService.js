@@ -31,6 +31,30 @@ function extractShortLabel(fullHeader) {
   return parts[0].trim();
 }
 
+/**
+ * Case-insensitive header dedup. Some source files contain two columns with
+ * the same label in different casing (e.g. "Supplementary information" and
+ * "Supplementary Information"). We keep the FIRST occurrence's original
+ * casing and suffix subsequent duplicates with the column index so they
+ * remain distinguishable in exports and don't collide in downstream code.
+ */
+function deduplicateHeaders(headers) {
+  const seen = new Map();
+  const out = {};
+  for (const [colKey, label] of Object.entries(headers)) {
+    const norm = String(label || '').trim().toLowerCase();
+    if (!norm) { out[colKey] = label; continue; }
+    if (seen.has(norm)) {
+      const idx = Number(colKey.replace('col_', '')) || 0;
+      out[colKey] = `${label} (${idx + 1})`;
+    } else {
+      seen.set(norm, colKey);
+      out[colKey] = label;
+    }
+  }
+  return out;
+}
+
 async function readExcelFromBase64(base64, sheetIndex) {
   const buffer = Buffer.from(base64, 'base64');
   const workbook = new ExcelJS.Workbook();
@@ -67,6 +91,7 @@ async function readExcelFromBase64(base64, sheetIndex) {
     }
   }
   if (originalHeaders && Object.keys(originalHeaders).length === 0) originalHeaders = null;
+  if (originalHeaders) originalHeaders = deduplicateHeaders(originalHeaders);
 
   const rows = [];
   sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
