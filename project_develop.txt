@@ -1,0 +1,1131 @@
+================================================================================
+SPARE PARTS WEB VERIFIER — PROJECT DEVELOPMENT GUIDE
+================================================================================
+Generated: 2026-04-21
+Branch: fix/pr2-frontend-polish
+================================================================================
+
+
+TABLE OF CONTENTS
+-----------------
+ 1.  What the project does (concept)
+ 2.  High-level architecture
+ 3.  Tech stack
+ 4.  Directory structure
+ 5.  End-to-end user flow
+ 6.  Backend services (what each file is for)
+ 7.  Frontend components & hooks (what each file is for)
+ 8.  Shared types
+ 9.  AI pipeline in depth
+ 10. URL validation & citation filter (hallucination defense)
+ 11. Database schema (migrations)
+ 12. Caching strategy
+ 13. Background job model
+ 14. Authentication & multi-tenancy
+ 15. Configuration & environment variables
+ 16. Docker / local run / production deploy
+ 17. Testing
+ 18. Key architectural decisions (D-001 … D-010)
+ 19. Critical rules & constraints
+ 20. Known issues and gotchas
+
+
+================================================================================
+1.  WHAT THE PROJECT DOES (CONCEPT)
+================================================================================
+
+The Spare Parts Web Verifier is a multi-tenant SaaS that takes an Excel file
+full of inconsistently-formatted industrial spare-parts data and returns the
+same data, normalized, with each part verified against the open web.
+
+Inputs:
+  - Excel file (.xlsx, .xls), up to 10,000 rows / 50 MB
+  - Rows contain at minimum: an internal item number + some description of the
+    part (manufacturer, type, supplementary notes, etc.) in one of three
+    shapes the system calls Format A / B / C
+
+Outputs:
+  - A verified Excel workbook with three sheets:
+      - Verified Data (AI-augmented: verified source, score, URL, source type)
+      - Original Data (preserved as uploaded)
+      - Import Ready (10 normalized columns for downstream ERP ingestion)
+  - Per-row AI confidence score (0–100), source type (official / distributor /
+    unverified / not_found), and a clickable website URL
+  - Audit trail of any supplementary-info changes the AI made
+
+Value proposition: a purchasing / reliability team uploads a messy parts list
+from their ERP and gets back a clean list with each part number resolved to a
+real manufacturer or distributor product page. The AI is forced through a
+verification pipeline that filters hallucinated URLs out.
+
+
+================================================================================
+2.  HIGH-LEVEL ARCHITECTURE
+================================================================================
+
+  Browser (Next.js 14 App Router on port 3000)
+      │
+      │  JSON over fetch + Server-Sent Events (SSE)
+      ▼
+  Express API (Node.js on port 3001)
+      │
+      ├─► PostgreSQL 16 (jobs, results, cache, auth, audit)
+      │
+      ├─► Google Gemini API
+      │     - gemini-2.0-flash  (format detect + normalize)
+      │     - gemini-2.5-flash  (web verify with Google Search grounding)
+      │     - gemini-2.0-flash  (rule-enforcement fallback)
+      │     All three use the single GEMINI_API_KEY; filenames are legacy.
+      │
+      └─► HEAD/GET probes to arbitrary product URLs (validator)
+
+  No Redis. No Bull. No external queue. Concurrency is handled in-process
+  by p-limit (see D-002).
+
+
+================================================================================
+3.  TECH STACK
+================================================================================
+
+Layer        Technology                                       Version
+-----        ----------------------------------------------   -------
+Frontend     Next.js 14 App Router (React 18)                 14.2.3
+             TypeScript strict mode                           5.4.5
+             Tailwind CSS (dark theme, custom tokens)         3.4.3
+             react-window FixedSizeList (virtual scrolling)   1.8
+             SSE for live verification progress
+Backend      Express 4 (CommonJS plain JS)                    4.18.2
+             ExcelJS (read + write)                           4.3.0
+             Zod (input validation middleware)
+             Helmet (CSP + security headers)
+             express-rate-limit                               7.1.5
+             Winston (structured logs)
+             node-cache (in-process TTL cache)
+             p-limit (concurrency)
+AI           Gemini via @google/generative-ai                 latest
+             googleSearch tool for grounded verification
+Storage      PostgreSQL 16 (alpine docker image)
+Auth         JWT in httpOnly cookie (spare_parts_token)
+             bcryptjs password hashing (cost 12)
+Email        Hostinger SMTP via nodemailer (NOT Resend)
+Jobs         In-process async, polled from UI via /status API
+Tests        Vitest (backend unit + frontend component)
+             Playwright CLI, not MCP (see D-007)
+Deploy       Docker Compose — dev and prod compose files
+             Production on AWS Lightsail
+
+
+================================================================================
+4.  DIRECTORY STRUCTURE
+================================================================================
+
+  spare-parts-verifier/
+  │
+  ├── docker-compose.yml           Dev compose (hot reload)
+  ├── docker-compose.prod.yml      Prod compose (Lightsail)
+  ├── CLAUDE.md                    AI agent instructions (agent rules)
+  ├── DECISIONS.md                 Architectural decisions log (D-001..D-010)
+  ├── README.md                    Public-facing project README
+  ├── project_develop.txt          THIS FILE
+  ├── package.json                 Workspace root (Vitest, Playwright)
+  ├── playwright.config.js
+  │
+  ├── .claude/                     Agent guidance
+  │   └── rules/                   Per-module rules (always, scan-prevention,
+  │                                ai-providers, excel-processing, backend,
+  │                                frontend, verification-flow, agent-limits,
+  │                                session, known-issues, modules)
+  │
+  ├── shared/
+  │   └── types/
+  │       └── index.ts             Shared TS types (RawRow, NormalizedRow,
+  │                                VerificationResult, JobStatus, etc.)
+  │
+  ├── backend/
+  │   ├── Dockerfile
+  │   ├── package.json
+  │   ├── .env                     GEMINI_API_KEY, DATABASE_URL, secrets
+  │   ├── .env.example
+  │   ├── logs/
+  │   ├── data/
+  │   └── src/
+  │       ├── server.js                    Express bootstrap
+  │       ├── config.js                    Zod-validated env loader
+  │       │
+  │       ├── config/
+  │       │   └── database.js              PG connection pool
+  │       │
+  │       ├── middleware/
+  │       │   ├── authMiddleware.js        requireCompany / requireSuperAdmin
+  │       │   ├── errorHandler.js
+  │       │   ├── rateLimiter.js
+  │       │   ├── requestLogger.js
+  │       │   └── validation.js            Zod validators
+  │       │
+  │       ├── migrations/
+  │       │   ├── 001_extensions.sql
+  │       │   ├── 002_super_admins.sql
+  │       │   ├── 003_companies.sql
+  │       │   ├── 004_verification_jobs.sql
+  │       │   ├── 005_job_results.sql
+  │       │   ├── 006_verification_cache.sql
+  │       │   ├── 007_ai_errors.sql
+  │       │   ├── 008_audit_logs.sql
+  │       │   ├── 009_legacy_job_stats.sql
+  │       │   ├── 010_original_headers.sql
+  │       │   ├── 011_reverify_high_score.sql
+  │       │   ├── 012_column_preferences.sql
+  │       │   ├── 013_url_validation_status.sql
+  │       │   └── run.js                   Applies in order, seeds admins
+  │       │
+  │       ├── routes/                      (Route = req/res plumbing only)
+  │       │   ├── health.js
+  │       │   ├── auth.js
+  │       │   ├── superAdmin.js
+  │       │   ├── sheets.js                /api/get-sheets
+  │       │   ├── detect.js                /api/detect-format
+  │       │   ├── normalize.js             /api/normalize
+  │       │   ├── manualMap.js             /api/manual-map
+  │       │   ├── verify.js                /api/verify (SSE)
+  │       │   ├── export.js                /api/export
+  │       │   ├── cache.js                 /api/cache/*
+  │       │   ├── cacheStats.js            /api/cache-stats
+  │       │   ├── aiStatus.js              /api/ai-status
+  │       │   ├── jobs.js                  /api/jobs/* (background)
+  │       │   ├── preferences.js           /api/preferences/columns
+  │       │   ├── devEmail.js              dev-only email preview
+  │       │   └── views.js                 legacy EJS at /
+  │       │
+  │       ├── controllers/                 (Validate + delegate to services)
+  │       │   ├── detectController.js
+  │       │   ├── exportController.js
+  │       │   ├── manualMapController.js
+  │       │   ├── normalizeController.js
+  │       │   ├── sheetsController.js
+  │       │   └── verifyController.js
+  │       │
+  │       ├── services/                    (All business logic lives here)
+  │       │   ├── pgService.js              Thin PG wrapper
+  │       │   ├── pgCacheService.js         verification_cache table I/O
+  │       │   ├── cacheService.js           In-process TTL cache (SHA256 keys)
+  │       │   ├── excelService.js           ExcelJS read + write pipelines
+  │       │   ├── detectionService.js       Format A/B/C detector
+  │       │   ├── normalizationService.js   Map raw rows → NormalizedRow
+  │       │   ├── deduplicationService.js   Collapse duplicates
+  │       │   ├── supplementaryLogger.js    TYPE_A / TYPE_B classifier
+  │       │   ├── urlValidatorService.js    GET→HEAD, classifies 2xx/3xx/4xx/5xx
+  │       │   ├── geminiCitationFilter.js   Level A/B/C anti-hallucination
+  │       │   ├── geminiService.js          gemini-2.5-flash web verify
+  │       │   ├── claudeService.js          gemini-2.0-flash rule fallback
+  │       │   ├── openaiService.js          gemini-2.0-flash normalizer
+  │       │   ├── geminiPool.js             Multi-key pool (round-robin)
+  │       │   ├── verificationService.js    Orchestrates per-row pipeline
+  │       │   ├── jobService.js             verification_jobs + job_results I/O
+  │       │   ├── authService.js            JWT + bcrypt
+  │       │   ├── companyService.js         Company CRUD
+  │       │   ├── auditService.js           audit_logs writer
+  │       │   ├── languageService.js        Swedish/EN translate helpers
+  │       │   ├── validationService.js      Content-shape validation
+  │       │   ├── emailService.js           Hostinger SMTP
+  │       │   └── mocks/                    Mock-mode Gemini responses
+  │       │
+  │       ├── utils/
+  │       │   ├── logger.js                 Winston
+  │       │   ├── retry.js                  3 attempts / 1s,2s,4s backoff
+  │       │   ├── asyncHandler.js
+  │       │   ├── aiErrorLogger.js
+  │       │   ├── ersHandler.js             ERS. prefix stripping
+  │       │   └── timeUtils.js
+  │       │
+  │       └── scripts/                      One-shot maintenance scripts
+  │
+  ├── frontend/
+  │   ├── Dockerfile
+  │   ├── package.json
+  │   ├── next.config.mjs                   /api/* → backend:3001 rewrite
+  │   ├── tailwind.config.ts
+  │   ├── tsconfig.json
+  │   ├── vitest.config.ts
+  │   │
+  │   ├── app/                              App Router pages
+  │   │   ├── layout.tsx                    Root layout, imports globals.css
+  │   │   ├── page.tsx                      Home → SparePartsApp
+  │   │   ├── globals.css
+  │   │   ├── login/                        Company login
+  │   │   ├── forgot-password/
+  │   │   ├── reset-password/
+  │   │   ├── confirm-email/
+  │   │   ├── profile/
+  │   │   ├── jobs/                         Activity center
+  │   │   ├── results/[jobId]/              Job results page
+  │   │   ├── super-admin/                  Super-admin portal
+  │   │   ├── docs/                         In-app docs
+  │   │   └── api/                          (Next.js route handlers if any)
+  │   │
+  │   ├── components/
+  │   │   ├── SparePartsApp.tsx             Main orchestrator component
+  │   │   ├── FileUpload.tsx                Drag-drop + base64 encode
+  │   │   ├── SheetSelector.tsx             Multi-sheet xlsx chooser
+  │   │   ├── FormatDetector.tsx            Shows detected A/B/C
+  │   │   ├── ManualMappingDialog.tsx       Column mapping override
+  │   │   ├── LargeFileWarning.tsx          > 5,000 rows modal
+  │   │   ├── ActionBar.tsx                 Verify / Stop / Export / Back
+  │   │   ├── ProgressSection.tsx           Progress bar + ETA
+  │   │   ├── StatsDashboard.tsx            Counters bar
+  │   │   ├── VerificationLog.tsx           Per-row log stream
+  │   │   ├── DataTable.tsx                 Virtualized verified data grid
+  │   │   ├── ActivityCenter.tsx            Job history panel
+  │   │   ├── BackgroundJobModal.tsx        Foreground vs background prompt
+  │   │   └── ui/                           Button, Badge, Card, Modal, …
+  │   │
+  │   ├── hooks/
+  │   │   ├── useVerification.ts            Single source of truth state
+  │   │   ├── useSSE.ts                     EventSource wrapper
+  │   │   ├── useEditState.ts               Inline-edit per cell
+  │   │   ├── useColumnPreferences.ts       Per-company column hide/show
+  │   │   └── useAlert.ts
+  │   │
+  │   ├── lib/
+  │   │   ├── api.ts                        Typed fetch client (ALL API calls)
+  │   │   ├── auth.ts                       Session helpers
+  │   │   ├── superAdminApi.ts
+  │   │   ├── superAdminAuth.ts
+  │   │   ├── notifications.ts              Web Push permission
+  │   │   ├── constants.ts                  BACKGROUND_THRESHOLD, etc.
+  │   │   ├── utils.ts                      fileToBase64, truncate, etc.
+  │   │   └── timeUtils.ts
+  │   │
+  │   ├── middleware.ts                     Next.js edge middleware (auth)
+  │   ├── __tests__/                        Vitest component tests
+  │   ├── types/
+  │   └── public/
+  │
+  └── e2e/
+      └── frontend/                         Playwright CLI specs
+          ├── _helpers.js
+          ├── companyLoginFlow.spec.js
+          ├── emailConfirmFlow.spec.js
+          ├── forgotPasswordFlow.spec.js
+          ├── jobIsolationFlow.spec.js
+          ├── passwordFlow.spec.js
+          ├── profileFlow.spec.js
+          └── superAdminFlow.spec.js
+
+
+================================================================================
+5.  END-TO-END USER FLOW
+================================================================================
+
+ Step 1.  SIGN UP / LOGIN
+   - Super admin creates a company via /super-admin portal
+   - Company receives confirmation email (Hostinger SMTP)
+   - Company clicks confirm link → status = confirmed
+   - Company logs in at /login → JWT in httpOnly cookie
+   - Backend requireCompany middleware attaches req.company on every request
+
+ Step 2.  FILE UPLOAD
+   - FileUpload.tsx validates .xlsx/.xls MIME + size ≤ 50 MB
+   - File read as base64 in the browser (lib/utils.fileToBase64)
+   - POST /api/get-sheets returns list of sheets
+   - If > 1 sheet: SheetSelector modal asks user which
+
+ Step 3.  FORMAT DETECTION  (backend: detectController → detectionService)
+   - POST /api/detect-format with base64 + sheetIndex
+   - gemini-2.0-flash reads first N rows, returns:
+       { format: 'A' | 'B' | 'C',
+         confidence: 0–100,
+         reasoning: "...",
+         suggestedMapping: { col_0: 'internalItemNumber', ... },
+         rowCount, sheetIndex,
+         originalHeaders: { col_0: 'Internal Item #', … } }
+   - Format A = direct column mapping (no AI normalize needed)
+   - Format B = single free-text column, needs AI parse
+   - Format C = hybrid (some columns mapped, some need AI)
+   - If confidence < 80: ManualMappingDialog opens for user to override
+
+ Step 4.  NORMALIZATION  (normalizeController → normalizationService)
+   - POST /api/normalize — for small files, chunked 500 rows at a time
+   - For Format B/C OR > 200 rows → switches to BACKGROUND JOB
+       POST /api/jobs/normalize/submit → returns jobId
+       Client polls /api/jobs/:jobId/status every 3s
+       When status = awaiting_review: user reviews normalized rows,
+       then clicks Verify All → POST /api/jobs/:jobId/start-search
+   - Output: NormalizedRow[] with { internalItemNumber, description,
+     manufacturer, itemNumber, typeDesignation, supplementary,
+     sparePartCategory?, rowIndex }
+
+ Step 5.  VERIFICATION  (verificationService.processRows)
+   Two modes:
+   (a) Foreground — POST /api/verify → SSE stream of events:
+         progress      { completed, total, elapsedSeconds }
+         row_complete  { result: VerificationResult }
+         complete      { response: VerificationResponse }
+         error         { rowIndex, message }
+   (b) Background — POST /api/jobs/submit → polled via /status
+
+   Per-row pipeline inside processRows:
+     1. cacheService.get(sha256(manufacturer|item|type))
+        HIT → return cached result, done (zero cost)
+     2. geminiService.verifyRow() — gemini-2.5-flash + googleSearch
+         a. Build prompt (internalItemNumber NEVER included — R1)
+         b. Parse JSON out of model text
+         c. Citation filter (geminiCitationFilter.applyCitationFilter):
+              - Level A: model-URL apex must be in groundingChunks[].web.title
+              - Level B: resolve Google redirects, path-match
+              - Level C: replace URL with cited one if only domain matches
+              - Statuses: citation_confirmed / _partial / _replaced /
+                          no_citations_fallback / domain_not_cited
+         d. Apply score caps from citation outcome
+     3. If score < 70 AND supplementary is part_specification: retry with
+        supplementary included (supplementaryLogger + second verifyRow pass)
+     4. If score still < 70 OR empty manufacturer:
+        claudeService.enforceRules — gemini-2.0-flash rule enforcement
+     5. urlValidatorService.validateUrl — GET first, HEAD fallback
+        Classifications:
+          confirmed            2xx / 3xx
+          bot_blocked          401 / 403 / 405 / 406 / other 4xx not 404/410
+          unverified           5xx / timeout / network error
+          broken_404           404 / 410
+          broken_error         redirect-to-error-path / invalid URL
+     6. verificationService applies final score caps by URL status:
+          confirmed                    keep AI score
+          bot_blocked_trusted  ≤ 85    (apex in TRUSTED_DOMAINS)
+          bot_blocked_untrusted ≤ 60
+          unverified           ≤ 70
+          broken_*             ≤ 55 + URL cleared + sourceType=unknown
+        Citation statuses (citation_*, no_citations_fallback) are preserved
+        over HTTP status unless HTTP is broken_*.
+     7. cacheService.set — SHA256 key → 24 h TTL
+
+ Step 6.  DISPLAY  (DataTable.tsx)
+   - react-window FixedSizeList, itemSize=36
+   - Sticky header (top:0) + sticky col_0 (left:0) — same scroll container
+   - Score badge: ≥90 green / 70–89 yellow / 50–69 orange / <50 red
+   - WebsiteLink renders distinct icons per urlValidationStatus:
+       citation_confirmed / confirmed / valid  →  plain blue link
+       citation_partial                        →  ✓ blue link
+       citation_replaced                       →  ♻ orange link
+       bot_blocked_trusted / bot_blocked       →  ⚠ amber link
+       bot_blocked_untrusted                   →  ⚠ red link
+       no_citations_fallback / unverified      →  ❓ grey link
+       broken_* / empty                        →  — (dash)
+   - Inline edit: click cell → input → Enter save / Escape cancel / blur save
+   - Columns toolbar dropdown (useColumnPreferences) persists hidden columns
+     per company_id in Postgres
+
+ Step 7.  EXPORT  (exportController → excelService.buildVerifiedExcel)
+   - POST /api/export → .xlsx blob with three sheets:
+       1. Verified Data (original + AI columns, score-colored, hyperlink)
+       2. Original Data (as-uploaded)
+       3. Import Ready (10 normalized columns for downstream ERP)
+   - Website ID columns are width=80 so full URL is readable
+   - Hyperlink cell stores full URL text + hyperlink target (never truncated)
+   - Export always includes ALL columns (column hide preference is UI-only)
+
+
+================================================================================
+6.  BACKEND SERVICES — WHAT EACH FILE IS FOR
+================================================================================
+
+pgService.js
+   Thin wrapper over pg.Pool. Exposes query / getOne / getMany / execute /
+   withTransaction. Logs queries > 1 s as "PG SLOW QUERY".
+
+pgCacheService.js
+   Reads/writes verification_cache. TTL-by-score policy:
+     score ≥ 90 → re-verify every 180 days
+     score ≥ 70 → 90 days
+     score ≥ 50 → 30 days
+     score < 50 → 7 days
+   Stores both top-level columns and the full JSONB result.
+   Also stores url_validation_status as a top-level column (migration 013).
+
+cacheService.js
+   Two-tier: in-memory node-cache (L1) + pgCacheService (L2). SHA256 key =
+   manufacturer|itemNumber|typeDesignation. 24 h in-memory TTL.
+
+excelService.js
+   - readExcelFromBase64: scans first 5 rows for a header row, picks the one
+     with ≥3 non-empty short-label cells (avg length < 50). Extracts
+     originalHeaders as { col_0: 'Internal Item #', … }. Dedupes case-insensitive.
+   - buildVerifiedExcel: three-sheet workbook output. Score-colored cells,
+     sticky frozen header row, hyperlink cells with full-URL display text.
+
+detectionService.js
+   Classifies the sheet as Format A / B / C using gemini-2.0-flash. Returns
+   confidence + suggested column mapping. Applies correction based on data
+   shape (e.g. if first row cells look numeric-heavy, flag as data not header).
+
+normalizationService.js
+   Takes raw col_N rows and produces NormalizedRow[] according to the
+   detected format + mapping. For Format B, calls gemini-2.0-flash to parse
+   the free-text cell.
+
+deduplicationService.js
+   R-rules from D-008: strip ERS. prefixes, collapse itemNumber ==
+   typeDesignation, translate Swedish → English, mirror original layout.
+
+supplementaryLogger.js
+   Classifies column E (supplementary) as TYPE_A (part-identification data —
+   may be used on retry when score < 70) vs TYPE_B (internal instruction
+   like "contact" / "do not" — never touched). Writes change logs.
+
+urlValidatorService.js
+   GET-first HTTP probe with real Chrome User-Agent and Accept headers.
+   HEAD fallback when GET throws (timeout / network). Classifies status:
+     VALID / CONFIRMED       2xx or 3xx → URL good
+     BOT_BLOCKED             401 / 403 / 405 / 406 / other 4xx not 404/410
+     UNVERIFIED              5xx or timeout
+     BROKEN_404              404 or 410
+     BROKEN_ERROR            redirect to /error, /404, /login, etc.
+   Rejects relative URLs, invalid URLs, and known error-page paths up front.
+
+geminiCitationFilter.js
+   Three-level anti-hallucination filter applied after Gemini returns JSON:
+     Level A (free) — domain gate: model URL apex must appear in a
+       groundingChunks[].web.title. Unknown-domain URLs are hard-rejected
+       with status='domain_not_cited'. Missing citations entirely →
+       status='no_citations_fallback' (URL kept, score capped at 60).
+     Level B (~200 ms) — resolve Google's redirect URLs via HEAD-follow,
+       compare model URL's path to the resolved paths:
+         exact      → citation_confirmed (keep AI score)
+         prefix     → citation_partial (cap 85)
+         domain-only→ escalate to Level C
+     Level C — replace the model's path with the first resolved citation URL
+       on the same domain. Cap score at 75. status='citation_replaced'.
+   Also exports TRUSTED_DOMAINS (manufacturer + distributor apex allowlist,
+   ~35 entries) and isTrustedDomain(url) — used by verificationService to
+   split bot_blocked into _trusted (cap 85) vs _untrusted (cap 60).
+
+geminiService.js
+   The primary verifier. gemini-2.5-flash with `tools: [{ googleSearch: {} }]`.
+   Calls applyCitationFilter after JSON extract. Note: file name is legacy —
+   all three AI services now call the same Gemini API under the single
+   GEMINI_API_KEY.
+
+claudeService.js
+   Rule-enforcement fallback via gemini-2.0-flash. Fires when score < 70 OR
+   the manufacturer field is empty. Applies R-rules (manufacturer inference,
+   ERS. prefix stripping, Swedish→English translation, supplementary
+   protection). Never invents URLs.
+
+openaiService.js
+   Format-detection + normalization via gemini-2.0-flash. Legacy filename.
+
+geminiPool.js
+   Round-robin pool of Gemini API keys (if multiple configured). Each key
+   gets its own p-limit=15 concurrency gate. Total concurrency scales with
+   the number of keys.
+
+verificationService.js
+   Orchestrates the per-row pipeline. Takes rows + options, fans out via
+   mainPool (p-limit=maxConcurrency × keyCount). For each row runs cache→
+   Gemini verify → optional rule fallback + URL validator in parallel →
+   deduplication → mirrorOriginalLayout → cacheService.set. Emits onProgress,
+   onRowComplete, onError, onComplete callbacks (drives SSE and background
+   job progress).
+
+jobService.js
+   CRUD on verification_jobs and job_results tables. Resumption logic for
+   interrupted jobs after server restart. Marks excel downloads. Writes stats.
+
+authService.js
+   JWT sign/verify (HS256). bcrypt hash/compare. Used by authMiddleware.
+
+companyService.js
+   Company lifecycle: create, confirm (email token), password reset,
+   deactivate, creditsBalance updates.
+
+auditService.js
+   Writes to audit_logs: file_uploaded, job_started, job_completed,
+   job_failed, excel_downloaded, login_*. Captures ip_address + user_agent.
+
+languageService.js
+   Swedish ↔ English translation via Gemini for descriptions. Used on retry
+   when description looks non-English.
+
+validationService.js
+   Content-shape validation (422 Unprocessable): rejects files that are not
+   spare-parts lists (e.g. general inventory or unrelated data).
+
+emailService.js
+   Hostinger SMTP via nodemailer. Templates for confirm-email,
+   password-reset, job-completion, job-failed.
+
+
+================================================================================
+7.  FRONTEND COMPONENTS & HOOKS
+================================================================================
+
+SparePartsApp.tsx
+   The main orchestrator. Wires up useVerification hook with all child
+   components (FileUpload, SheetSelector, StatsDashboard, ActionBar,
+   ProgressSection, VerificationLog, DataTable). Owns modals:
+   ManualMappingDialog, LargeFileWarning, BackgroundJobModal.
+
+DataTable.tsx
+   Virtualized grid built on react-window FixedSizeList (D-001). Critical
+   subtleties:
+   - Both the header and row body MUST share the same scroll container,
+     so the header lives inside react-window's outerElementType.
+   - OuterEl and InnerEl are useMemo'd with stable deps; creating new
+     forwardRef() on every render causes scroll position to reset
+     (caught + fixed during development — see commit history).
+   - Sticky top (header) + sticky left (col 0) anchored to that shared
+     scroll container.
+   - Score color thresholds per project rules.
+   - WebsiteLink renders per-status icons (see flow step 6).
+   - Columns toolbar dropdown uses useColumnPreferences. First column
+     (internalItemNumber) is always forced visible.
+
+useVerification.ts
+   Single source of truth. Owns: phase, rows, results, stats, progress,
+   logEntries, modals, background job tracking. Exposes: uploadFile,
+   selectSheet, processSheet, applyManualMapping, startVerification,
+   cancelVerification, submitBackgroundJob, continueSSEVerification,
+   startVerificationAfterReview, loadJobData, exportData, updateRow,
+   handleBack, reset.
+
+useSSE.ts
+   EventSource wrapper. connect(url, body, handlers) opens a POST+SSE
+   connection (using fetch stream since EventSource doesn't support POST
+   bodies natively). Returns AbortController for cancel.
+
+useEditState.ts
+   Per-cell inline edit state. startEdit, commitEdit, cancelEdit, isEditing,
+   getEditedValue. Enter saves, Escape cancels, Tab moves to next editable
+   cell in same row.
+
+useColumnPreferences.ts
+   GET on mount, PUT on each toggle, against /api/preferences/columns.
+   Per-company persistence via column_preferences table (unique on
+   company_id + preference_key).
+
+lib/api.ts
+   Single typed fetch client. All backend HTTP goes through here. Returns
+   typed shapes from shared/types. Handles ApiError with status code +
+   details payload. Defaults to credentials: 'include' and no-store.
+
+
+================================================================================
+8.  SHARED TYPES  (shared/types/index.ts)
+================================================================================
+
+Interfaces (8):
+   RawRow                  col_0..N → string | number | null
+   NormalizedRow           internalItemNumber + 5–6 AI-relevant fields + rowIndex
+   VerificationResult      NormalizedRow + verified fields + urlValidationStatus
+   ColumnMapping           col_N → canonical name
+   FormatDetectionResult   format / confidence / reasoning / suggestedMapping
+   SupplementaryChangeLog  audit of column E changes
+   ProcessingStats         counters bar source
+   VerificationResponse    complete-event payload
+
+SSE event types (4): progress / row_complete / complete / error
+
+Enum-like unions (7):
+   FormatType              'A' | 'B' | 'C'
+   SourceType              'official' | 'external' | 'inferred' | 'not_found' |
+                           'unverified' | 'unknown'
+   VerifiedSourceLabel
+   SupplementaryType       'internal_instruction' | 'part_specification' | 'unknown'
+   UrlValidationStatus     (15 values — see flow step 6 + legacy values)
+   AppPhase                'idle' | 'detecting' | 'normalizing' | 'verifying' | 'done' | 'error'
+   SSEEventType
+
+Multi-tenant types: Company, SuperAdmin, AuditLog, AuthPayload,
+                    CompanyUser, DashboardStats
+
+
+================================================================================
+9.  AI PIPELINE IN DEPTH
+================================================================================
+
+All three "AI services" call Google Gemini using a single GEMINI_API_KEY.
+Filenames preserve the original three-provider design:
+
+  openaiService.js   gemini-2.0-flash   format detect + normalize (Format B/C)
+  geminiService.js   gemini-2.5-flash   web verify (PRIMARY) + googleSearch tool
+  claudeService.js   gemini-2.0-flash   rule enforcement fallback
+
+Per-row fallback chain (D-010):
+  1. cacheService.get(SHA256(manufacturer|itemNumber|typeDesignation))
+        hit → return, zero API cost
+  2. geminiService.verifyRow
+        builds prompt (no internalItemNumber)
+        generateContent({ model: 'gemini-2.5-flash',
+                          tools: [{ googleSearch: {} }] })
+        parses JSON from model text
+        citation filter (Level A → B → C)
+  3. if score < 70 AND supplementary classified as part_specification:
+        re-call verifyRow with supplementary included
+        (supplementaryUsed = true)
+  4. if score still < 70 OR manufacturer empty:
+        claudeService.enforceRules (rule-based refinement, no web)
+  5. urlValidatorService.validateUrl on any remaining websiteId
+  6. cacheService.set with TTL derived from final score
+
+Concurrency:
+  - maxConcurrency per key = 15 (p-limit)
+  - geminiPool.initPools() opens one pool per key
+  - mainPool = maxConcurrency × keyCount (so 3 keys = 45 total in-flight)
+  - rulePool (for Claude fallback) = 15
+  - urlPool = 30 (HTTP probes are cheap)
+
+Retry:
+  utils/retry.js — 3 attempts, exponential backoff 1s / 2s / 4s
+
+Per-row hard timeout:
+  config.verificationTimeoutMs (default 30 s). On timeout, a canonical
+  "Not found (Timeout)" result is pushed and onRowComplete fires with score 0.
+
+Error recovery pass:
+  After the main batch, any rowIndex missing from results is retried once
+  after a 5-s pause with a fresh pool.
+
+Mock mode:
+  MOCK_MODE=true in .env (and per-service OPENAI_MOCK_MODE, GEMINI_MOCK_MODE,
+  CLAUDE_MOCK_MODE) short-circuits to mocks/ directory. Useful for tests
+  without burning API credits.
+
+
+================================================================================
+10. URL VALIDATION & CITATION FILTER (HALLUCINATION DEFENSE)
+================================================================================
+
+The AI sometimes writes plausible-looking URLs that don't exist. Two layers
+defend against this:
+
+A) urlValidatorService.js — network HTTP check
+   - GET first with Chrome UA; HEAD fallback only if GET throws
+   - 15-s timeout via AbortController
+   - Follows redirects; rechecks final URL path against error patterns
+   - Classifies status: confirmed / bot_blocked / unverified / broken_404 /
+     broken_error (plus legacy valid / redirected shim)
+   - Returns { valid, keep_url, status, validation_status, finalUrl,
+               httpStatus, reason }
+
+B) geminiCitationFilter.js — grounding citation check
+   Runs in geminiService AFTER JSON parse, BEFORE URL validation.
+   Uses response.candidates[0].groundingMetadata.groundingChunks:
+
+     Level A (free) domain gate
+       If model URL's apex domain is in any groundingChunks[].web.title:
+         → pass to Level B
+       Else if citations exist but on other apexes:
+         → REJECT status=domain_not_cited, clear URL, score=0
+       Else (no citations at all):
+         → FALLBACK status=no_citations_fallback, keep URL, cap score ≤ 60
+
+     Level B (~200-500 ms) path match
+       Parallel-resolve all groundingChunks[].web.uri (these are Google's
+       vertexaisearch.cloud.google.com/grounding-api-redirect/ URLs) via
+       HEAD follow, grabbing res.url.
+       Filter resolved URLs to same apex as model URL. Compare paths:
+         exact match         → citation_confirmed (keep AI score)
+         prefix either way   → citation_partial   (cap 85)
+         domain only         → escalate to Level C
+
+     Level C — replace
+       Replace model URL with the first resolved citation URL on the same
+       apex. status=citation_replaced, cap 75.
+
+   Trust preservation in verificationService:
+     When the downstream HTTP validator returns bot_blocked / unverified /
+     confirmed, it does NOT overwrite a citation_* or no_citations_fallback
+     status (those were set by the stronger citation layer). It DOES
+     overwrite on broken_404 / broken_error, because a hard network failure
+     proves the URL is dead regardless of citations.
+
+Score caps (summary, applied in order — lowest wins):
+   citation_confirmed         no cap
+   citation_partial           85
+   citation_replaced          75
+   bot_blocked_trusted        85  (apex in TRUSTED_DOMAINS)
+   bot_blocked_untrusted      60
+   unverified                 70
+   no_citations_fallback      60
+   broken_404 / broken_error  55  (URL also cleared, source=unknown)
+
+TRUSTED_DOMAINS covers ~35 manufacturer and distributor apexes:
+   mouser.com, digikey.com, rs-online.com, farnell.com, skf.com,
+   siemens.com, abb.com, ifm.com, festo.com, balluff.com, turck.com,
+   boschrexroth.com, sew-eurodrive.com, atlascopco.com, hydac.com,
+   phoenixcontact.com, pepperl-fuchs.com, grundfos.com, danfoss.com,
+   endress.com, wika.com, omron.com, keyence.com, sick.com,
+   lapp.com, legrand.com, eaton.com, rittal.com, wago.com,
+   murrelektronik.com, kirloskarelectric.com, lntebg.com, havells.com,
+   bharatbijlee.com, crompton.co.in, schneider-electric.com, se.com
+
+
+================================================================================
+11. DATABASE SCHEMA
+================================================================================
+
+Applied in order by backend/src/migrations/run.js (idempotent).
+
+001_extensions.sql           pgcrypto (for gen_random_uuid)
+002_super_admins.sql         super_admins (id, email, password_hash)
+003_companies.sql            companies (id, company_name, email,
+                               password_hash, confirmed, confirmation_token,
+                               is_active, credits_balance, …)
+004_verification_jobs.sql    verification_jobs (id, company_id FK,
+                               status, job_type, file_name, total_rows,
+                               processed_rows, current_phase, started_at,
+                               completed_at, error_message, results_json,
+                               excel_downloaded, excel_downloaded_at)
+005_job_results.sql          job_results (job_id FK, row_index, row_type,
+                               internal_item_number, description,
+                               manufacturer, item_number, type_designation,
+                               supplementary, verified_source,
+                               verification_score, website_id, source_type,
+                               manufacturer_website, manufacturer_inferred,
+                               supplementary_*, url_validation_status)
+006_verification_cache.sql   verification_cache (sha256_key PK,
+                               manufacturer, item_number, type_designation,
+                               score, website_id, source_type, result JSONB,
+                               verified_at, hit_count, re_verify_after)
+007_ai_errors.sql            ai_errors (correlation_id, service, error, ts)
+008_audit_logs.sql           audit_logs (company_id?, super_admin_id?,
+                               action, details JSONB, ip_address, user_agent)
+009_legacy_job_stats.sql     job_stats (snake-case counters bucket)
+010_original_headers.sql     verification_jobs.original_headers JSONB
+011_reverify_high_score.sql  backfills re_verify_after = verified_at + 180 d
+                               for rows with score ≥ 90 that had NULL
+                               (previous "never re-verify" policy)
+012_column_preferences.sql   column_preferences (company_id FK,
+                               preference_key, hidden_columns JSONB,
+                               UNIQUE(company_id, preference_key))
+013_url_validation_status.sql verification_cache.url_validation_status
+                               VARCHAR DEFAULT 'unverified'
+                               Backfilled from JSONB result->>'urlValidationStatus'
+
+Seeding:
+  - Super admin seeded from SUPER_ADMIN_EMAIL / SUPER_ADMIN_PASSWORD
+  - Default company seeded from ADMIN_EMAIL / ADMIN_PASSWORD (legacy bridge)
+
+
+================================================================================
+12. CACHING STRATEGY
+================================================================================
+
+Two tiers:
+
+  L1 — cacheService.js (in-process, node-cache, 24 h TTL)
+       Key: SHA256(manufacturer|itemNumber|typeDesignation)
+       Scope: per Node process. Lost on restart (D-002).
+       Purpose: avoid re-hitting PG + Gemini within a single job.
+
+  L2 — pgCacheService.js → verification_cache table
+       Same SHA256 key.
+       TTL policy by score (see pgCacheService.shouldReVerify):
+         ≥ 90 → 180 days
+         ≥ 70 →  90 days
+         ≥ 50 →  30 days
+         <  50 →   7 days
+       Cached payload = full JSONB result. Top-level columns are duplicated
+       for queryability (score, website_id, source_type, url_validation_status).
+
+Why cache is shared across all companies (D-002 note):
+  Cache key is manufacturer|item|type — pure product data with no company
+  PII. Zero cross-tenant leakage risk.
+
+Admin cache endpoints:
+  GET  /api/cache-stats         counters
+  POST /api/cache/clear         wipe (super-admin only)
+
+
+================================================================================
+13. BACKGROUND JOB MODEL
+================================================================================
+
+No external queue. Jobs are ordinary Node promises, persisted to
+verification_jobs so progress survives page refreshes.
+
+Flow:
+  1. Client POSTs /api/jobs/submit (or /normalize/submit, /detect/submit)
+  2. Route creates a row in verification_jobs with status='pending'
+  3. Route returns { jobId } and fires the async processor (IIFE / fn)
+  4. Processor calls verificationService.processRows with onProgress
+     callback that updates verification_jobs.processed_rows every row
+     and job_stats every 10 rows
+  5. Client polls GET /api/jobs/:jobId/status every 3 s (useVerification)
+  6. On completion: saveJobResults writes per-row rows into job_results,
+     status='completed'. Email sent via emailService.sendJobCompletionEmail.
+  7. On failure: error_message captured, status='failed', error email sent.
+
+Awaiting-review sub-state:
+  Normalize jobs pause at status='awaiting_review' after normalization.
+  User sees the normalized rows in the DataTable, can edit, then clicks
+  "Verify All" → POST /api/jobs/:jobId/start-search → transitions to
+  'processing' and runs the verify phase.
+
+Server-restart resumption:
+  jobService.resumeJobs on boot finds orphaned 'processing' jobs. Because
+  the raw input rows aren't durably stored once job starts (only row
+  results are), resumed jobs are flipped to 'failed' with a "please
+  re-submit" error message. (D-002 trade-off — good enough for MVP.)
+
+
+================================================================================
+14. AUTHENTICATION & MULTI-TENANCY
+================================================================================
+
+Two actor types:
+  - super_admin: manages companies, views dashboard stats, wipes caches
+  - company:     regular tenant
+
+Auth mechanism:
+  - Login → authService.signToken({ role, company_id | super_admin_id,
+                                    email, company_name? })
+  - JWT (HS256) placed in httpOnly cookie spare_parts_token
+  - requireCompany / requireSuperAdmin middleware verifies on every call
+  - Company is re-read from DB each request so confirmed / is_active
+    toggles take effect without token re-issue
+
+Isolation:
+  - All tables that hold tenant data (verification_jobs, job_results,
+    column_preferences, audit_logs with company_id) reference companies(id)
+    ON DELETE CASCADE
+  - Every route handler checks job.company_id === req.user.companyId
+    before returning data (jobs.js:188 et al)
+  - verification_cache is intentionally shared (public product data)
+
+Password recovery: email-token with 30-minute expiry, stored on companies
+.password_reset_token + .password_reset_expires_at.
+
+Email confirmation: same pattern on companies.confirmation_token.
+
+Super-admin portal: /super-admin/* — separate layout, separate JWT
+payload (role === 'super_admin'). Can create companies, activate /
+deactivate, impersonate (future).
+
+
+================================================================================
+15. CONFIGURATION & ENVIRONMENT VARIABLES
+================================================================================
+
+Loaded by backend/src/config.js (Zod-validated). Minimum required:
+
+  NODE_ENV                      development | production | test
+  PORT                          3001
+
+  # AI
+  GEMINI_API_KEY                single key (or comma-separated for pool)
+  MOCK_MODE                     true|false    (inherited by per-service flags)
+  OPENAI_MOCK_MODE              optional override
+  GEMINI_MOCK_MODE              optional override
+  CLAUDE_MOCK_MODE              optional override
+
+  # Database
+  DATABASE_URL                  postgres://user:pass@host:5432/db
+  DB_SSL                        enable|disable
+
+  # Auth
+  JWT_SECRET                    HS256 secret
+  SUPER_ADMIN_EMAIL             seed value for initial super admin
+  SUPER_ADMIN_PASSWORD
+  ADMIN_EMAIL                   legacy bridge (default company)
+  ADMIN_PASSWORD
+
+  # Mail (Hostinger SMTP)
+  SMTP_HOST
+  SMTP_PORT
+  SMTP_USER
+  SMTP_PASSWORD
+  MAIL_FROM
+
+  # Tuning (defaults in config.js)
+  MAX_CONCURRENCY               default 15 (per Gemini key)
+  BATCH_SIZE                    default 5  (SSE progress emit cadence)
+  MAX_ROWS_LIMIT                default 10000
+  MAX_ROWS_WARNING              default 5000
+  REQUEST_TIMEOUT_MS            default 30000
+  VERIFICATION_TIMEOUT_MS       default 60000
+  CACHE_TTL_SECONDS             default 86400
+  MAX_RETRIES                   default 3
+  RETRY_DELAY_MS                default 1000
+
+  # Observability
+  LOG_LEVEL                     debug | info | warn | error
+
+Frontend picks up the API base via next.config.mjs rewrites:
+  /api/:path*  →  http://backend:3001/api/:path*
+
+
+================================================================================
+16. DOCKER / LOCAL RUN / PRODUCTION DEPLOY
+================================================================================
+
+Local dev:
+  docker compose up -d             # postgres + backend + frontend
+  docker compose logs -f backend
+  docker compose logs -f frontend
+
+Hot reload:
+  backend/src is bind-mounted, nodemon rebuilds on change
+  frontend is bind-mounted, Next.js dev server HMRs
+
+Running migrations:
+  They run automatically on backend boot (migrations/run.js invoked from
+  server.js). To run standalone:
+    docker compose exec backend node src/migrations/run.js
+
+Production compose (docker-compose.prod.yml):
+  - Frontend built with `next build` → `next start`
+  - Backend NODE_ENV=production, healthcheck via node fetch (not curl)
+  - Postgres data volume persisted
+  - AWS Lightsail single-host deployment target
+
+Health check:
+  GET /api/health (mounted BEFORE the rate limiter in server.js line 41 —
+  critical, otherwise the healthcheck itself triggers 429 during load)
+
+
+================================================================================
+17. TESTING
+================================================================================
+
+Frontend:
+  cd frontend && npm test        # Vitest (jsdom env)
+  __tests__/Badge.test.tsx
+  __tests__/ProgressBar.test.tsx
+  __tests__/StatsDashboard.test.tsx
+  __tests__/useEditState.test.ts
+  __tests__/utils.test.ts
+
+Backend:
+  cd backend && npm test         # Vitest
+  tests/unit/…                   pure-function tests
+  tests/integration/…            end-to-end route tests (in-memory PG)
+  tests/rules/…                  critical business-rule suite (D-008/009/010)
+  tests/helpers/…
+
+E2E:
+  npx playwright test e2e/frontend/<spec>.spec.js   # Playwright CLI (D-007)
+  Covered flows: company login, email confirm, forgot / reset password,
+  profile, super-admin, job isolation.
+
+Never:
+  - Jest (not used anywhere)
+  - Playwright MCP (project memory rule; D-007)
+
+
+================================================================================
+18. KEY ARCHITECTURAL DECISIONS (excerpts — see DECISIONS.md for full log)
+================================================================================
+
+D-001  No pagination — use react-window FixedSizeList virtual scrolling.
+       Pagination + inline editing creates conflicting state. Virtual
+       scrolling handles 10,000 rows without page splits.
+
+D-002  No Redis, no Bull. node-cache + p-limit in-process. Simpler
+       single-server deployment. Trade-off: cache lost on restart;
+       jobs can't survive server restart (marked 'failed' for re-submit).
+
+D-003  exceljs (MIT) not SheetJS (now commercial). Handles read, write,
+       styling, hyperlinks, multiple sheets.
+
+D-004  Web Worker for Excel parsing client-side (historical — the current
+       pipeline does parsing in the backend).
+
+D-005  Three-model AI pipeline (was OpenAI + Gemini + Claude). Now
+       consolidated onto Gemini only under a single API key — filenames
+       preserve legacy names but all three call Gemini endpoints.
+
+D-006  HTTP HEAD / GET validation of every URL the AI returns. Client
+       sees only validated URLs. Now extended with the citation filter
+       (Levels A/B/C) to catch URLs that pass HTTP but are hallucinated
+       paths on real domains.
+
+D-007  Playwright CLI, not MCP. CLI saves snapshots to disk; MCP streams
+       into context. ~4.6× token reduction.
+
+D-008  Column E (supplementary) classified as TYPE_A (part data) vs
+       TYPE_B (internal instruction). Only TYPE_A is used on retry.
+       TYPE_B is never modified.
+
+D-009  Internal Item Number = column index 0 always. Stored separately.
+       Never sent to AI. Reattached after verification.
+
+D-010  Two-pass retry rule: if score < 70 AND supplementary is
+       part_specification, re-call Gemini with supplementary in the prompt.
+       If still < 70, escalate to Claude rule enforcement.
+
+
+================================================================================
+19. CRITICAL RULES & CONSTRAINTS
+================================================================================
+
+Data handling:
+  - R1:  internalItemNumber NEVER sent to AI. Column 0 only. Reattached.
+  - R26: EVERY AI-returned URL must pass validateUrl before storage.
+  - MAX_ROWS_LIMIT = 10,000 hard; warning at 5,000.
+  - Excel upload body limit = 50 MB.
+
+Order of middleware in server.js:
+  1. helmet
+  2. cors
+  3. body parsers (50 MB)
+  4. cookieParser
+  5. express.static
+  6. correlation-ID injector
+  7. requestLogger
+  8. views / auth / super-admin / aiStatus / cacheStats   (NO rate limit)
+  9. /api/health                                            (NO rate limit)
+  10. rateLimiter                                           (from here on)
+  11. detect / sheets / normalize / manualMap / verify /
+      export / cache / jobs / preferences routes
+  12. errorHandler (last)
+
+  CRITICAL: /api/health MUST sit before the rate limiter, otherwise Docker
+  healthchecks get rate-limited into an unhealthy state.
+
+Score thresholds (UI and export):
+  ≥ 90 green   70–89 yellow   50–69 orange   < 50 red
+
+URL validation cap ladder (see §10 for full):
+  confirmed  ≥ bot_blocked_trusted / citation_partial  ≥
+  citation_replaced ≥ unverified ≥ bot_blocked_untrusted ≥
+  no_citations_fallback ≥ broken_*   (lowest wins)
+
+Supplementary protection:
+  result.supplementary is restored from the original row unless
+  result.supplementaryChanged === true (defense against silent AI edits).
+
+
+================================================================================
+20. KNOWN ISSUES & GOTCHAS
+================================================================================
+
+Open (medium):
+  - No search/filter bar on DataTable (roadmap)
+  - No column sorting on header click (roadmap)
+  - ManualMappingDialog has no preview before apply
+
+Open (low):
+  - 50 MB body limit is generous; tighten if abuse occurs
+  - node-cache lost on restart — consider Redis when horizontally scaling
+  - No global request-timeout middleware (only per-AI-call timeout)
+  - Legacy EJS views/ still mounted at /; candidate for removal
+
+AI behavior caveats:
+  - Gemini's googleSearch grounding is non-deterministic: the same prompt
+    can return groundingMetadata in one call and nothing in the next. The
+    citation filter's no_citations_fallback (cap 60) is the pragmatic
+    answer. If you need higher citation coverage, consider
+    gemini-2.5-pro or prompt hardening.
+  - Hallucinated URLs can still get through when: (a) Gemini doesn't
+    ground, AND (b) the constructed URL happens to exist on a trusted
+    domain, AND (c) the target server returns 200 or 403. The Playwright
+    browser validator (deferred Fix 2) would close this by reading page
+    HTML and asserting the part number is present.
+
+Test file:
+  Spare_parts_test_20rows.xlsx in repo root is the canonical smoke test.
+  Upload → verify → export → open the result; the 20-row pipeline
+  exercises all three formats and the three-model fallback.
+
+================================================================================
+END OF DOCUMENT
+================================================================================
