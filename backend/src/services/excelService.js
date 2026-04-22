@@ -150,10 +150,15 @@ function applyScoreFill(cell, score) {
 function setHyperlinkCell(cell, url) {
   if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
     cell.value = url ? String(url) : '—';
+    cell.alignment = { wrapText: false, vertical: 'middle' };
     return;
   }
-  cell.value = { text: truncate(url, 35), hyperlink: url };
+  // Full URL as both display text and hyperlink target — never truncate the
+  // visible text, otherwise users see "…" in Excel and have to check the
+  // formula bar to read the real URL.
+  cell.value = { text: url, hyperlink: url };
   cell.font = { color: { argb: 'FF0066CC' }, underline: true };
+  cell.alignment = { wrapText: false, vertical: 'middle' };
 }
 
 function setSourceTypeCell(cell, sourceType) {
@@ -210,7 +215,7 @@ function buildImportReadySheet(sheet, results, originalHeaders) {
     { header: h.col_5 || 'Supplementary Information',         key: 'supplementary',      width: 30 },
     { header: 'Verified Source',                   key: 'verifiedSource',     width: 25 },
     { header: 'Verification Score',                key: 'verificationScore',  width: 10 },
-    { header: 'Website ID',                        key: 'websiteId',          width: 40 },
+    { header: 'Website ID',                        key: 'websiteId',          width: 80 },
     { header: 'Source Type',                       key: 'sourceType',         width: 15 },
   ];
   applyTealHeaderStyle(sheet);
@@ -251,7 +256,7 @@ async function buildVerifiedExcel(results, originalData, _originalFormat, origin
     { header: h.col_6 || 'Spare Part Category',               key: 'sparePartCategory',  width: 20 },
     { header: 'Verified Source',                   key: 'verifiedSource',     width: 25 },
     { header: 'Verification Score',                key: 'verificationScore',  width: 18 },
-    { header: 'Website ID',                        key: 'websiteId',          width: 50 },
+    { header: 'Website ID',                        key: 'websiteId',          width: 80 },
     { header: 'Source Type',                       key: 'sourceType',         width: 15 },
   ];
   applyHeaderStyle(sheet1);

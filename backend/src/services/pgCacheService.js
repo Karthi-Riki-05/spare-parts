@@ -62,24 +62,30 @@ async function setCachedResult(sha256Key, inputFields, result) {
     const score = result.verification_score ?? result.verificationScore ?? 0;
     const reVerifyAfter = computeReVerifyAfter(score);
 
+    const urlStatus =
+      result.url_validation_status ||
+      result.urlValidationStatus ||
+      'unverified';
+
     await db.execute(
       `
       INSERT INTO verification_cache (
         sha256_key, manufacturer, item_number, type_designation,
         score, website_id, source_type, result,
-        verified_at, hit_count, re_verify_after
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), 0, $9)
+        verified_at, hit_count, re_verify_after, url_validation_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), 0, $9, $10)
       ON CONFLICT (sha256_key) DO UPDATE SET
-        manufacturer     = EXCLUDED.manufacturer,
-        item_number      = EXCLUDED.item_number,
-        type_designation = EXCLUDED.type_designation,
-        score            = EXCLUDED.score,
-        website_id       = EXCLUDED.website_id,
-        source_type      = EXCLUDED.source_type,
-        result           = EXCLUDED.result,
-        verified_at      = NOW(),
-        re_verify_after  = EXCLUDED.re_verify_after,
-        hit_count        = verification_cache.hit_count + 1
+        manufacturer           = EXCLUDED.manufacturer,
+        item_number            = EXCLUDED.item_number,
+        type_designation       = EXCLUDED.type_designation,
+        score                  = EXCLUDED.score,
+        website_id             = EXCLUDED.website_id,
+        source_type            = EXCLUDED.source_type,
+        result                 = EXCLUDED.result,
+        verified_at            = NOW(),
+        re_verify_after        = EXCLUDED.re_verify_after,
+        url_validation_status  = EXCLUDED.url_validation_status,
+        hit_count              = verification_cache.hit_count + 1
       `,
       [
         sha256Key,
@@ -91,6 +97,7 @@ async function setCachedResult(sha256Key, inputFields, result) {
         result.source_type || result.sourceType || null,
         result,
         reVerifyAfter,
+        urlStatus,
       ]
     );
 

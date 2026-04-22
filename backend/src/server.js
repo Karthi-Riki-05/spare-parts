@@ -72,6 +72,7 @@ app.use('/api', require('./routes/export'));
 app.use('/api', require('./routes/cache'));
 const { router: jobsRouter, initResumption: initJobs } = require('./routes/jobs');
 app.use('/api/jobs', jobsRouter);
+app.use('/api/preferences', require('./routes/preferences'));
 
 // Dev-only email preview + test trigger (disabled in production)
 if (config.nodeEnv !== 'production') {

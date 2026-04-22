@@ -14,6 +14,14 @@ const ERROR_PATH_PATTERNS = [
   '/unavailable',
 ];
 
+const VALIDATION_STATUS = {
+  CONFIRMED:    'confirmed',     // 2xx / 3xx → real page
+  BOT_BLOCKED:  'bot_blocked',   // 401/403/other 4xx (not 404/410) → page exists, server blocked
+  UNVERIFIED:   'unverified',    // 5xx / timeout / network → keep URL, cap score
+  BROKEN_404:   'broken_404',    // 404 / 410 → clear URL
+  BROKEN_ERROR: 'broken_error',  // invalid URL / redirect to error page → clear URL
+};
+
 function pathMatchesErrorPattern(urlStr) {
   try {
     const p = new URL(urlStr).pathname.toLowerCase();
@@ -25,79 +33,170 @@ function pathMatchesErrorPattern(urlStr) {
   }
 }
 
-function reject(reason, url) {
-  logger.warn(`[URL VALIDATOR] REJECTED ${reason}: ${url}`);
-  return { status: 'broken', finalUrl: null, reason };
+const BROWSER_HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+    'AppleWebKit/537.36 (KHTML, like Gecko) ' +
+    'Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.5',
+};
+
+async function fetchWithTimeout(url, method, ms) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, {
+      method,
+      redirect: 'follow',
+      signal: ctrl.signal,
+      headers: BROWSER_HEADERS,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function classifyResponse(res, raw) {
+  const finalUrl = res.url || raw;
+  const redirected = !!res.redirected && finalUrl !== raw;
+
+  if (pathMatchesErrorPattern(finalUrl)) {
+    logger.warn(`[URL VALIDATOR] REJECTED redirect_to_error: ${raw} → ${finalUrl}`);
+    return {
+      valid: false,
+      keep_url: false,
+      status: 'broken',
+      validation_status: VALIDATION_STATUS.BROKEN_ERROR,
+      finalUrl: null,
+      reason: 'redirect_to_error',
+      httpStatus: res.status,
+    };
+  }
+
+  if (res.status === 404 || res.status === 410) {
+    logger.warn(`[URL VALIDATOR] REJECTED http_${res.status}: ${raw}`);
+    return {
+      valid: false,
+      keep_url: false,
+      status: 'broken',
+      validation_status: VALIDATION_STATUS.BROKEN_404,
+      finalUrl: null,
+      reason: res.status === 404 ? '404_not_found' : '410_gone',
+      httpStatus: res.status,
+    };
+  }
+
+  if (res.status >= 200 && res.status < 400) {
+    if (redirected) {
+      logger.info(`[URL VALIDATOR] Redirected: ${raw} → ${finalUrl}`);
+      return {
+        valid: true,
+        keep_url: true,
+        status: 'redirected',
+        validation_status: VALIDATION_STATUS.CONFIRMED,
+        finalUrl,
+        httpStatus: res.status,
+      };
+    }
+    return {
+      valid: true,
+      keep_url: true,
+      status: 'valid',
+      validation_status: VALIDATION_STATUS.CONFIRMED,
+      finalUrl,
+      httpStatus: res.status,
+    };
+  }
+
+  // 401 / 403 / 405 / 406 / any other 4xx (not 404/410): page exists, server
+  // blocked our request. Classic anti-bot protection on manufacturer sites.
+  if (res.status >= 400 && res.status < 500) {
+    logger.info(`[URL VALIDATOR] BOT_BLOCKED http_${res.status} — keeping URL: ${raw}`);
+    return {
+      valid: true,
+      keep_url: true,
+      status: 'bot_blocked',
+      validation_status: VALIDATION_STATUS.BOT_BLOCKED,
+      finalUrl: raw,
+      reason: `http_${res.status}`,
+      httpStatus: res.status,
+    };
+  }
+
+  // 5xx: server error — keep URL, treat as unverified.
+  logger.info(`[URL VALIDATOR] UNVERIFIED http_${res.status} — keeping URL: ${raw}`);
+  return {
+    valid: true,
+    keep_url: true,
+    status: 'unverified',
+    validation_status: VALIDATION_STATUS.UNVERIFIED,
+    finalUrl: raw,
+    reason: `http_${res.status}`,
+    httpStatus: res.status,
+  };
 }
 
 async function validateUrl(url) {
   if (!url || String(url).trim() === '') {
-    return { status: 'broken', finalUrl: null, reason: 'empty' };
+    return {
+      valid: false, keep_url: false,
+      status: 'broken', validation_status: VALIDATION_STATUS.BROKEN_ERROR,
+      finalUrl: null, reason: 'empty',
+    };
   }
+
   const raw = String(url).trim();
 
-  // Block relative URLs up front — never hit fetch() with them.
   if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
-    return reject('relative_url', raw);
+    logger.warn(`[URL VALIDATOR] REJECTED relative_url: ${raw}`);
+    return {
+      valid: false, keep_url: false,
+      status: 'broken', validation_status: VALIDATION_STATUS.BROKEN_ERROR,
+      finalUrl: null, reason: 'relative_url',
+    };
   }
-
-  // Sanity-parse + block known error-page paths before any network call.
-  try {
-    new URL(raw);
-  } catch {
-    return reject('invalid_url', raw);
+  try { new URL(raw); } catch {
+    logger.warn(`[URL VALIDATOR] REJECTED invalid_url: ${raw}`);
+    return {
+      valid: false, keep_url: false,
+      status: 'broken', validation_status: VALIDATION_STATUS.BROKEN_ERROR,
+      finalUrl: null, reason: 'invalid_url',
+    };
   }
   if (pathMatchesErrorPattern(raw)) {
-    return reject('error_page', raw);
+    logger.warn(`[URL VALIDATOR] REJECTED error_page: ${raw}`);
+    return {
+      valid: false, keep_url: false,
+      status: 'broken', validation_status: VALIDATION_STATUS.BROKEN_ERROR,
+      finalUrl: null, reason: 'error_page',
+    };
   }
 
+  // GET first — more reliable; most sites accept GET even when HEAD is blocked.
   try {
-    const res = await fetch(raw, {
-      method: 'HEAD',
-      redirect: 'manual',
-      signal: AbortSignal.timeout(15000),
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SparePartsBot/1.0)',
-      },
-    });
-
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get('location') || raw;
-      // Resolve relative redirects against the original URL so we always end up absolute.
-      let finalUrl;
-      try {
-        finalUrl = new URL(location, raw).toString();
-      } catch {
-        return reject('redirect_invalid', raw);
-      }
-      if (pathMatchesErrorPattern(finalUrl)) {
-        logger.warn(`[URL VALIDATOR] REJECTED redirect_to_error: ${raw} → ${finalUrl}`);
-        return { status: 'broken', finalUrl: null, reason: 'redirect_to_error' };
-      }
-      logger.info(`[URL VALIDATOR] Redirected: ${raw} → ${finalUrl}`);
-      return { status: 'redirected', finalUrl };
+    const res = await fetchWithTimeout(raw, 'GET', 15000);
+    return classifyResponse(res, raw);
+  } catch (getErr) {
+    // Network/timeout on GET — fall back to HEAD. Some servers refuse GET
+    // from unknown user agents but still respond to HEAD.
+    try {
+      const res = await fetchWithTimeout(raw, 'HEAD', 10000);
+      return classifyResponse(res, raw);
+    } catch (headErr) {
+      logger.info(
+        `[URL VALIDATOR] UNVERIFIED network/timeout — keeping URL: ${raw} ` +
+        `(get=${getErr?.message || 'unknown'} head=${headErr?.message || 'unknown'})`
+      );
+      return {
+        valid: true,
+        keep_url: true,
+        status: 'unverified',
+        validation_status: VALIDATION_STATUS.UNVERIFIED,
+        finalUrl: raw,
+        reason: 'timeout_kept',
+      };
     }
-
-    if (res.status === 200) {
-      return { status: 'valid', finalUrl: raw };
-    }
-
-    // 404 is a hard reject — the AI claimed a product page that does not exist.
-    // Callers use this to clear websiteId AND cap the score (see verificationService).
-    if (res.status === 404) {
-      logger.warn(`[URL VALIDATOR] REJECTED 404_not_found: ${raw}`);
-      return { status: 'broken', finalUrl: null, reason: '404_not_found' };
-    }
-
-    // Other 4xx/5xx: keep-but-flag so we don't drop legitimate URLs behind
-    // auth walls / rate limits (common on manufacturer sites that throttle HEAD).
-    logger.info(`[URL VALIDATOR] Non-200 status=${res.status} — keeping as unverified: ${raw}`);
-    return { status: 'unverified', finalUrl: raw, httpStatus: res.status };
-  } catch (err) {
-    // Timeout / network — per rule, keep the URL (false negatives on slow sites
-    // are worse than accepting an unverified URL the user can eyeball).
-    logger.info(`[URL VALIDATOR] Network/timeout — keeping as unverified: ${raw} (${err?.message || 'unknown'})`);
-    return { status: 'unverified', finalUrl: raw, reason: 'timeout_kept' };
   }
 }
 
@@ -107,4 +206,4 @@ async function validateBatch(urls) {
   return Promise.all(urls.map(url => limit(() => validateUrl(url))));
 }
 
-module.exports = { validateUrl, validateBatch };
+module.exports = { validateUrl, validateBatch, VALIDATION_STATUS };

@@ -7,6 +7,7 @@ const cacheService = require('./cacheService');
 const { classifySupplementary, createChangeLog } = require('./supplementaryLogger');
 const jobService = require('./jobService');
 const geminiPoolModule = require('./geminiPool');
+const { isTrustedDomain } = require('./geminiCitationFilter');
 
 /**
  * Core verification logic extracted for use in both SSE and Background Jobs
@@ -109,34 +110,78 @@ async function processRows(rows, options = {}) {
         const urlPromise = (async () => {
           if (r.websiteId) {
             const { validateUrl } = require('./urlValidatorService');
-            return await urlPool(async () => {
-              const urlCheck = await validateUrl(r.websiteId);
-              return { status: urlCheck.status, finalUrl: urlCheck.finalUrl };
-            });
+            return await urlPool(() => validateUrl(r.websiteId));
           }
           return null;
         })();
-        
+
         const [ruleResult, urlResult] = await Promise.all([rulePromise, urlPromise]);
         r = ruleResult || r;
-        
+
         if (urlResult) {
-          if (urlResult.status === 'redirected' && urlResult.finalUrl) {
-            r.websiteId = urlResult.finalUrl;
-          } else if (urlResult.status === 'broken') {
-            // R26 / D-006 — stricter validator flagged this URL (relative, error
-            // page, 404, redirect-to-error). Clear it AND cap the score so a
-            // broken URL never surfaces with a 95% badge.
-            const prevScore = r.verificationScore || 0;
-            let capped = prevScore;
-            if (prevScore >= 90) capped = 60;
-            else if (prevScore >= 70) capped = 50;
-            logger.warn(`[VERIFY] URL_VALIDATION_FAILED row=${row.rowIndex} reason=${urlResult.reason || 'unknown'} score=${prevScore}->${capped} url=${r.websiteId}`);
-            r.websiteId = '';
+          const vs = urlResult.validation_status;
+          const prevScore = r.verificationScore || 0;
+          const priorStatus = r.urlValidationStatus || '';
+          const isCitationStatus =
+            priorStatus === 'citation_confirmed' ||
+            priorStatus === 'citation_partial' ||
+            priorStatus === 'citation_replaced' ||
+            priorStatus === 'no_citations_fallback';
+
+          if (vs === 'confirmed') {
+            // 2xx / 3xx — URL confirmed. Adopt final URL after redirects.
+            if (urlResult.finalUrl && urlResult.finalUrl !== r.websiteId) {
+              r.websiteId = urlResult.finalUrl;
+            }
+            // Preserve stronger citation_* status if present; otherwise
+            // record the HTTP confirmation.
+            if (!isCitationStatus) r.urlValidationStatus = 'confirmed';
+          } else if (vs === 'bot_blocked') {
+            // 401/403/other 4xx — page exists but server blocked us.
+            // Trust depends on whether the domain is on the allowlist of
+            // known manufacturer/distributor sites with real anti-bot walls.
+            const trusted = isTrustedDomain(r.websiteId);
+            const cap = trusted ? 85 : 60;
+            const capped = prevScore > cap ? cap : prevScore;
+            if (capped !== prevScore) {
+              logger.info(`[VERIFY] URL_BOT_BLOCKED row=${row.rowIndex} trusted=${trusted} reason=${urlResult.reason || 'unknown'} score=${prevScore}->${capped} url=${r.websiteId}`);
+            }
             r.verificationScore = capped;
-            r.sourceType = 'unknown';
+            if (!isCitationStatus) {
+              r.urlValidationStatus = trusted ? 'bot_blocked_trusted' : 'bot_blocked_untrusted';
+            }
+          } else if (vs === 'unverified') {
+            // 5xx / timeout / network error — keep URL, cap score at 70.
+            const capped = prevScore > 70 ? 70 : prevScore;
+            if (capped !== prevScore) {
+              logger.info(`[VERIFY] URL_UNVERIFIED row=${row.rowIndex} reason=${urlResult.reason || 'unknown'} score=${prevScore}->${capped} url=${r.websiteId}`);
+            }
+            r.verificationScore = capped;
+            if (r.sourceType === 'official') r.sourceType = 'unverified';
+            if (!isCitationStatus) r.urlValidationStatus = 'unverified';
+          } else if (vs === 'broken_404' || vs === 'broken_error') {
+            // Hard reject — URL cannot be recovered. Clear it and zero the
+            // score (no URL ⇒ no score; invariant enforced below).
+            logger.warn(`[VERIFY] URL_VALIDATION_FAILED row=${row.rowIndex} reason=${urlResult.reason || vs} score=${prevScore}->0 url=${r.websiteId}`);
+            r.websiteId = '';
+            r.verificationScore = 0;
+            r.sourceType = 'not_found';
+            r.urlValidationStatus = vs;
+          } else {
+            r.urlValidationStatus = vs || 'unverified';
           }
-          r.urlValidationStatus = urlResult.status;
+        }
+
+        // Invariant: a score without a website URL is meaningless to the
+        // user. If we end up with no websiteId (Gemini never returned one,
+        // or it was stripped by the validator / citation filter), force the
+        // score to 0 so the table never shows "55 with no link".
+        if (!r.websiteId || !String(r.websiteId).trim()) {
+          if (r.verificationScore && r.verificationScore > 0) {
+            logger.info(`[VERIFY] SCORE_ZEROED_NO_URL row=${row.rowIndex} score=${r.verificationScore}->0 status=${r.urlValidationStatus || 'n/a'}`);
+          }
+          r.verificationScore = 0;
+          if (r.sourceType !== 'not_found') r.sourceType = 'not_found';
         }
         
         return r;

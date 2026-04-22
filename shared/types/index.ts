@@ -1,5 +1,5 @@
 export type FormatType = 'A' | 'B' | 'C';
-export type SourceType = 'official' | 'external' | 'inferred' | 'not_found';
+export type SourceType = 'official' | 'external' | 'inferred' | 'not_found' | 'unverified' | 'unknown';
 export type VerifiedSourceLabel =
   | 'Manufacturer website'
   | `Distributor: ${string}`
@@ -9,7 +9,15 @@ export type SupplementaryType =
   | 'part_specification'
   | 'unknown';
 export type UrlValidationStatus =
-  | 'valid' | 'redirected' | 'broken' | 'timeout' | 'unchecked';
+  | 'unchecked'
+  | 'confirmed'
+  | 'bot_blocked' | 'bot_blocked_trusted' | 'bot_blocked_untrusted'
+  | 'unverified'
+  | 'broken_404' | 'broken_error'
+  | 'citation_confirmed' | 'citation_partial' | 'citation_replaced'
+  | 'no_citations' | 'no_citations_fallback' | 'domain_not_cited'
+  // legacy values kept for back-compat with older cached rows
+  | 'valid' | 'redirected' | 'broken' | 'timeout' | 'failed_404' | 'failed_error_page' | 'timeout_unverified';
 export type AppPhase =
   | 'idle' | 'detecting' | 'normalizing' | 'verifying' | 'done' | 'error';
 

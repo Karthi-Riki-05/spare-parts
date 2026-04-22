@@ -5,6 +5,10 @@ const { logger } = require('../utils/logger');
 const { logAiError } = require('../utils/aiErrorLogger');
 const { mockVerificationResult } = require('./mocks/geminiMock');
 const geminiPool = require('./geminiPool');
+const {
+  applyCitationFilter,
+  URL_VALIDATION_STATUS,
+} = require('./geminiCitationFilter');
 
 const clients = new Map();
 
@@ -218,7 +222,7 @@ function mapResult(raw, originalRow) {
     supplementaryChanged: raw.supplementary_changed || false,
     supplementaryOriginal: raw.supplementary_original || '',
     supplementaryType: raw.supplementary_type || 'unknown',
-    urlValidationStatus: 'unchecked',
+    urlValidationStatus: raw._url_validation_status || 'unchecked',
   };
 }
 
@@ -249,6 +253,64 @@ async function verifyRow(row, useSupplementary, correlationId) {
       if (!parsed) {
         logger.warn(`[WEB VERIFY] Row ${correlationId} → JSON parse failed after 4 attempts, returning safe default`);
         parsed = safeDefaultRaw(row, useSupplementary);
+      }
+
+      // Citation filter — Level A (domain gate) → Level B (path match after
+      // redirect resolve) → Level C (replace with resolved citation URL).
+      // no_citations falls through to the HTTP validator with a score cap;
+      // domain_not_cited hard-rejects.
+      if (parsed.website_id) {
+        const decision = await applyCitationFilter(genResult.response, parsed.website_id);
+        const origUrl = parsed.website_id;
+        const origScore = parsed.verification_score || 0;
+
+        if (decision.action === 'reject') {
+          logger.warn(
+            `[CITATION] row=${correlationId} REJECT status=${decision.status} url=${origUrl}`
+          );
+          parsed.website_id = '';
+          parsed.verification_score = 0;
+          parsed.source_type = 'not_found';
+          parsed.verified_source =
+            decision.status === URL_VALIDATION_STATUS.DOMAIN_NOT_CITED
+              ? `URL domain not in search citations (cited: ${(decision.citedDomains || []).join(',') || 'none'}) — URL discarded`
+              : 'URL rejected — no matching citations';
+          parsed._url_validation_status = decision.status;
+        } else if (decision.action === 'replace') {
+          const capped = Math.min(origScore, decision.scoreCap || 75);
+          logger.info(
+            `[CITATION] row=${correlationId} REPLACE status=${decision.status} score=${origScore}->${capped} from=${origUrl} to=${decision.url}`
+          );
+          parsed.website_id = decision.url;
+          parsed.verification_score = capped;
+          parsed.verified_source = `${parsed.verified_source || 'Verified'} (URL updated from citation)`;
+          parsed._url_validation_status = decision.status;
+        } else if (decision.action === 'fallback') {
+          // no_citations_fallback — keep URL, cap score, let HTTP validator
+          // finalise the verdict downstream.
+          const capped = Math.min(origScore, decision.scoreCap || 60);
+          if (capped !== origScore) {
+            logger.info(
+              `[CITATION] row=${correlationId} FALLBACK status=${decision.status} score=${origScore}->${capped} url=${origUrl}`
+            );
+          }
+          parsed.verification_score = capped;
+          parsed._url_validation_status = decision.status;
+        } else if (decision.action === 'keep') {
+          // confirmed / partial — keep URL; apply cap only for partial.
+          if (decision.scoreCap && origScore > decision.scoreCap) {
+            const capped = decision.scoreCap;
+            logger.info(
+              `[CITATION] row=${correlationId} KEEP status=${decision.status} score=${origScore}->${capped} url=${origUrl}`
+            );
+            parsed.verification_score = capped;
+          } else {
+            logger.info(
+              `[CITATION] row=${correlationId} KEEP status=${decision.status} score=${origScore} url=${origUrl}`
+            );
+          }
+          parsed._url_validation_status = decision.status;
+        }
       }
 
       // Pass full original row so mapResult can preserve itemNumber from Excel
