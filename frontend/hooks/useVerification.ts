@@ -308,7 +308,7 @@ export function useVerification() {
     setProgressMessage('Starting verification...');
     const startedAt = Date.now();
 
-    const controller = connectSSE('/api/verify', { rows: normalizedRows }, {
+    const controller = connectSSE('/api/verify', { rows: normalizedRows, originalHeaders }, {
       onProgress: (e) => {
         const pct = Math.round((e.completed / e.total) * 100);
         setProgress(pct);

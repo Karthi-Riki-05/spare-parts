@@ -15,9 +15,18 @@ const router = express.Router();
 /**
  * Common background verification logic
  */
-async function startBackgroundVerification(jobId, rows, auditCtx = null) {
+async function startBackgroundVerification(jobId, rows, auditCtx = null, originalHeaders = null) {
   try {
     await jobService.updateJobStatus(jobId, 'processing', { started_at: new Date() });
+
+    // If headers weren't passed in, recover them from the job record so the
+    // col_0 hide/show decision in verificationService is correct.
+    if (!originalHeaders) {
+      try {
+        const job = await jobService.getJob(jobId);
+        if (job && job.original_headers) originalHeaders = job.original_headers;
+      } catch (_) { /* fall through with null */ }
+    }
 
     // Check for existing results to skip (resumed jobs).
     const existingResults = await jobService.getJobResults(jobId);
@@ -50,6 +59,7 @@ async function startBackgroundVerification(jobId, rows, auditCtx = null) {
 
     await verificationService.processRows(rowsToProcess, {
       correlationId: `job-${jobId}`,
+      originalHeaders,
       onRowComplete: (result) => {
         const score = result?.verificationScore || 0;
         const srcRaw = result?.sourceType || 'unknown';
@@ -171,7 +181,7 @@ router.post('/submit', requireAuth, async (req, res) => {
       message: `Job submitted. ${rows.length} rows queued for verification.`,
     });
 
-    startBackgroundVerification(jobId, rows, { companyId });
+    startBackgroundVerification(jobId, rows, { companyId }, originalHeaders || null);
   } catch (err) {
     logger.error(`[JOB] Submit error: ${err.message}`);
     res.status(500).json({ error: err.message });

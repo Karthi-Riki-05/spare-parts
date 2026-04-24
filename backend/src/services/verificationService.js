@@ -12,6 +12,19 @@ const { isTrustedDomain } = require('./geminiCitationFilter');
 /**
  * Core verification logic extracted for use in both SSE and Background Jobs
  */
+// Col_0 is hidden from AI only when its Excel header clearly labels it as an
+// internal/supplier item reference (per R1 / D-009). For any other header —
+// e.g. "Description", "Model", "Notes" — the value IS useful context and is
+// passed through to Gemini.
+function shouldHideCol0FromAI(header) {
+  if (!header) return true; // no header → safe default: hide
+  const h = String(header).trim().toLowerCase();
+  if (!h) return true;
+  return /^(internal\s+)?(item|article|artikel|part|sku)\s*(#|no\.?|number|nummer|nr\.?)?$/.test(h)
+      || /^art\.?\s*(nr\.?|no\.?|number)$/.test(h)
+      || /^internal\s+(number|id)$/.test(h);
+}
+
 async function processRows(rows, options = {}) {
   const {
     correlationId = 'internal',
@@ -20,7 +33,12 @@ async function processRows(rows, options = {}) {
     onComplete = () => {},
     onError = () => {},
     batchSize: customBatchSize,
+    originalHeaders = null,
   } = options;
+
+  const col0Header = originalHeaders && originalHeaders.col_0 ? String(originalHeaders.col_0).trim() : '';
+  const hideCol0 = shouldHideCol0FromAI(col0Header);
+  logger.info(`[VERIFY] col0 header="${col0Header || '(none)'}" hideFromAI=${hideCol0}`);
 
   const pLimit = (await import('p-limit')).default;
   const maxC = config.maxConcurrency || 15;
@@ -74,15 +92,22 @@ async function processRows(rows, options = {}) {
       return;
     }
     
+    // Build per-row col0 context: null when header indicates an internal
+    // item number (stays hidden from AI), populated otherwise so Gemini
+    // can use the value as extra verification context.
+    const col0Context = hideCol0
+      ? null
+      : { label: col0Header || 'First Column', value: internalItemNumber || '' };
+
     try {
       let result = await withRowTimeout((async () => {
         // Step 1: Gemini verification (uses per-key pool from geminiPool)
         if (config.geminiMockMode) mockCalls++; else geminiCalls++;
         const pool = geminiPoolModule.getNextPool() || pLimit(15);
         let r = await pool(async () => {
-          return await verifyRow(deduped, false, correlationId);
+          return await verifyRow(deduped, false, correlationId, col0Context);
         });
-        
+
         // Step 2 & 4: Rule enforcement and URL validation in parallel
         const rulePromise = (async () => {
           if (r.verificationScore < 70 && deduped.supplementary.trim()) {
@@ -91,7 +116,7 @@ async function processRows(rows, options = {}) {
               if (config.geminiMockMode) mockCalls++; else geminiCalls++;
               const suppPool = geminiPoolModule.getNextPool() || pool;
               const supplementaryResult = await suppPool(async () => {
-                return await verifyRow(deduped, true, correlationId);
+                return await verifyRow(deduped, true, correlationId, col0Context);
               });
               supplementaryResult.supplementaryUsed = true;
               return supplementaryResult;

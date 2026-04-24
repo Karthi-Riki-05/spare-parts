@@ -23,9 +23,17 @@ function getClient(apiKey) {
   return clients.get(keyToUse);
 }
 
-function buildPrompt(row, useSupplementary) {
+function buildPrompt(row, useSupplementary, col0Context) {
   // itemNumber is EXCLUDED here to force the AI to find it in the text.
   let partInfo = `- Description: ${row.description || 'empty'}\n- Manufacturer: ${row.manufacturer || 'empty'}\n- Type Designation: ${row.typeDesignation || 'empty'}`;
+
+  // When the Excel's first column is NOT labeled as an item/article number,
+  // its value is surfaced to the AI as additional verification context.
+  // Rows whose first column IS labeled "Item Number" / "Article #" / etc.
+  // continue to hide col_0 (R1 / D-009: internal SKUs must never touch AI).
+  if (col0Context && col0Context.value) {
+    partInfo += `\n- ${col0Context.label || 'First Column'}: ${col0Context.value}`;
+  }
 
   if (useSupplementary && row.supplementary) {
     partInfo += `\n- Supplementary Info: ${row.supplementary}`;
@@ -226,7 +234,7 @@ function mapResult(raw, originalRow) {
   };
 }
 
-async function verifyRow(row, useSupplementary, correlationId) {
+async function verifyRow(row, useSupplementary, correlationId, col0Context = null) {
   if (config.geminiMockMode) {
     logger.warn(`[WEB VERIFY] Row ${correlationId} → MOCK MODE (no real API call)`);
     return mockVerificationResult(row.rowIndex, row);
@@ -239,7 +247,7 @@ async function verifyRow(row, useSupplementary, correlationId) {
   return withRetry(async () => {
     const start = Date.now();
     try {
-      const prompt = buildPrompt(row, useSupplementary);
+      const prompt = buildPrompt(row, useSupplementary, col0Context);
 
       const model = getClient(apiKey).getGenerativeModel({
         model: 'gemini-2.5-flash',

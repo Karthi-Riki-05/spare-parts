@@ -23,7 +23,7 @@ function computeStats(results) {
 
 async function handleVerify(req, res, next) {
   try {
-    const { rows, batchSize } = req.body;
+    const { rows, batchSize, originalHeaders } = req.body;
     const correlationId = req.correlationId;
     const actualBatchSize = batchSize || config.batchSize;
     const startTime = Date.now();
@@ -40,6 +40,7 @@ async function handleVerify(req, res, next) {
     await require('../services/verificationService').processRows(rows, {
       correlationId,
       batchSize: actualBatchSize,
+      originalHeaders: originalHeaders || null,
       onProgress: (p) => {
         if (aborted || res.destroyed) return;
         send({ 

@@ -47,6 +47,7 @@ const manualMapSchema = z.object({
 const verifySchema = z.object({
   rows: z.array(normalizedRowSchema).min(1).max(10000),
   batchSize: z.number().int().min(1).max(20).optional().default(5),
+  originalHeaders: z.record(z.string()).nullable().optional(),
 });
 
 const exportSchema = z.object({
