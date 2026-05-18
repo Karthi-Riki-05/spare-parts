@@ -12,7 +12,8 @@ type DialogState =
   | { kind: 'deactivate'; company: Company }
   | { kind: 'activate'; company: Company }
   | { kind: 'delete'; company: Company }
-  | { kind: 'resend'; company: Company };
+  | { kind: 'resend'; company: Company }
+  | { kind: 'confirm'; company: Company };
 
 type ToastState = { message: string; type: 'success' | 'error' } | null;
 
@@ -49,6 +50,18 @@ export default function SuperAdminDashboardPage() {
     try {
       await superAdminApi.resendConfirmation(dialog.company.id);
       setToast({ message: 'Confirmation email resent.', type: 'success' });
+    } catch (e) {
+      setToast({ message: (e as Error).message, type: 'error' });
+    }
+    closeDialog();
+  };
+
+  const handleConfirm = async () => {
+    if (dialog.kind !== 'confirm') return;
+    try {
+      await superAdminApi.confirmCompany(dialog.company.id);
+      setToast({ message: `${dialog.company.companyName} marked as confirmed.`, type: 'success' });
+      load();
     } catch (e) {
       setToast({ message: (e as Error).message, type: 'error' });
     }
@@ -144,10 +157,16 @@ export default function SuperAdminDashboardPage() {
                   View
                 </Link>
                 {!c.confirmed && (
-                  <button onClick={() => setDialog({ kind: 'resend', company: c })}
-                    className="text-xs px-3 py-1.5 rounded border border-border text-text-secondary hover:bg-bg-primary">
-                    Resend
-                  </button>
+                  <>
+                    <button onClick={() => setDialog({ kind: 'confirm', company: c })}
+                      className="text-xs px-3 py-1.5 rounded border border-green-500/40 text-green-600 dark:text-green-400 hover:bg-green-500/10">
+                      Confirm
+                    </button>
+                    <button onClick={() => setDialog({ kind: 'resend', company: c })}
+                      className="text-xs px-3 py-1.5 rounded border border-border text-text-secondary hover:bg-bg-primary">
+                      Resend
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => setDialog(c.isActive ? { kind: 'deactivate', company: c } : { kind: 'activate', company: c })}
@@ -200,8 +219,12 @@ export default function SuperAdminDashboardPage() {
                   <Td className="text-right pr-4 space-x-2 whitespace-nowrap">
                     <Link href={`/super-admin/companies/${c.id}`} className="text-xs text-brand-cyan hover:underline">View</Link>
                     {!c.confirmed && (
-                      <button onClick={() => setDialog({ kind: 'resend', company: c })}
-                        className="text-xs text-text-secondary hover:text-text-primary">Resend</button>
+                      <>
+                        <button onClick={() => setDialog({ kind: 'confirm', company: c })}
+                          className="text-xs text-green-600 dark:text-green-400 hover:underline">Confirm</button>
+                        <button onClick={() => setDialog({ kind: 'resend', company: c })}
+                          className="text-xs text-text-secondary hover:text-text-primary">Resend</button>
+                      </>
                     )}
                     <button
                       onClick={() => setDialog(c.isActive ? { kind: 'deactivate', company: c } : { kind: 'activate', company: c })}
@@ -219,6 +242,9 @@ export default function SuperAdminDashboardPage() {
       </section>
 
       {/* Dialogs */}
+      <ConfirmDialog open={dialog.kind === 'confirm'} title="Mark company as confirmed"
+        message={dialog.kind === 'confirm' ? `Manually confirm ${dialog.company.companyName} (${dialog.company.email})? They will be able to log in immediately without clicking the email link.` : ''}
+        confirmLabel="Confirm company" onConfirm={handleConfirm} onCancel={closeDialog} />
       <ConfirmDialog open={dialog.kind === 'resend'} title="Resend confirmation email"
         message={dialog.kind === 'resend' ? `Resend the confirmation email to ${dialog.company.email}?` : ''}
         confirmLabel="Resend" onConfirm={handleResend} onCancel={closeDialog} />

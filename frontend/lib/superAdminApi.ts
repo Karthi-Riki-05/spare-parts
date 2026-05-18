@@ -53,6 +53,10 @@ export const superAdminApi = {
     await req(`/companies/${id}/resend-confirmation`, { method: 'POST' });
   },
 
+  async confirmCompany(id: string): Promise<{ company: Company }> {
+    return req<{ company: Company }>(`/companies/${id}/confirm`, { method: 'POST' });
+  },
+
   async getAuditLogs(params: { company_id?: string; action?: string; limit?: number; offset?: number } = {}): Promise<{ logs: AuditLog[]; limit: number; offset: number }> {
     const qs = new URLSearchParams();
     if (params.company_id) qs.set('company_id', params.company_id);

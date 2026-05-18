@@ -322,6 +322,49 @@ router.patch('/companies/:id', requireSuperAdmin, async (req, res) => {
 });
 
 /**
+ * POST /api/super-admin/companies/:id/confirm
+ * Manually mark a company as confirmed (super-admin override of email click).
+ */
+router.post('/companies/:id/confirm', requireSuperAdmin, async (req, res) => {
+  const meta = audit.reqMeta(req);
+  try {
+    const company = await db.getOne('SELECT * FROM companies WHERE id = $1', [req.params.id]);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+    if (company.confirmed) return res.status(400).json({ error: 'Company already confirmed' });
+
+    const updated = await db.getOne(
+      `UPDATE companies SET
+         confirmed                     = TRUE,
+         confirmed_at                  = NOW(),
+         confirmation_token            = NULL,
+         confirmation_token_expires_at = NULL,
+         updated_at                    = NOW()
+       WHERE id = $1
+       RETURNING id, company_name, email, confirmed, is_active, deactivated_at,
+                 deactivation_reason, credits_balance, created_at, confirmed_at`,
+      [company.id]
+    );
+
+    await audit.log('company_confirmed', {
+      superAdminId: req.superAdmin.id,
+      companyId: company.id,
+      details: { manual: true },
+      ...meta,
+    });
+
+    emailService.sendWelcomeEmail(company).catch(err =>
+      logger.warn(`[SUPER-ADMIN] welcome email failed for ${company.email}: ${err.message}`)
+    );
+
+    logger.info(`[SUPER-ADMIN] manually confirmed company ${company.email}`);
+    return res.json({ success: true, company: updated });
+  } catch (err) {
+    logger.error('[SUPER-ADMIN] confirm company error: ' + err.message);
+    return res.status(500).json({ error: 'Failed to confirm company' });
+  }
+});
+
+/**
  * POST /api/super-admin/companies/:id/resend-confirmation
  */
 router.post('/companies/:id/resend-confirmation', requireSuperAdmin, async (req, res) => {
