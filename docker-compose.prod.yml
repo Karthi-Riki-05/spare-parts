@@ -57,22 +57,16 @@ services:
       start_period: 30s
 
   # ── Next.js frontend ────────────────────────────────────────────
-  # Not exposed externally — Caddy proxies to this container on the
-  # internal Docker network. No ports: directive here.
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+    ports:
+      - "80:3000"
     environment:
-      # Server-side env var used by Next.js rewrites and the SSE route handler.
-      # Must use the Docker service name, not localhost or a public domain.
+      - NODE_ENV=production
       - BACKEND_URL=http://backend:3001
       - NEXT_PUBLIC_APP_TIMEZONE=${APP_TIMEZONE:-Europe/Stockholm}
-      # NEXT_PUBLIC_BACKEND_URL is intentionally omitted.
-      # All browser-to-backend traffic flows through Next.js rewrites
-      # (/api/* → backend:3001) — the browser never contacts the backend directly.
-      # The SSE route handler (app/api/verify/route.ts) also uses server-side
-      # BACKEND_URL, not a NEXT_PUBLIC_ variable.
     depends_on:
       backend:
         condition: service_healthy
@@ -82,40 +76,5 @@ services:
         limits:
           memory: 512M
 
-  # ── Caddy reverse proxy (TLS termination) ───────────────────────
-  # The only service with public ports. Caddy:
-  #   • Obtains and renews TLS certificates from Let's Encrypt automatically
-  #   • Redirects HTTP → HTTPS
-  #   • Adds security headers (HSTS, X-Frame-Options, etc.)
-  #   • Proxies HTTPS traffic to the frontend container on the internal network
-  # Requirements before first deploy:
-  #   • DNS A record: spare-parts.tawdev.com → this server's public IP
-  #   • Ports 80 and 443 open in the server firewall / AWS security group
-  caddy:
-    image: caddy:2-alpine
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      frontend:
-        condition: service_started
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:2019/config/ > /dev/null 2>&1 || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-
 volumes:
   postgres_data:
-  caddy_data:    # TLS certificates and ACME account — must survive container restarts
-  caddy_config:  # Caddy compiled runtime config
