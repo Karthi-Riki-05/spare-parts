@@ -1,6 +1,13 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# BACKEND_URL must be known at build time because Next.js standalone bakes
+# rewrites() destinations into the server bundle during `next build`.
+# The value http://backend:3001 is correct for all Docker deployments
+# (Docker Compose internal DNS resolves the service name 'backend').
+ARG BACKEND_URL=http://backend:3001
+ENV BACKEND_URL=$BACKEND_URL
+
 # Copy the shared folder first
 COPY shared ./shared
 

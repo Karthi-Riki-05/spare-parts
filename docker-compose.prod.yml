@@ -23,7 +23,7 @@ services:
           memory: 512M
 
   # ── Express backend ─────────────────────────────────────────────
-  # NOT exposed externally. All traffic arrives via Caddy → frontend
+  # NOT exposed externally. All traffic arrives via CloudFront → frontend
   # (Next.js rewrites) → backend. The backend port 3001 is internal only.
   backend:
     build: ./backend
@@ -33,11 +33,11 @@ services:
       - ./backend/data:/app/data
     environment:
       - NODE_ENV=production
-      # Force secure cookies now that HTTPS is active via Caddy.
-      # Overrides whatever COOKIE_SECURE value is in backend/.env.
+      # Secure cookies: browser receives HTTPS via CloudFront even though origin
+      # serves plain HTTP. Localhost is also a secure context so local testing works.
       - COOKIE_SECURE=true
-      # Restrict CORS to the production domain.
-      # The backend isn't externally reachable but this is defence-in-depth.
+      # Restrict CORS to the production domain (defence-in-depth — backend is
+      # not publicly reachable; all API traffic proxied via Next.js rewrites).
       - CORS_ORIGIN=https://spare-parts.tawdev.com
       # DATABASE_URL comes from backend/.env — use hostname 'postgres', URL-encode
       # special chars in the password (@ → %40, # → %23, etc.)
@@ -61,6 +61,9 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        # Baked into the standalone bundle at build time (rewrites destination).
+        - BACKEND_URL=http://backend:3001
     ports:
       - "80:3000"
     environment:
