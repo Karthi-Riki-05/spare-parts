@@ -1,6 +1,24 @@
 const { defineConfig, devices } = require('@playwright/test');
 const path = require('path');
 
+// Load backend .env so SUPER_ADMIN_EMAIL/PASSWORD are available to test helpers
+// without requiring manual env var exports before running playwright.
+try {
+  const fs = require('fs');
+  const envFile = fs.readFileSync(path.join(__dirname, 'backend/.env'), 'utf8');
+  for (const line of envFile.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx < 1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = trimmed.slice(eqIdx + 1).trim().replace(/^['"]|['"]$/g, '');
+    if (!(key in process.env)) process.env[key] = val;
+  }
+} catch {
+  // backend/.env not readable — env vars must be set externally
+}
+
 module.exports = defineConfig({
   timeout: 30000,
   retries: 1,

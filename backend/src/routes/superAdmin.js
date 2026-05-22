@@ -7,6 +7,7 @@ const audit = require('../services/auditService');
 const emailService = require('../services/emailService');
 const pgCacheService = require('../services/pgCacheService');
 const { requireSuperAdmin, COOKIE_NAME } = require('../middleware/authMiddleware');
+const { loginLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -27,7 +28,7 @@ function normalizeEmail(e) {
 /**
  * POST /api/super-admin/login
  */
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const meta = audit.reqMeta(req);
   try {
     const { email, password } = req.body || {};
@@ -96,6 +97,8 @@ router.get('/me', requireSuperAdmin, (req, res) => {
 /**
  * POST /api/super-admin/companies
  * Creates a new company, sends confirmation email with temp password.
+ * Atomic: if email send fails the company row is rolled back — no orphaned
+ * unconfirmed accounts with no way to receive the confirmation link.
  */
 router.post('/companies', requireSuperAdmin, async (req, res) => {
   const meta = audit.reqMeta(req);
@@ -108,6 +111,14 @@ router.post('/companies', requireSuperAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
+    // Fast pre-check — avoids touching the DB when email is clearly not set up.
+    if (!emailService.isEmailConfigured()) {
+      return res.status(503).json({
+        error: 'Email service not configured. Please contact administrator.',
+        code: 'EMAIL_NOT_CONFIGURED',
+      });
+    }
+
     const normalizedEmail = normalizeEmail(email);
     const existing = await authService.findCompanyByEmail(normalizedEmail);
     if (existing) {
@@ -118,19 +129,23 @@ router.post('/companies', requireSuperAdmin, async (req, res) => {
     const confirmationToken = authService.generateConfirmationToken();
     const expiresAt = authService.confirmationExpiryDate();
 
-    const row = await db.getOne(
-      `INSERT INTO companies
-         (company_name, email, password_hash, confirmation_token,
-          confirmation_token_expires_at, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, company_name, email, confirmed, is_active,
-                 credits_balance, confirmation_token_expires_at, created_at`,
-      [company_name, normalizedEmail, hash, confirmationToken, expiresAt, req.superAdmin.id]
-    );
-
-    emailService.sendConfirmationEmail(row, password, confirmationToken).catch(err =>
-      logger.error(`[SUPER-ADMIN] confirmation email failed for ${normalizedEmail}: ${err.message}`)
-    );
+    // Atomic: roll back the INSERT if the email send fails so we never create
+    // an account whose confirmation email was never delivered.
+    let row;
+    await db.withTransaction(async (client) => {
+      const result = await client.query(
+        `INSERT INTO companies
+           (company_name, email, password_hash, confirmation_token,
+            confirmation_token_expires_at, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, company_name, email, confirmed, is_active,
+                   credits_balance, confirmation_token_expires_at, created_at`,
+        [company_name, normalizedEmail, hash, confirmationToken, expiresAt, req.superAdmin.id]
+      );
+      row = result.rows[0];
+      // sendConfirmationEmail throws on failure → transaction auto-rolls back.
+      await emailService.sendConfirmationEmail(row, password, confirmationToken);
+    });
 
     await audit.log('company_created', {
       superAdminId: req.superAdmin.id,
@@ -154,6 +169,16 @@ router.post('/companies', requireSuperAdmin, async (req, res) => {
       },
     });
   } catch (err) {
+    if (err.code === 'EMAIL_NOT_CONFIGURED') {
+      return res.status(503).json({
+        error: 'Email service not configured. Please contact administrator.',
+        code: 'EMAIL_NOT_CONFIGURED',
+      });
+    }
+    // SMTP send failures (ECONNREFUSED, auth errors, etc.)
+    if (err.code === 'ECONNREFUSED' || err.code === 'EAUTH' || err.responseCode >= 400) {
+      return res.status(503).json({ error: `Email delivery failed: ${err.message}` });
+    }
     logger.error('[SUPER-ADMIN] create company error: ' + err.message);
     return res.status(500).json({ error: 'Failed to create company' });
   }
@@ -503,6 +528,30 @@ router.get('/dashboard-stats', requireSuperAdmin, async (_req, res) => {
   } catch (err) {
     logger.error('[SUPER-ADMIN] dashboard-stats error: ' + err.message);
     res.status(500).json({ error: 'Failed to load dashboard stats' });
+  }
+});
+
+/**
+ * POST /api/super-admin/cleanup-jobs
+ * Manually trigger old-job cleanup. Body: { daysToKeep?: number }
+ */
+router.post('/cleanup-jobs', requireSuperAdmin, async (req, res) => {
+  const meta = audit.reqMeta(req);
+  try {
+    const daysToKeep = Math.max(1, parseInt(req.body?.daysToKeep, 10) || 90);
+    const { cleanupOldJobs } = require('../services/cleanupService');
+    const result = await cleanupOldJobs(daysToKeep);
+
+    await audit.log('jobs_cleanup', {
+      superAdminId: req.superAdmin.id,
+      details: { daysToKeep, ...result },
+      ...meta,
+    });
+    logger.info(`[SUPER-ADMIN] manual cleanup: deleted ${result.deletedJobs} jobs (>${daysToKeep}d)`);
+    return res.json({ success: true, daysToKeep, ...result });
+  } catch (err) {
+    logger.error('[SUPER-ADMIN] cleanup-jobs error: ' + err.message);
+    return res.status(500).json({ error: 'Cleanup failed' });
   }
 });
 

@@ -21,6 +21,8 @@ export type UrlValidationStatus =
 export type AppPhase =
   | 'idle' | 'detecting' | 'normalizing' | 'verifying' | 'done' | 'error';
 
+export type ViewLanguage = 'english' | 'swedish' | 'original';
+
 export interface RawRow {
   [key: string]: string | number | null;
 }
@@ -35,6 +37,22 @@ export interface NormalizedRow {
   sparePartCategory?: string;
   _originalFormat?: FormatType;
   rowIndex: number;
+}
+
+export interface OriginalFields {
+  description: string;
+  manufacturer: string;
+  itemNumber: string;
+  typeDesignation: string;
+  supplementary: string;
+}
+
+export interface SvFields {
+  description: string;
+  manufacturer: string;
+  itemNumber: string;
+  typeDesignation: string;
+  supplementary: string;
 }
 
 export interface VerificationResult {
@@ -56,6 +74,8 @@ export interface VerificationResult {
   supplementaryOriginal: string;
   supplementaryType: SupplementaryType;
   urlValidationStatus: UrlValidationStatus;
+  originalFields?: OriginalFields | null;
+  svFields?: SvFields | null;
 }
 
 export interface ColumnMapping {
@@ -97,8 +117,8 @@ export interface ProcessingStats {
   webVerified: number;
   emptyCells: number;
   scoreAbove90: number;
-  score50to89: number;
-  scoreBelow50: number;
+  score70to89: number;
+  scoreBelow70: number;
   officialSourceFound: number;
   externalSourceFound: number;
   notFound: number;
@@ -154,8 +174,8 @@ export interface JobStats {
   webVerified: number;
   emptyCells: number;
   scoreAbove90: number;
-  score50to89: number;
-  scoreBelow50: number;
+  score70to89: number;
+  scoreBelow70: number;
   officialSourceFound: number;
   externalSourceFound: number;
   notFound: number;

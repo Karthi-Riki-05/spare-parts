@@ -171,12 +171,12 @@ export default function JobTrackingPage() {
                 <p className="text-lg font-bold text-text-primary">{stats.scoreAbove90}</p>
               </div>
               <div className="bg-bg-elevated rounded p-3">
-                <p className="text-xs text-text-muted">Score 50-89</p>
-                <p className="text-lg font-bold text-text-primary">{stats.score50to89}</p>
+                <p className="text-xs text-text-muted">Score 70-89</p>
+                <p className="text-lg font-bold text-text-primary">{stats.score70to89}</p>
               </div>
               <div className="bg-bg-elevated rounded p-3">
-                <p className="text-xs text-text-muted">Score &lt;50</p>
-                <p className="text-lg font-bold text-text-primary">{stats.scoreBelow50}</p>
+                <p className="text-xs text-text-muted">Score &lt;70</p>
+                <p className="text-lg font-bold text-text-primary">{stats.scoreBelow70}</p>
               </div>
               <div className="bg-bg-elevated rounded p-3">
                 <p className="text-xs text-text-muted">Official Source</p>

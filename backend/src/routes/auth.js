@@ -7,6 +7,7 @@ const audit = require('../services/auditService');
 const companyService = require('../services/companyService');
 const emailService = require('../services/emailService');
 const { requireCompany, COOKIE_NAME } = require('../middleware/authMiddleware');
+const { loginLimiter, forgotPasswordLimiter, resetPasswordLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -27,7 +28,7 @@ function normalizeEmail(e) {
 /**
  * POST /api/auth/login
  */
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const meta = audit.reqMeta(req);
   try {
     const { email, password } = req.body || {};
@@ -174,7 +175,7 @@ router.get('/confirm/:token', async (req, res) => {
  * POST /api/auth/forgot-password
  * Always returns the same success message regardless of email existence.
  */
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
   const meta = audit.reqMeta(req);
   const stock = { message: 'If that email exists, a reset link has been sent.' };
   try {
@@ -197,9 +198,15 @@ router.post('/forgot-password', async (req, res) => {
       [company.id, token, expiresAt]
     );
 
-    emailService.sendPasswordResetEmail(company, token).catch(err =>
-      logger.warn(`[AUTH] password reset email failed: ${err.message}`)
-    );
+    try {
+      await emailService.sendPasswordResetEmail(company, token);
+    } catch (err) {
+      // Always return the stock response to prevent email enumeration.
+      // Log the failure so ops can diagnose SMTP issues.
+      logger.error(`[AUTH] password reset email failed for ${company.email}: ${err.message}`);
+      await audit.log('password_reset_requested', { companyId: company.id, ...meta });
+      return res.json(stock);
+    }
 
     await audit.log('password_reset_requested', { companyId: company.id, ...meta });
     return res.json(stock);
@@ -212,7 +219,7 @@ router.post('/forgot-password', async (req, res) => {
 /**
  * POST /api/auth/reset-password
  */
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', resetPasswordLimiter, async (req, res) => {
   const meta = audit.reqMeta(req);
   try {
     const { token, newPassword } = req.body || {};

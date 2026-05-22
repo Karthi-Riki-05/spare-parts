@@ -5,7 +5,10 @@ const { z } = require('zod');
 const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  CORS_ORIGIN: z.string().default('http://localhost:3001'),
+  // Comma-separated list of allowed origins, e.g.:
+  //   http://localhost:3000
+  //   https://spare-parts.tawdev.com,https://www.spare-parts.tawdev.com
+  CORS_ORIGIN: z.string().default('http://localhost:3000'),
   // Single AI provider — all models via GEMINI_API_KEY (with optional 2 and 3)
   GEMINI_API_KEY: z.string().default(''),
   GEMINI_API_KEY_2: z.string().default(''),
@@ -18,8 +21,14 @@ const envSchema = z.object({
   MAX_RETRIES: z.coerce.number().default(3),
   RETRY_DELAY_MS: z.coerce.number().default(1000),
   CACHE_TTL_SECONDS: z.coerce.number().default(86400),
+  // Global API rate limit (applied to all /api/* routes except health/auth/super-admin)
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000),
   RATE_LIMIT_MAX: z.coerce.number().default(500),
+  // Auth-specific rate limits (applied per-IP at the route level, before the global limiter)
+  LOGIN_RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000),   // 15 minutes
+  LOGIN_RATE_LIMIT_MAX: z.coerce.number().default(20),
+  FORGOT_RATE_LIMIT_WINDOW_MS: z.coerce.number().default(3600000), // 1 hour
+  FORGOT_RATE_LIMIT_MAX: z.coerce.number().default(10),
   VERIFICATION_TIMEOUT_MS: z.coerce.number().default(90000),
   LOG_LEVEL: z.string().default('info'),
   MOCK_MODE: z.string().transform(v => v === 'true').default('false'),
@@ -27,17 +36,17 @@ const envSchema = z.object({
   GEMINI_MOCK_MODE: z.string().transform(v => v === 'true').default('false'),
   CLAUDE_MOCK_MODE: z.string().transform(v => v === 'true').default('false'),
   LOG_WRITE: z.string().transform(v => v === 'true').default('false'),
-  // Auth (legacy single-admin — kept until P3 replaces with multi-tenant)
-  JWT_SECRET: z.string().default('changeme-secret-key'),
+  // Auth
+  JWT_SECRET: z.string().min(1, 'JWT_SECRET is required — run: openssl rand -hex 32'),
   JWT_EXPIRES_IN: z.string().default('7d'),
-  ADMIN_EMAIL: z.string().default('karthick.webronic@gmail.com'),
-  ADMIN_PASSWORD: z.string().default('T@Wdev$05'),
+  ADMIN_EMAIL: z.string().default(''),
+  ADMIN_PASSWORD: z.string().default(''),   // empty = skip legacy-admin seed
   COOKIE_SECURE: z.string().transform(v => v === 'true').default('false'),
   // PostgreSQL (P1 — required)
   DATABASE_URL: z.string().min(1, 'DATABASE_URL required'),
   // Super admin seed (used by migrations/run.js on boot)
-  SUPER_ADMIN_EMAIL: z.string().default('karthick.webronic@gmail.com'),
-  SUPER_ADMIN_PASSWORD: z.string().default('SuperAdmin@2026'),
+  SUPER_ADMIN_EMAIL: z.string().default(''),
+  SUPER_ADMIN_PASSWORD: z.string().default(''),  // empty = skip seed
   // Token expirations for upcoming P3 flows
   CONFIRMATION_TOKEN_HOURS: z.coerce.number().default(72),
   PASSWORD_RESET_MINUTES: z.coerce.number().default(60),
@@ -60,10 +69,38 @@ if (!parsed.success) {
   process.exit(1);
 }
 
+// Reject well-known placeholder secrets before any traffic is served.
+const WEAK_JWT_PLACEHOLDERS = [
+  'changeme-secret-key',
+  'change-me-to-a-random-secret',
+  'your-secret-here',
+  'secret',
+  'jwt-secret',
+];
+const jwtSecret = parsed.data.JWT_SECRET;
+const isProd = parsed.data.NODE_ENV === 'production';
+
+if (WEAK_JWT_PLACEHOLDERS.includes(jwtSecret)) {
+  const msg = '[CONFIG] JWT_SECRET is a known placeholder — any attacker can forge tokens.\n  Generate a real secret:  openssl rand -hex 32';
+  if (isProd) { console.error(msg); process.exit(1); }
+  else console.warn(msg);
+}
+if (isProd && jwtSecret.length < 32) {
+  console.error('[CONFIG] JWT_SECRET must be at least 32 characters in production.');
+  process.exit(1);
+}
+if (isProd && !parsed.data.COOKIE_SECURE) {
+  console.warn('[CONFIG] WARNING: COOKIE_SECURE is false in production. Set COOKIE_SECURE=true once HTTPS is active.');
+}
+
 const config = {
   port: parsed.data.PORT,
   nodeEnv: parsed.data.NODE_ENV,
-  corsOrigin: parsed.data.CORS_ORIGIN,
+  // Parse comma-separated CORS origins into an array when more than one is specified.
+  // cors() accepts a string (single origin), an array, or a RegExp.
+  corsOrigin: parsed.data.CORS_ORIGIN.includes(',')
+    ? parsed.data.CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean)
+    : parsed.data.CORS_ORIGIN,
   geminiApiKey: parsed.data.GEMINI_API_KEY,
   geminiApiKey2: parsed.data.GEMINI_API_KEY_2,
   geminiApiKey3: parsed.data.GEMINI_API_KEY_3,
@@ -77,6 +114,10 @@ const config = {
   cacheTtlSeconds: parsed.data.CACHE_TTL_SECONDS,
   rateLimitWindowMs: parsed.data.RATE_LIMIT_WINDOW_MS,
   rateLimitMax: parsed.data.RATE_LIMIT_MAX,
+  loginRateLimitWindowMs: parsed.data.LOGIN_RATE_LIMIT_WINDOW_MS,
+  loginRateLimitMax: parsed.data.LOGIN_RATE_LIMIT_MAX,
+  forgotRateLimitWindowMs: parsed.data.FORGOT_RATE_LIMIT_WINDOW_MS,
+  forgotRateLimitMax: parsed.data.FORGOT_RATE_LIMIT_MAX,
   verificationTimeoutMs: parsed.data.VERIFICATION_TIMEOUT_MS,
   logLevel: parsed.data.LOG_LEVEL,
   mockMode: parsed.data.MOCK_MODE,

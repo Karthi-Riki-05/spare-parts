@@ -1,0 +1,82 @@
+# ════════════════════════════════════════════════════════════════════
+#  .gitattributes — git archive export filters
+#
+#  Files marked `export-ignore` are excluded when running:
+#    git archive HEAD --output=deploy.tar.gz
+#
+#  This gives a clean `git archive` output without dev-only noise.
+#  The file is safe to commit — it has no effect on normal git ops.
+# ════════════════════════════════════════════════════════════════════
+
+# ── Dev-only tooling ─────────────────────────────────────────────────
+.claude/                    export-ignore
+.github/                    export-ignore
+.DS_Store                   export-ignore
+CLAUDE.md                   export-ignore
+playwright.config.js        export-ignore
+
+# ── Test files ───────────────────────────────────────────────────────
+e2e/                        export-ignore
+test-results/               export-ignore
+backend/tests/              export-ignore
+backend/e2e/                export-ignore
+frontend/__tests__/         export-ignore
+backend/coverage/           export-ignore
+*.spec.js                   export-ignore
+*.test.js                   export-ignore
+*.test.ts                   export-ignore
+
+# ── Root-level noise ─────────────────────────────────────────────────
+test.js                     export-ignore
+test-verify.js              export-ignore
+cookies.txt                 export-ignore
+cookies_frontend.txt        export-ignore
+project_develop.txt         export-ignore
+project_devlop.txt          export-ignore
+project_analysis_report.md  export-ignore
+workflow.txt                export-ignore
+TEST_REPORT_*.md            export-ignore
+package.json                export-ignore
+package-lock.json           export-ignore
+
+# ── Test / sample data files ─────────────────────────────────────────
+*.xlsx                      export-ignore
+*.xls                       export-ignore
+Spare_parts_test_20rows.xlsx export-ignore
+verified_*.xlsx             export-ignore
+test.xlsx                   export-ignore
+test_excel.xlsx             export-ignore
+
+# ── Screenshots and images in the root ───────────────────────────────
+Screenshot*.png             export-ignore
+image.png                   export-ignore
+
+# ── Frontend dev-only files ──────────────────────────────────────────
+frontend/docker-compose.yaml   export-ignore
+frontend/vitest.config.ts      export-ignore
+frontend/vfs_backup.zip        export-ignore
+frontend/fcm-service.json      export-ignore
+frontend/cookies.txt           export-ignore
+frontend/2026-*.log            export-ignore
+frontend/tsconfig.tsbuildinfo  export-ignore
+frontend/shared/               export-ignore
+frontend/README.md             export-ignore
+
+# ── Backend dev-only dirs ────────────────────────────────────────────
+backend/backend/            export-ignore
+
+# ── Build artefacts (shouldn't be committed but guard anyway) ────────
+node_modules/               export-ignore
+frontend/.next/             export-ignore
+frontend/node_modules/      export-ignore
+backend/node_modules/       export-ignore
+*.tsbuildinfo               export-ignore
+
+# ── Secrets (should never be committed, but guard anyway) ────────────
+.env                        export-ignore
+backend/.env                export-ignore
+frontend/.env               export-ignore
+frontend/.env.local         export-ignore
+*.backup                    export-ignore
+*.zip                       export-ignore
+fcm-service.json            export-ignore

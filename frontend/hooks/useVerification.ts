@@ -12,6 +12,7 @@ import type {
   SupplementaryChangeLog,
   ColumnMapping,
   FormatType,
+  ViewLanguage,
 } from '@spare-parts/types';
 import { api, ApiError, JobStatus } from '@/lib/api';
 import { fileToBase64 } from '@/lib/utils';
@@ -37,8 +38,8 @@ function computeStatsFromRows(rows: any[]): ProcessingStats {
     webVerified: 0,
     emptyCells: 0,
     scoreAbove90: 0,
-    score50to89: 0,
-    scoreBelow50: 0,
+    score70to89: 0,
+    scoreBelow70: 0,
     officialSourceFound: 0,
     externalSourceFound: 0,
     notFound: 0,
@@ -47,8 +48,8 @@ function computeStatsFromRows(rows: any[]): ProcessingStats {
     const score = Number(r?.verificationScore) || 0;
     if (score > 0) s.webVerified++;
     if (score >= 90) s.scoreAbove90++;
-    else if (score >= 50) s.score50to89++;
-    else s.scoreBelow50++;
+    else if (score >= 70) s.score70to89++;
+    else s.scoreBelow70++;
 
     const st = String(r?.sourceType || '').toLowerCase();
     if (st === 'official') s.officialSourceFound++;
@@ -60,6 +61,88 @@ function computeStatsFromRows(rows: any[]): ProcessingStats {
       .length;
   }
   return s;
+}
+
+/**
+ * Build display rows using original (pre-translation) text from Excel.
+ * AI-generated fields (score, source, websiteId) are kept unchanged.
+ * Returns null when no original data is available.
+ */
+function buildOriginalDisplayRows(
+  results: VerificationResult[],
+  originalData: RawRow[],
+  format: FormatType | null,
+  mapping: ColumnMapping | null,
+): VerificationResult[] | null {
+  if (!originalData.length) return null;
+  return results.map((row) => {
+    const orig = originalData[row.rowIndex] ?? originalData[results.indexOf(row)];
+    if (!orig) return row;
+    if (format === 'B') {
+      return { ...row, description: String(orig.col_1 ?? ''), manufacturer: '', itemNumber: '', typeDesignation: '', supplementary: '' };
+    }
+    const m = mapping;
+    if (!m) return row;
+    return {
+      ...row,
+      description:     String(orig[m.description]     ?? ''),
+      manufacturer:    String(orig[m.manufacturer]    ?? ''),
+      itemNumber:      String(orig[m.itemNumber]       ?? ''),
+      typeDesignation: String(orig[m.typeDesignation]  ?? ''),
+      supplementary:   String(orig[m.supplementary]    ?? ''),
+    };
+  });
+}
+
+/**
+ * Build original display rows from per-row originalFields stored in DB result.
+ */
+function buildOriginalFromStoredFields(results: VerificationResult[]): VerificationResult[] | null {
+  if (!results.some(r => r.originalFields)) return null;
+  return results.map(r => {
+    const orig = r.originalFields;
+    if (!orig) return r;
+    return { ...r, description: orig.description, manufacturer: orig.manufacturer, itemNumber: orig.itemNumber, typeDesignation: orig.typeDesignation, supplementary: orig.supplementary };
+  });
+}
+
+/**
+ * Build SV display rows from per-row svFields stored in DB result.
+ */
+function buildSvFromStoredFields(results: VerificationResult[]): VerificationResult[] | null {
+  if (!results.some(r => r.svFields)) return null;
+  return results.map(r => {
+    const sv = r.svFields;
+    if (!sv) return r;
+    return { ...r, description: sv.description, manufacturer: sv.manufacturer, itemNumber: sv.itemNumber, typeDesignation: sv.typeDesignation, supplementary: sv.supplementary };
+  });
+}
+
+/**
+ * Build SV display rows from _svFields runtime props on normalizedRows (SSE/saved path).
+ */
+function buildSvFromNormalizedRows(results: VerificationResult[], normalizedRows: NormalizedRow[]): VerificationResult[] | null {
+  if (!normalizedRows.some((r: any) => r._svFields)) return null;
+  const svMap = new Map(normalizedRows.map((r: any) => [r.rowIndex, r._svFields]));
+  return results.map(r => {
+    const sv = svMap.get(r.rowIndex);
+    if (!sv) return r;
+    return { ...r, description: sv.description, manufacturer: sv.manufacturer, itemNumber: sv.itemNumber, typeDesignation: sv.typeDesignation, supplementary: sv.supplementary };
+  });
+}
+
+/**
+ * Build original display rows from _originalFields runtime props on normalizedRows.
+ * Used when originalDataRef is empty (background job path).
+ */
+function buildOriginalFromNormalizedRows(results: VerificationResult[], normalizedRows: NormalizedRow[]): VerificationResult[] | null {
+  if (!normalizedRows.some((r: any) => r._originalFields)) return null;
+  const origMap = new Map(normalizedRows.map((r: any) => [r.rowIndex, r._originalFields]));
+  return results.map(r => {
+    const orig = origMap.get(r.rowIndex);
+    if (!orig) return r;
+    return { ...r, description: orig.description, manufacturer: orig.manufacturer, itemNumber: orig.itemNumber, typeDesignation: orig.typeDesignation, supplementary: orig.supplementary };
+  });
 }
 
 /**
@@ -107,11 +190,58 @@ export function useVerification() {
   // in awaiting_review. Drives the banner's "Review Data" CTA.
   const [awaitingReview, setAwaitingReview] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  // Snapshot of normalizedRows (with _originalFields/_svFields) saved before they are cleared
+  // when a background verification job starts. Used to reconstruct language-toggle rows on completion.
+  const savedNormalizedRowsRef = useRef<NormalizedRow[]>([]);
   const { connect: connectSSE } = useSSE();
+
+  // Language toggle state
+  const [viewLanguage, setViewLanguage] = useState<ViewLanguage>('english');
+  const [originalResults, setOriginalResults] = useState<VerificationResult[]>([]);
+  const [svResults, setSvResults] = useState<VerificationResult[]>([]);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const addLog = useCallback((text: string, type: LogEntry['type'] = 'success') => {
     setLogEntries(prev => [...prev, { text, type }]);
   }, []);
+
+  // Build originalResults/svResults when verification completes.
+  // Priority: DB stored fields → savedNormalizedRowsRef snapshot → SSE inline paths
+  useEffect(() => {
+    if (phase !== 'done' || results.length === 0) {
+      if (phase === 'idle') { setOriginalResults([]); setSvResults([]); setViewLanguage('english'); }
+      return;
+    }
+    // 1. DB path: per-row originalFields/svFields from DB columns (background job, historical load)
+    const fromStoredOrig = buildOriginalFromStoredFields(results);
+    if (fromStoredOrig) setOriginalResults(fromStoredOrig);
+    const fromStoredSv = buildSvFromStoredFields(results);
+    if (fromStoredSv) setSvResults(fromStoredSv);
+
+    // 2. savedNormalizedRowsRef: snapshot taken before normalizedRows was cleared (background job this session)
+    const saved = savedNormalizedRowsRef.current;
+    if (!fromStoredOrig) {
+      const fromSaved = buildOriginalFromNormalizedRows(results, saved);
+      if (fromSaved) { setOriginalResults(fromSaved); }
+      else {
+        // 3. SSE inline path: original Excel raw data
+        const origData = originalDataRef.current;
+        if (origData.length) {
+          const built = buildOriginalDisplayRows(results, origData, formatResult?.format ?? null, formatResult?.suggestedMapping ?? null);
+          if (built) setOriginalResults(built);
+        }
+      }
+    }
+    if (!fromStoredSv) {
+      const fromSaved = buildSvFromNormalizedRows(results, saved);
+      if (fromSaved) { setSvResults(fromSaved); }
+      else {
+        // 3. SSE inline path: current normalizedRows (not yet cleared)
+        const built = buildSvFromNormalizedRows(results, normalizedRows);
+        if (built) setSvResults(built);
+      }
+    }
+  }, [phase, results, formatResult, normalizedRows]);
 
   const uploadFile = useCallback(async (file: File) => {
     try {
@@ -299,7 +429,7 @@ export function useVerification() {
     setStats({
       totalRows: normalizedRows.length,
       webVerified: 0, emptyCells: 0,
-      scoreAbove90: 0, score50to89: 0, scoreBelow50: 0,
+      scoreAbove90: 0, score70to89: 0, scoreBelow70: 0,
       officialSourceFound: 0, externalSourceFound: 0, notFound: 0,
     });
     setChangeLogs([]);
@@ -328,14 +458,14 @@ export function useVerification() {
           const s = {
             totalRows: normalizedRows.length,
             webVerified: 0, emptyCells: 0,
-            scoreAbove90: 0, score50to89: 0, scoreBelow50: 0,
+            scoreAbove90: 0, score70to89: 0, scoreBelow70: 0,
             officialSourceFound: 0, externalSourceFound: 0, notFound: 0,
           };
           for (const r of next) {
             if (r.verificationScore > 0) s.webVerified++;
             if (r.verificationScore >= 90) s.scoreAbove90++;
-            else if (r.verificationScore >= 50) s.score50to89++;
-            else s.scoreBelow50++;
+            else if (r.verificationScore >= 70) s.score70to89++;
+            else s.scoreBelow70++;
             const st = String(r.sourceType);
             if (st === 'official') s.officialSourceFound++;
             else if (st === 'external') s.externalSourceFound++;
@@ -391,11 +521,32 @@ export function useVerification() {
 
   const cancelVerification = useCallback(() => {
     abortRef.current?.abort();
-    setPhase('idle');
-    setProgressMessage('Verification stopped.');
     setProgress(0);
-    addLog('Cancelled by user', 'fail');
-  }, [addLog]);
+    if (results.length > 0) {
+      // Show whatever rows were verified so far as partial results
+      setPhase('done');
+      setProgressMessage(`Verification stopped — ${results.length} partial rows shown`);
+      setStats(computeStatsFromRows(results));
+      addLog(`Cancelled — ${results.length} rows processed (partial results)`, 'fail');
+    } else {
+      setPhase('idle');
+      setProgressMessage('Verification stopped.');
+      addLog('Cancelled before any rows were processed', 'fail');
+    }
+  }, [results, addLog]);
+
+  const cancelBackgroundJob = useCallback(async (jobId: string) => {
+    if (isCancelling) return;
+    try {
+      setIsCancelling(true);
+      await api.cancelJob(jobId);
+      addLog('Cancellation requested — waiting for backend to stop...', 'fail');
+      // Poll will detect 'cancelled' status and load partial results automatically
+    } catch (err) {
+      addLog(`Cancel failed: ${(err as Error).message}`, 'fail');
+      setIsCancelling(false);
+    }
+  }, [isCancelling, addLog]);
 
   const submitBackgroundJob = useCallback(async () => {
     try {
@@ -419,6 +570,8 @@ export function useVerification() {
       }
 
       setJobTrackingMode(true);
+      // Save snapshot before clearing — needed to reconstruct language-toggle rows when job completes
+      if (normalizedRows.length > 0) savedNormalizedRowsRef.current = normalizedRows;
       // Clear normalized rows so UI shows background tracking banner
       setNormalizedRows([]);
       setResults([]);
@@ -436,6 +589,8 @@ export function useVerification() {
 
   const startVerificationAfterReview = useCallback(async (jobId: string) => {
     try {
+      // Save snapshot before normalizedRows gets cleared by background job tracking
+      if (normalizedRows.length > 0) savedNormalizedRowsRef.current = normalizedRows;
       setPhase('idle'); // Don't block UI
       setAwaitingReview(false);
       setProgress(0);
@@ -509,6 +664,7 @@ export function useVerification() {
             setStats(response.stats as any);
           }
         } else if (currentStatus === 'completed') {
+          setIsCancelling(false); // safety: reset if cancel arrived after job already finished
           setProgress(100);
           setProgressMessage('Job complete!');
 
@@ -551,6 +707,14 @@ export function useVerification() {
               backendStats.scoreAbove90 !== undefined;
             setStats(hasCamelCase ? backendStats : computeStatsFromRows(rowsArray));
 
+            // Build original/sv display rows: DB fields first, then saved snapshot
+            const fromStored = buildOriginalFromStoredFields(rowsArray);
+            if (fromStored) setOriginalResults(fromStored);
+            else { const f = buildOriginalFromNormalizedRows(rowsArray, savedNormalizedRowsRef.current); if (f) setOriginalResults(f); }
+            const fromStoredSv = buildSvFromStoredFields(rowsArray);
+            if (fromStoredSv) setSvResults(fromStoredSv);
+            else { const f = buildSvFromNormalizedRows(rowsArray, savedNormalizedRowsRef.current); if (f) setSvResults(f); }
+
             setPhase('done');
             setProgressMessage(`${rowsArray.length} rows verified`);
           } else {
@@ -567,12 +731,58 @@ export function useVerification() {
           setJobTrackingMode(false);
           setPendingJobId(null);
           setAwaitingReview(false);
+        } else if (currentStatus === 'cancelled') {
+          setIsCancelling(false);
+          setProgress(100);
+          // Fetch whatever rows were processed before cancellation
+          try {
+            const resultsResponse = await api.getJobResults(pendingJobId);
+            if (!isMounted) return;
+            const rawResults: any = resultsResponse.results;
+            const rowsArray: any[] = Array.isArray(rawResults) ? rawResults : [];
+            if (rowsArray.length > 0 && rowsHaveVerificationData(rowsArray)) {
+              setResults(rowsArray);
+              setNormalizedRows([]);
+              setStats(computeStatsFromRows(rowsArray));
+              setPhase('done');
+              setProgressMessage(`Verification cancelled — ${rowsArray.length} partial rows shown`);
+              addLog(`Job cancelled — ${rowsArray.length} rows processed`, 'fail');
+              // Build original/sv: DB fields first, then saved snapshot
+              const fromStored = buildOriginalFromStoredFields(rowsArray);
+              if (fromStored) setOriginalResults(fromStored);
+              else { const f = buildOriginalFromNormalizedRows(rowsArray, savedNormalizedRowsRef.current); if (f) setOriginalResults(f); }
+              const fromStoredSv = buildSvFromStoredFields(rowsArray);
+              if (fromStoredSv) setSvResults(fromStoredSv);
+              else { const f = buildSvFromNormalizedRows(rowsArray, savedNormalizedRowsRef.current); if (f) setSvResults(f); }
+            } else if (rowsArray.length > 0) {
+              // Normalization was cancelled mid-way — show partial normalized rows ready to verify
+              setNormalizedRows(rowsArray);
+              setRowCount(rowsArray.length);
+              setResults([]);
+              setStats(null);
+              setPhase('idle');
+              setProgressMessage(`Normalization cancelled — ${rowsArray.length} rows ready to verify`);
+              addLog(`Normalization cancelled — ${rowsArray.length} rows normalized`, 'fail');
+            } else {
+              setPhase('idle');
+              setProgressMessage('Job cancelled before any rows were processed.');
+              addLog('Job cancelled — no rows to show', 'fail');
+            }
+          } catch {
+            setPhase('idle');
+            setProgressMessage('Job was cancelled.');
+          }
+          setLastCompletedJobId(pendingJobId);
+          setJobTrackingMode(false);
+          setPendingJobId(null);
+          setAwaitingReview(false);
         } else if (currentStatus === 'failed') {
           setPhase('error');
           setError(response.job.errorMessage || 'Background job failed');
           setJobTrackingMode(false);
           setPendingJobId(null);
           setAwaitingReview(false);
+          setIsCancelling(false);
           addLog(`Background job failed: ${response.job.errorMessage}`, 'fail');
         }
       } catch (err) {
@@ -606,8 +816,13 @@ export function useVerification() {
     try {
       // Guard: lang must be a string (prevents event object leak from onClick)
       const safeLang = typeof lang === 'string' ? lang : exportLanguage;
+      // Use appropriate row set based on active language toggle
+      const exportRows =
+        (viewLanguage === 'swedish' && svResults.length > 0) ? svResults :
+        (viewLanguage === 'original' && originalResults.length > 0) ? originalResults :
+        results;
       const blob = await api.exportData(
-        results,
+        exportRows,
         originalDataRef.current,
         fileName,
         formatResult?.format,
@@ -624,7 +839,7 @@ export function useVerification() {
     } catch (err) {
       setError(`Download failed: ${(err as Error).message}`);
     }
-  }, [results, fileName, formatResult, originalHeaders, exportLanguage, pendingJobId, lastCompletedJobId]);
+  }, [results, originalResults, viewLanguage, fileName, formatResult, originalHeaders, exportLanguage, pendingJobId, lastCompletedJobId]);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
@@ -641,6 +856,7 @@ export function useVerification() {
     setNormalizedRows([]);
     originalDataRef.current = [];
     rawDataRef.current = [];
+    savedNormalizedRowsRef.current = [];
     setResults([]);
     setStats(null);
     setChangeLogs([]);
@@ -657,6 +873,10 @@ export function useVerification() {
     setJobTrackingMode(false);
     setAwaitingReview(false);
     setRowCount(0);
+    setViewLanguage('english');
+    setOriginalResults([]);
+    setSvResults([]);
+    setIsCancelling(false);
   }, []);
 
   const handleBack = useCallback(() => {
@@ -763,6 +983,14 @@ export function useVerification() {
     awaitingReview,
     exportLanguage,
     setExportLanguage,
+    viewLanguage,
+    setViewLanguage,
+    originalResults,
+    svResults,
+    hasOriginalData: originalResults.length > 0 || (normalizedRows.length > 0 && !!(normalizedRows[0] as any)?._originalFields),
+    hasSvData: svResults.length > 0 || (normalizedRows.length > 0 && !!(normalizedRows[0] as any)?._svFields),
+    isCancelling,
+    cancelBackgroundJob,
     submitBackgroundJob,
     continueSSEVerification,
     startVerificationAfterReview,
@@ -813,7 +1041,7 @@ export function useVerification() {
 
         const resultsResponse = await api.getJobResults(jobId);
 
-        if (jobStatus === 'completed') {
+        if (jobStatus === 'completed' || jobStatus === 'cancelled') {
           const rawResults: any = resultsResponse.results;
           const backendDataType: string | undefined = (resultsResponse as any).dataType;
           const rowsArray: any[] = Array.isArray(rawResults)
@@ -835,10 +1063,22 @@ export function useVerification() {
               backendStats.scoreAbove90 !== undefined;
             setStats(hasCamelCase ? backendStats : computeStatsFromRows(rowsArray));
 
+            // Build original/sv display rows: DB fields first, then saved snapshot
+            const fromStored = buildOriginalFromStoredFields(rowsArray);
+            if (fromStored) setOriginalResults(fromStored);
+            else { const f = buildOriginalFromNormalizedRows(rowsArray, savedNormalizedRowsRef.current); if (f) setOriginalResults(f); }
+            const fromStoredSv = buildSvFromStoredFields(rowsArray);
+            if (fromStoredSv) setSvResults(fromStoredSv);
+            else { const f = buildSvFromNormalizedRows(rowsArray, savedNormalizedRowsRef.current); if (f) setSvResults(f); }
+
             setLastCompletedJobId(jobId);
             setPhase('done');
             setProgress(100);
-            setProgressMessage(`${rowsArray.length} rows verified`);
+            setProgressMessage(
+              jobStatus === 'cancelled'
+                ? `${rowsArray.length} rows (partial — job was cancelled)`
+                : `${rowsArray.length} rows verified`
+            );
           } else {
             // Normalize / detect job results stored as JSON
             setNormalizedRows(rowsArray);

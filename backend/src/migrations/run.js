@@ -34,16 +34,40 @@ async function applySqlMigrations(client) {
       continue;
     }
     const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
-    logger.info(`[MIGRATE] apply ${file}`);
-    await client.query('BEGIN');
-    try {
-      await client.query(sql);
-      await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
-      await client.query('COMMIT');
-    } catch (err) {
-      await client.query('ROLLBACK');
-      logger.error(`[MIGRATE] FAILED ${file}: ${err.message}`);
-      throw err;
+    // CONCURRENTLY cannot run inside a transaction block — detect and skip tx.
+    const usesTx = !/\bCONCURRENTLY\b/i.test(sql);
+    logger.info(`[MIGRATE] apply ${file}${usesTx ? '' : ' (no-tx — CONCURRENTLY)'}`);
+
+    if (usesTx) {
+      await client.query('BEGIN');
+      try {
+        await client.query(sql);
+        await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        logger.error(`[MIGRATE] FAILED ${file}: ${err.message}`);
+        throw err;
+      }
+    } else {
+      // CONCURRENTLY requires autocommit and cannot run inside any transaction,
+      // including the implicit one PG creates when multiple statements are sent
+      // in a single query() call. Execute each statement individually so every
+      // call gets its own autocommit context. Strip line comments first so
+      // comment-only segments don't produce empty queries.
+      const stmts = sql
+        .split(';')
+        .map(s => s.replace(/--[^\n]*/g, '').trim())
+        .filter(Boolean);
+      try {
+        for (const stmt of stmts) {
+          await client.query(stmt);
+        }
+        await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
+      } catch (err) {
+        logger.error(`[MIGRATE] FAILED ${file}: ${err.message}`);
+        throw err;
+      }
     }
   }
 }

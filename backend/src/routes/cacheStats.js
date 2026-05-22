@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { requireAuth } = require('../middleware/authMiddleware');
+const { requireSuperAdmin } = require('../middleware/authMiddleware');
 const { getStats } = require('../services/cacheService');
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireSuperAdmin, async (req, res) => {
   try {
     const stats = await getStats();
     // Keep the legacy `l2SqliteCache` key for frontend compatibility even though

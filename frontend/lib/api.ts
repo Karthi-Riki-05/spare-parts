@@ -86,8 +86,8 @@ export interface JobStatsShape {
   webVerified: number;
   emptyCells: number;
   scoreAbove90: number;
-  score50to89: number;
-  scoreBelow50: number;
+  score70to89: number;
+  scoreBelow70: number;
   officialSourceFound: number;
   externalSourceFound: number;
   notFound: number;
@@ -235,5 +235,7 @@ export const api = {
   clearAllCompleted: () => del<{ success: boolean; deleted: number }>('/jobs/completed/all'),
 
   startJobSearch: (jobId: string) => post<{ success: boolean; message: string }>(`/jobs/${jobId}/start-search`, {}),
+
+  cancelJob: (jobId: string) => post<{ success: boolean; message: string }>(`/jobs/${jobId}/cancel`, {}),
 };
 

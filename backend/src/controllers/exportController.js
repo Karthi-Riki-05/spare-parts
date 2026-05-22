@@ -23,8 +23,11 @@ async function resolveOriginalData(body) {
     if (job && job.results_json) {
       // results_json is JSONB — already an object, no JSON.parse needed.
       const parsed = job.results_json;
-      const rows = parsed.rows || parsed;
-      if (Array.isArray(rows) && rows.length > 0) return rows;
+      // If truncated (>5000 rows), fall through to the job_results fallback below.
+      if (!parsed.truncated) {
+        const rows = parsed.rows || parsed;
+        if (Array.isArray(rows) && rows.length > 0) return rows;
+      }
     }
   } catch (err) {
     logger.warn(`[EXPORT] Failed to read results_json for job ${jobId}: ${err.message}`);

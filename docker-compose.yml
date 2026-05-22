@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: spareparts
       POSTGRES_USER: spare_partner_user
-      POSTGRES_PASSWORD: SuperAdmin@2026
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in the root .env file}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -24,7 +24,8 @@ services:
     env_file: ./backend/.env
     environment:
       - TZ=${APP_TIMEZONE:-Europe/Stockholm}
-      - DATABASE_URL=postgresql://spare_partner_user:SuperAdmin%402026@postgres:5432/spareparts
+      # DATABASE_URL comes from backend/.env — use hostname 'postgres' (the service name),
+      # not 'localhost'. Special chars in the password must be URL-encoded (@ → %40).
     volumes:
       - ./backend/src:/app/src
       - ./backend/logs:/app/logs

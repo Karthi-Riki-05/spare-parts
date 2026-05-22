@@ -10,8 +10,8 @@ describe('StatsDashboard', () => {
       webVerified: 40,
       emptyCells: 5,
       scoreAbove90: 20,
-      score50to89: 15,
-      scoreBelow50: 5,
+      score70to89: 15,
+      scoreBelow70: 5,
       officialSourceFound: 18,
       externalSourceFound: 12,
       notFound: 10,
@@ -20,9 +20,9 @@ describe('StatsDashboard', () => {
 
     expect(screen.getByText('50')).toBeDefined();     // totalRows
     expect(screen.getByText('40')).toBeDefined();     // webVerified
-    expect(screen.getAllByText('5')).toHaveLength(2);  // emptyCells=5 + scoreBelow50=5
+    expect(screen.getAllByText('5')).toHaveLength(2);  // emptyCells=5 + scoreBelow70=5
     expect(screen.getByText('20')).toBeDefined();     // scoreAbove90
-    expect(screen.getByText('15')).toBeDefined();     // score50to89
+    expect(screen.getByText('15')).toBeDefined();     // score70to89
     expect(screen.getByText('18')).toBeDefined();     // official
     expect(screen.getByText('12')).toBeDefined();     // external
     expect(screen.getByText('10')).toBeDefined();     // notFound
@@ -42,8 +42,8 @@ describe('StatsDashboard', () => {
     expect(screen.getByText('Web Verified')).toBeDefined();
     expect(screen.getByText('Empty Cells')).toBeDefined();
     expect(screen.getByText(/Score ≥90/)).toBeDefined();
-    expect(screen.getByText(/Score 50-89/)).toBeDefined();
-    expect(screen.getByText(/Score <50/)).toBeDefined();
+    expect(screen.getByText(/Score 70-89/)).toBeDefined();
+    expect(screen.getByText(/Score <70/)).toBeDefined();
     expect(screen.getByText('Official')).toBeDefined();
     expect(screen.getByText('External')).toBeDefined();
     expect(screen.getByText('Not Found')).toBeDefined();

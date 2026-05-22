@@ -48,6 +48,7 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
   const [jobStats, setJobStats] = useState<Record<string, any>>({});
   const [loadingSearch, setLoadingSearch] = useState<string | null>(null);
   const [notifPermission, setNotifPermission] = useState<string>('default');
+  const [cancellingJobs, setCancellingJobs] = useState<Set<string>>(new Set());
 
   // Check notification permission
   useEffect(() => {
@@ -166,6 +167,23 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
       showError('Failed to clear jobs');
     }
   };
+
+  const handleCancelJob = useCallback(async (jobId: string) => {
+    const confirmed = await showConfirm(
+      'Cancel this job? Already-processed rows will be saved and displayed.',
+      { title: 'Cancel Job', type: 'warning', confirmText: 'Cancel Job', cancelText: 'Keep running' }
+    );
+    if (!confirmed) return;
+    setCancellingJobs(prev => new Set(prev).add(jobId));
+    try {
+      await api.cancelJob(jobId);
+      await fetchJobs();
+    } catch (err) {
+      showError('Failed to cancel: ' + (err as Error).message);
+    } finally {
+      setCancellingJobs(prev => { const next = new Set(prev); next.delete(jobId); return next; });
+    }
+  }, [showConfirm, showError, fetchJobs]);
 
   const progressJobs = jobs.filter(j => j.status === 'processing' || j.status === 'pending' || j.status === 'awaiting_review');
   const doneJobs = jobs.filter(j => j.status === 'completed' || j.status === 'failed');
@@ -352,6 +370,15 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
                           </p>
                         )}
                         <p className="text-[10px] text-text-muted mt-1">You can safely close this browser</p>
+                        <div className="flex justify-end mt-2">
+                          <button
+                            onClick={() => handleCancelJob(job.id)}
+                            disabled={cancellingJobs.has(job.id)}
+                            className="px-3 py-1.5 border border-brand-red/60 text-brand-red text-[11px] font-medium rounded hover:bg-brand-red/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {cancellingJobs.has(job.id) ? 'Cancelling...' : 'Cancel Job'}
+                          </button>
+                        </div>
                       </div>
                     )}
 
@@ -412,8 +439,8 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
                     {job.status === 'completed' && (() => {
                       const st = jobStats[job.id] || (job as any).stats || {};
                       const s90 = st.score_above_90 ?? st.scoreAbove90 ?? 0;
-                      const s50 = st.score_50_to_89 ?? st.score50to89 ?? 0;
-                      const sLow = st.score_below_50 ?? st.scoreBelow50 ?? 0;
+                      const s50 = st.score_70_89 ?? st.score70to89 ?? 0;
+                      const sLow = st.score_below_70 ?? st.scoreBelow70 ?? 0;
                       const official = st.official_source ?? st.officialSourceFound ?? 0;
                       const external = st.external_source ?? st.externalSourceFound ?? 0;
                       const nf = st.not_found ?? st.notFound ?? 0;
@@ -436,14 +463,14 @@ export default function ActivityCenter({ open, onClose, userEmail, onReview, onS
                               <div className="text-lg font-bold text-brand-yellow">{s50}</div>
                               <span className="text-[10px]">⚠️</span>
                             </div>
-                            <div className="text-[9px] text-text-secondary mt-0.5">Score 50-89</div>
+                            <div className="text-[9px] text-text-secondary mt-0.5">Score 70-89</div>
                           </div>
                           <div className="border-l-[3px] border-brand-red bg-brand-red/5 rounded-r-lg p-2">
                             <div className="flex justify-between items-start">
                               <div className="text-lg font-bold text-brand-red">{sLow}</div>
                               <span className="text-[10px]">❌</span>
                             </div>
-                            <div className="text-[9px] text-text-secondary mt-0.5">Score &lt;50</div>
+                            <div className="text-[9px] text-text-secondary mt-0.5">Score &lt;70</div>
                           </div>
                         </div>
 

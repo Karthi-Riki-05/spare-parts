@@ -34,6 +34,8 @@ async function processRows(rows, options = {}) {
     onError = () => {},
     batchSize: customBatchSize,
     originalHeaders = null,
+    shouldAbort = null,
+    signal = null,       // AbortSignal — checked synchronously, no DB round-trip
   } = options;
 
   const col0Header = originalHeaders && originalHeaders.col_0 ? String(originalHeaders.col_0).trim() : '';
@@ -62,6 +64,38 @@ async function processRows(rows, options = {}) {
   const total = rows.length;
   const startTime = Date.now();
 
+  // Shared cancelled flag — set once, never unset. Avoids re-running cancelled
+  // rows in the retry loop (the main cause of wasCancelled being wrong).
+  let cancelled = false;
+  const checkCancelled = async () => {
+    if (signal?.aborted || cancelled) { cancelled = true; return true; }
+    if (!shouldAbort) return false;
+    if (await shouldAbort()) { cancelled = true; return true; }
+    return false;
+  };
+
+  // Race any promise against the AbortSignal so in-flight Gemini calls are
+  // abandoned the moment ctrl.abort() fires, without waiting for HTTP to settle.
+  // The orphaned HTTP request finishes in the background but is discarded.
+  const raceWithAbort = (promise) => {
+    if (!signal) return promise;
+    if (signal.aborted) {
+      cancelled = true;
+      return Promise.reject(Object.assign(new Error('Cancelled'), { __cancelled: true }));
+    }
+    let abortHandler;
+    const abortRace = new Promise((_, reject) => {
+      abortHandler = () => {
+        cancelled = true;
+        reject(Object.assign(new Error('Cancelled'), { __cancelled: true }));
+      };
+      signal.addEventListener('abort', abortHandler, { once: true });
+    });
+    return Promise.race([promise, abortRace]).finally(() => {
+      if (abortHandler) signal.removeEventListener('abort', abortHandler);
+    });
+  };
+
   const ROW_HARD_TIMEOUT_MS = config.verificationTimeoutMs; 
   const withRowTimeout = (promise, rowIndex) => Promise.race([
     promise,
@@ -72,15 +106,20 @@ async function processRows(rows, options = {}) {
   ]);
 
   const tasks = rows.map(row => mainPool(async () => {
+    if (cancelled || signal?.aborted) { cancelled = true; return; } // fast sync check
+    if (await checkCancelled()) return;
     const deduped = applyAllDeduplication(row);
     const internalItemNumber = deduped.internalItemNumber;
     const cacheKey = cacheService.makeCacheKey(deduped);
     const cached = await cacheService.get(cacheKey);
-    
+    if (cancelled || signal?.aborted) { cancelled = true; return; }
+
     if (cached) {
       cacheHits++;
       completed++;
       const result = { ...cached, rowIndex: row.rowIndex, internalItemNumber };
+      if (row._originalFields) result._originalFields = row._originalFields;
+      if (row._svFields) result._svFields = row._svFields;
       results.push(result);
       onRowComplete(result);
       onProgress({ 
@@ -101,12 +140,13 @@ async function processRows(rows, options = {}) {
 
     try {
       let result = await withRowTimeout((async () => {
-        // Step 1: Gemini verification (uses per-key pool from geminiPool)
+        // Step 1: Gemini verification — raced against abort signal so cancel
+        // abandons the in-flight HTTP request immediately.
         if (config.geminiMockMode) mockCalls++; else geminiCalls++;
         const pool = geminiPoolModule.getNextPool() || pLimit(15);
-        let r = await pool(async () => {
+        let r = await raceWithAbort(pool(async () => {
           return await verifyRow(deduped, false, correlationId, col0Context);
-        });
+        }));
 
         // Step 2 & 4: Rule enforcement and URL validation in parallel
         const rulePromise = (async () => {
@@ -115,19 +155,19 @@ async function processRows(rows, options = {}) {
             if (suppType === 'part_specification') {
               if (config.geminiMockMode) mockCalls++; else geminiCalls++;
               const suppPool = geminiPoolModule.getNextPool() || pool;
-              const supplementaryResult = await suppPool(async () => {
+              const supplementaryResult = await raceWithAbort(suppPool(async () => {
                 return await verifyRow(deduped, true, correlationId, col0Context);
-              });
+              }));
               supplementaryResult.supplementaryUsed = true;
               return supplementaryResult;
             }
           }
-          
+
           if (r.verificationScore < 70 || (!r.manufacturer || !r.manufacturer.trim())) {
             if (config.claudeMockMode) mockCalls++; else fallbackCalls++;
-            return await rulePool(async () => {
+            return await raceWithAbort(rulePool(async () => {
               return await enforceRules(deduped, r, correlationId);
-            });
+            }));
           }
           return r;
         })();
@@ -216,6 +256,9 @@ async function processRows(rows, options = {}) {
       result = mirrorOriginalLayout(result, deduped);
       result.rowIndex = row.rowIndex;
       result.internalItemNumber = internalItemNumber;
+      // Carry original pre-translation fields for language-toggle storage
+      if (row._originalFields) result._originalFields = row._originalFields;
+      if (row._svFields) result._svFields = row._svFields;
 
       // Supplementary protection: always restore original unless explicitly flagged as changed
       if (!result.supplementaryChanged) {
@@ -226,23 +269,29 @@ async function processRows(rows, options = {}) {
         changeLogs.push(createChangeLog(row.rowIndex, result.supplementaryOriginal, result.supplementary, result.verificationScore, result.verificationScore < 70 ? 'claude-sonnet-4-6' : 'gemini-2.5-flash'));
       }
       
+      // Final abort gate: if signal fired while Gemini was returning, discard
+      // the result so the counter never increments after cancel.
+      if (cancelled || signal?.aborted) { cancelled = true; return; }
+
       await cacheService.set(cacheKey, result, {
         manufacturer:     deduped.manufacturer     || null,
         item_number:      deduped.itemNumber       || null,
         type_designation: deduped.typeDesignation  || null,
         description:      deduped.description      || null,
       });
-      
+
       results.push(result);
       completed++;
       onRowComplete(result);
-      onProgress({ 
-        completed, 
-        total, 
+      onProgress({
+        completed,
+        total,
         batch: Math.ceil(completed / actualBatchSize),
-        elapsedSeconds: Math.round((Date.now() - startTime) / 1000) 
+        elapsedSeconds: Math.round((Date.now() - startTime) / 1000)
       });
     } catch (error) {
+      // Cancelled via raceWithAbort — discard silently, no progress update
+      if (error?.__cancelled) { cancelled = true; return; }
       completed++;
       if (error && error.__rowTimeout) {
         const timeoutResult = {
@@ -277,29 +326,33 @@ async function processRows(rows, options = {}) {
 
   await Promise.allSettled(tasks);
 
-  // Error recovery: retry network-failed rows once after a 5s pause
+  // Error recovery: retry network-failed rows once after a 5s pause.
+  // Skipped entirely when cancelled — cancelled rows must not be re-run because
+  // that would make results.length === total and wasCancelled would be wrong.
   const processedIndexes = new Set(results.map(r => r.rowIndex));
   const failedRows = rows.filter(r => !processedIndexes.has(r.rowIndex));
   let retried = 0;
   let recoveredAfterRetry = 0;
 
-  if (failedRows.length > 0) {
+  if (!cancelled && failedRows.length > 0) {
     logger.info(`[VERIFY] ${failedRows.length} rows failed. Waiting 5s before retry...`);
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     const retryTasks = failedRows.map(row => mainPool(async () => {
+      if (cancelled || signal?.aborted) { cancelled = true; return; }
       retried++;
       try {
         const deduped = applyAllDeduplication(row);
         const internalItemNumber = deduped.internalItemNumber;
         const retryPool = geminiPoolModule.getNextPool() || pLimit(15);
         let result = await withRowTimeout((async () => {
-          return await retryPool(async () => verifyRow(deduped, false, correlationId));
+          return await raceWithAbort(retryPool(async () => verifyRow(deduped, false, correlationId)));
         })(), row.rowIndex);
         result = deduplicateVerified(result);
         result = mirrorOriginalLayout(result, deduped);
         result.rowIndex = row.rowIndex;
         result.internalItemNumber = internalItemNumber;
+        if (cancelled || signal?.aborted) { cancelled = true; return; }
         results.push(result);
         recoveredAfterRetry++;
         completed++;
@@ -307,6 +360,7 @@ async function processRows(rows, options = {}) {
         onProgress({ completed, total });
         logger.info(`[VERIFY] Retry SUCCESS row ${row.rowIndex}`);
       } catch (err) {
+        if (err?.__cancelled) { cancelled = true; return; }
         logger.warn(`[VERIFY] Retry FAILED row ${row.rowIndex}: ${err.message}`);
       }
     }));
@@ -314,6 +368,13 @@ async function processRows(rows, options = {}) {
   }
 
   results.sort((a, b) => a.rowIndex - b.rowIndex);
+
+  // wasCancelled is driven by the cancelled flag, not row count. Using row count
+  // was unreliable: the retry loop could complete cancelled rows and make it false.
+  const wasCancelled = cancelled;
+  if (wasCancelled) {
+    logger.info(`[Cancel] Job ${correlationId} aborted after ${results.length} rows`);
+  }
 
   const stats = computeStats(results);
   const permanentlyFailed = total - results.length;
@@ -330,7 +391,8 @@ async function processRows(rows, options = {}) {
     totalTime: Date.now() - startTime,
     results,
     changeLogs,
-    stats
+    stats,
+    wasCancelled,
   };
 
   try {

@@ -92,7 +92,7 @@ async function normalizeRowsBatch(rawTextsWithIndices, correlationId) {
   logger.info(`[BATCH NORMALIZE] ${batchSize} rows → calling Gemini (Key ...${client.suffix})`);
 
   const itemsJson = rawTextsWithIndices.map(({ text }, i) => `${i + 1}. "${text}"`).join('\n');
-  const prompt = `Extract spare parts data from these ${batchSize} texts. Respond with a JSON array of ${batchSize} objects.\n\n${itemsJson}\n\nRULES:\n1. Manufacturer = brand (SKF, ABB, etc.)\n2. item_number = order code, type_designation = model\n3. Translate Swedish descriptive words to English (Keep technical codes as-is).\n4. Return exactly ${batchSize} items in input order.\n\n[{"description":"","manufacturer":"","item_number":"","type_designation":"","supplementary":"","swedish_found":false}, ...]`;
+  const prompt = `Extract spare parts data from these ${batchSize} texts. Respond with a JSON array of ${batchSize} objects.\n\n${itemsJson}\n\nRULES:\n1. Manufacturer = brand (SKF, ABB, etc.)\n2. item_number = order code, type_designation = model\n3. description = translate to English (descriptive words only, keep technical codes as-is)\n4. sv_description = same extracted description in the ORIGINAL language (do NOT translate; if already English, copy description)\n5. Return exactly ${batchSize} items in input order.\n\n[{"description":"","sv_description":"","manufacturer":"","item_number":"","type_designation":"","supplementary":"","swedish_found":false}, ...]`;
 
   return withRetry(async () => {
     const start = Date.now();
@@ -113,6 +113,7 @@ async function normalizeRowsBatch(rawTextsWithIndices, correlationId) {
       // Sanitization layer: Convert any null/undefined values to empty strings
       const sanitized = array.map(item => ({
         description: String(item.description || ''),
+        sv_description: String(item.sv_description || item.description || ''),
         manufacturer: String(item.manufacturer || ''),
         item_number: String(item.item_number || ''),
         type_designation: String(item.type_designation || ''),

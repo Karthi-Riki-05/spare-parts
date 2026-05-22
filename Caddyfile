@@ -1,0 +1,70 @@
+# spare-parts.tawdev.com — Caddy reverse proxy with automatic HTTPS
+#
+# Caddy obtains and renews the Let's Encrypt TLS certificate automatically.
+# Prerequisites before first deploy:
+#   1. DNS A record for spare-parts.tawdev.com → server public IP
+#   2. Ports 80 and 443 open in the server firewall / security group
+#   3. No other process bound to port 80/443 on the host
+
+spare-parts.tawdev.com {
+
+    # ── Reverse proxy to Next.js container ──────────────────────
+    # flush_interval -1 disables response buffering so SSE streams
+    # (/api/verify) reach the browser immediately rather than being
+    # held in Caddy's buffer until the connection closes.
+    reverse_proxy frontend:3000 {
+        flush_interval -1
+
+        # Pass real client IP through to Next.js / Express
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # ── Security headers ─────────────────────────────────────────
+    header {
+        # Force HTTPS for 1 year; include subdomains; allow preload-list submission
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+        # Prevent MIME-type sniffing
+        X-Content-Type-Options "nosniff"
+
+        # Block the site from being embedded in an iframe (clickjacking)
+        X-Frame-Options "DENY"
+
+        # Control referrer in cross-origin requests
+        Referrer-Policy "strict-origin-when-cross-origin"
+
+        # Modern browsers ignore this but keep it for older ones
+        X-XSS-Protection "1; mode=block"
+
+        # Do not expose Caddy server version
+        -Server
+    }
+
+    # ── Request body size limit ───────────────────────────────────
+    # Matches the 50MB limit set in Express (server.js:32).
+    # Caddy rejects oversized requests before they reach Next.js.
+    request_body {
+        max_size 50MB
+    }
+
+    # ── Access logs ───────────────────────────────────────────────
+    # Written to the caddy_data volume at /data/logs/access.log
+    # so logs survive container restarts without a host bind-mount.
+    log {
+        output file /data/logs/access.log {
+            roll_size 10MB
+            roll_keep 5
+            roll_keep_for 720h
+        }
+        format json
+    }
+}
+
+# ── HTTP → HTTPS redirect ─────────────────────────────────────────
+# Caddy handles this automatically for named sites, but being explicit
+# makes the intent clear and ensures any HTTP request is upgraded.
+http://spare-parts.tawdev.com {
+    redir https://{host}{uri} permanent
+}

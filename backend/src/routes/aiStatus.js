@@ -1,10 +1,11 @@
 const { Router } = require('express');
 const { config } = require('../config');
 const { getRecentErrors } = require('../utils/aiErrorLogger');
+const { requireSuperAdmin } = require('../middleware/authMiddleware');
 
 const router = Router();
 
-router.get('/ai-status', (_req, res) => {
+router.get('/ai-status', requireSuperAdmin, (_req, res) => {
   const key = config.geminiApiKey || '';
   const hasKey = key.length > 0;
   res.json({
@@ -24,7 +25,7 @@ router.get('/ai-status', (_req, res) => {
   });
 });
 
-router.get('/ai-errors', async (req, res) => {
+router.get('/ai-errors', requireSuperAdmin, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const errors = await getRecentErrors(Math.min(limit, 200));

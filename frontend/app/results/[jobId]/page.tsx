@@ -90,11 +90,11 @@ export default function ResultsPage() {
           </div>
           <div className="bg-yellow-900/20 border border-yellow-700/30 rounded p-3">
             <div className="text-xs text-yellow-400">70-89</div>
-            <div className="text-2xl font-bold text-yellow-400">{stats.score50to89}</div>
+            <div className="text-2xl font-bold text-yellow-400">{stats.score70to89}</div>
           </div>
           <div className="bg-orange-900/20 border border-orange-700/30 rounded p-3">
             <div className="text-xs text-orange-400">&lt;70</div>
-            <div className="text-2xl font-bold text-orange-400">{stats.scoreBelow50}</div>
+            <div className="text-2xl font-bold text-orange-400">{stats.scoreBelow70}</div>
           </div>
           <div className="bg-bg-surface border border-border rounded p-3">
             <div className="text-xs text-text-secondary">Verified</div>

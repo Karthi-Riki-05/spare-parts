@@ -19,6 +19,7 @@ import LargeFileWarning from './LargeFileWarning';
 import BackgroundJobModal from './BackgroundJobModal';
 import ActivityCenter from './ActivityCenter';
 import AlertModal from './ui/AlertModal';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 interface User {
   email: string;
@@ -36,6 +37,7 @@ export default function SparePartsApp() {
   const [activeJobCount, setActiveJobCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [showCancelJobModal, setShowCancelJobModal] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('app-theme') as 'light' | 'dark' | null;
@@ -145,10 +147,35 @@ export default function SparePartsApp() {
   const isVerifyingPhase = v.phase === 'verifying';
   let displayRows;
   if (v.phase === 'done' && v.results.length > 0) {
-    displayRows = v.results;
+    if (v.viewLanguage === 'swedish' && v.svResults.length > 0) displayRows = v.svResults;
+    else if (v.viewLanguage === 'original' && v.originalResults.length > 0) displayRows = v.originalResults;
+    else displayRows = v.results;
   } else if (isVerifyingPhase && v.results.length > 0) {
     const byIndex = new Map(v.results.map((r) => [r.rowIndex, r]));
     displayRows = v.normalizedRows.map((n) => byIndex.get(n.rowIndex) ?? n);
+  } else if (v.normalizedRows.length > 0) {
+    // Pre-verification: apply language toggle to normalized rows using runtime _svFields/_originalFields
+    if (v.viewLanguage === 'swedish' && v.hasSvData) {
+      displayRows = v.normalizedRows.map(r => ({
+        ...r,
+        description:     (r as any)._svFields?.description     ?? r.description,
+        manufacturer:    (r as any)._svFields?.manufacturer    ?? r.manufacturer,
+        itemNumber:      (r as any)._svFields?.itemNumber       ?? r.itemNumber,
+        typeDesignation: (r as any)._svFields?.typeDesignation  ?? r.typeDesignation,
+        supplementary:   (r as any)._svFields?.supplementary    ?? r.supplementary,
+      }));
+    } else if (v.viewLanguage === 'original' && v.hasOriginalData) {
+      displayRows = v.normalizedRows.map(r => ({
+        ...r,
+        description:     (r as any)._originalFields?.description     ?? r.description,
+        manufacturer:    (r as any)._originalFields?.manufacturer    ?? r.manufacturer,
+        itemNumber:      (r as any)._originalFields?.itemNumber       ?? r.itemNumber,
+        typeDesignation: (r as any)._originalFields?.typeDesignation  ?? r.typeDesignation,
+        supplementary:   (r as any)._originalFields?.supplementary    ?? r.supplementary,
+      }));
+    } else {
+      displayRows = v.normalizedRows;
+    }
   } else {
     displayRows = v.normalizedRows;
   }
@@ -273,7 +300,7 @@ export default function SparePartsApp() {
             </div>
           )}
 
-          <div className="flex justify-center gap-3">
+          <div className="flex justify-center gap-3 flex-wrap">
             {v.awaitingReview && v.pendingJobId ? (
               <button
                 onClick={() => v.pendingJobId && v.loadJobData(v.pendingJobId)}
@@ -287,6 +314,15 @@ export default function SparePartsApp() {
                 className="px-4 py-2 bg-brand-cyan text-white text-sm font-bold rounded hover:bg-brand-cyan/90 transition-colors"
               >
                 Open Activity Center
+              </button>
+            )}
+            {v.pendingJobId && !v.awaitingReview && (
+              <button
+                onClick={() => setShowCancelJobModal(true)}
+                disabled={v.isCancelling}
+                className="px-4 py-2 border border-brand-red text-brand-red text-sm rounded hover:bg-brand-red/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {v.isCancelling ? 'Cancelling...' : 'Cancel Job'}
               </button>
             )}
             <button
@@ -387,6 +423,10 @@ export default function SparePartsApp() {
             onExport={() => v.exportData()}
             onManualMapping={() => v.setShowMappingDialog(true)}
             isTracking={v.jobTrackingMode}
+            viewLanguage={v.viewLanguage}
+            onToggleLanguage={v.setViewLanguage}
+            hasOriginalData={v.hasOriginalData}
+            hasSvData={v.hasSvData}
           />
 
           <ProgressSection
@@ -463,6 +503,17 @@ export default function SparePartsApp() {
         cancelText="Stay"
         onConfirm={v.confirmBack}
         onCancel={v.cancelBack}
+      />
+
+      <ConfirmDialog
+        open={showCancelJobModal}
+        title="Cancel verification job?"
+        message="The job will stop. Already-processed rows will be saved and displayed."
+        confirmLabel="Cancel Job"
+        cancelLabel="Keep running"
+        variant="danger"
+        onConfirm={() => { setShowCancelJobModal(false); v.cancelBackgroundJob(v.pendingJobId!); }}
+        onCancel={() => setShowCancelJobModal(false)}
       />
     </>
   );

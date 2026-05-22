@@ -15,3 +15,27 @@ backend/data/*.db
 backend/data/*.db-shm
 backend/data/*.db-wal
 backend/logs/
+
+# ── Sensitive / credential files — never commit these ──────
+# Session cookie dumps
+cookies.txt
+cookies_frontend.txt
+frontend/cookies.txt
+
+# Env backup files (may contain real credentials)
+*.backup
+**/*.backup
+
+# Firebase / GCP service account keys
+fcm-service.json
+**/fcm-service.json
+*-service-account*.json
+*-credentials*.json
+
+# Temporary archives / IDE artifacts
+vfs_backup.zip
+**/*.zip
+
+# Root-level .env for docker-compose variable substitution
+# (holds POSTGRES_PASSWORD and other compose-level vars)
+.env.compose

@@ -12,10 +12,18 @@ const { logger } = require('../utils/logger');
 
 const router = express.Router();
 
+// AbortController per running verification job.
+const activeJobs = new Map();
+
+// AbortController per running normalization job (normalize/submit IIFE).
+const activeNormalizationJobs = new Map();
+
 /**
  * Common background verification logic
  */
 async function startBackgroundVerification(jobId, rows, auditCtx = null, originalHeaders = null) {
+  const controller = new AbortController();
+  activeJobs.set(jobId, controller);
   try {
     await jobService.updateJobStatus(jobId, 'processing', { started_at: new Date() });
 
@@ -47,8 +55,8 @@ async function startBackgroundVerification(jobId, rows, auditCtx = null, origina
       webVerified:         0,
       emptyCells:          0,
       scoreAbove90:        0,
-      score50to89:         0,
-      scoreBelow50:        0,
+      score70to89:         0,
+      scoreBelow70:        0,
       officialSourceFound: 0,
       externalSourceFound: 0,
       notFound:            0,
@@ -57,16 +65,28 @@ async function startBackgroundVerification(jobId, rows, auditCtx = null, origina
     try { await jobService.updateJobStats(jobId, runningStats); }
     catch (err) { logger.warn(`[JOB] Initial stats seed failed for ${jobId}: ${err.message}`); }
 
+    // Primary check: AbortController.signal.aborted — synchronous, no DB.
+    // DB fallback every 10 rows for resilience if the process restarts.
+    let abortCheckCount = 0;
+    const shouldAbort = async () => {
+      if (controller.signal.aborted) return true;
+      abortCheckCount++;
+      if (abortCheckCount % 10 !== 0) return false;
+      return await jobService.isJobCancelled(jobId);
+    };
+
     await verificationService.processRows(rowsToProcess, {
       correlationId: `job-${jobId}`,
       originalHeaders,
+      shouldAbort,
+      signal: controller.signal,
       onRowComplete: (result) => {
         const score = result?.verificationScore || 0;
         const srcRaw = result?.sourceType || 'unknown';
         if (score > 0) runningStats.webVerified++;
         if (score >= 90) runningStats.scoreAbove90++;
-        else if (score >= 50) runningStats.score50to89++;
-        else runningStats.scoreBelow50++;
+        else if (score >= 70) runningStats.score70to89++;
+        else runningStats.scoreBelow70++;
         if (srcRaw === 'official') runningStats.officialSourceFound++;
         else if (srcRaw === 'external' || srcRaw === 'distributor') runningStats.externalSourceFound++;
         else if (srcRaw === 'not_found') runningStats.notFound++;
@@ -85,10 +105,20 @@ async function startBackgroundVerification(jobId, rows, auditCtx = null, origina
         }
       },
       onComplete: async (summary) => {
+        // Persist whatever rows were processed (partial or full)
         try {
           await jobService.saveJobResults(jobId, summary.results, summary.stats);
         } catch (saveErr) {
           logger.error(`[JOB] saveJobResults failed for ${jobId}: ${saveErr.message}`);
+        }
+
+        if (summary.wasCancelled) {
+          await jobService.updateJobStatus(jobId, 'cancelled', {
+            processed_rows: finishedIndexes.size + summary.results.length,
+            current_phase: 'cancelled',
+          });
+          logger.info(`[JOB] Job ${jobId} cancelled after ${summary.results.length} rows`);
+          return;
         }
 
         // Always mark completed — even if saveJobResults had a partial failure
@@ -143,6 +173,8 @@ async function startBackgroundVerification(jobId, rows, auditCtx = null, origina
     } catch (emailErr) {
       logger.error(`[JOB] Error email failed: ${emailErr.message}`);
     }
+  } finally {
+    activeJobs.delete(jobId);
   }
 }
 
@@ -203,9 +235,11 @@ router.get('/:jobId/status', requireAuth, async (req, res) => {
 
     // Safety net: auto-complete jobs that processed all rows but status is still 'processing'.
     // This catches the race where late onProgress callbacks overwrote 'completed' back to 'processing'.
+    // Skip for cancelled jobs.
     if (job.status === 'processing'
         && job.total_rows > 0
-        && job.processed_rows >= job.total_rows) {
+        && job.processed_rows >= job.total_rows
+        && !job.cancelled) {
       // Check if results actually exist in DB
       const resultCount = await db.getOne(
         "SELECT COUNT(*)::int as cnt FROM job_results WHERE job_id = $1 AND row_type = 'verified'",
@@ -229,9 +263,9 @@ router.get('/:jobId/status', requireAuth, async (req, res) => {
       totalRows:           rawStats.total_rows        || 0,
       webVerified:         rawStats.web_verified      || 0,
       emptyCells:          rawStats.empty_cells       || 0,
-      scoreAbove90:        rawStats.score_above_90    || 0,
-      score50to89:         rawStats.score_50_to_89    || 0,
-      scoreBelow50:        rawStats.score_below_50    || 0,
+      scoreAbove90:        rawStats.score_90_100      || 0,
+      score70to89:         rawStats.score_70_89       || 0,
+      scoreBelow70:        rawStats.score_below_70    || 0,
       officialSourceFound: rawStats.official_source   || 0,
       externalSourceFound: rawStats.external_source   || 0,
       notFound:            rawStats.not_found         || 0,
@@ -287,7 +321,7 @@ router.get('/:jobId/results', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    if (job.status !== 'completed' && job.status !== 'awaiting_review') {
+    if (!['completed', 'awaiting_review', 'cancelled'].includes(job.status)) {
       return res.status(400).json({ error: `Job not completed yet (status: ${job.status})` });
     }
 
@@ -316,6 +350,8 @@ router.get('/:jobId/results', requireAuth, async (req, res) => {
         supplementaryOriginal: r.supplementary_original,
         supplementaryType: r.supplementary_type,
         urlValidationStatus: r.url_validation_status,
+        originalFields: r.original_fields || null,
+        svFields: r.sv_fields || null,
       }));
     } else if (job.results_json) {
       try {
@@ -337,9 +373,9 @@ router.get('/:jobId/results', requireAuth, async (req, res) => {
       totalRows:           rawStats.total_rows        || 0,
       webVerified:         rawStats.web_verified      || 0,
       emptyCells:          rawStats.empty_cells       || 0,
-      scoreAbove90:        rawStats.score_above_90    || 0,
-      score50to89:         rawStats.score_50_to_89    || 0,
-      scoreBelow50:        rawStats.score_below_50    || 0,
+      scoreAbove90:        rawStats.score_90_100      || 0,
+      score70to89:         rawStats.score_70_89       || 0,
+      scoreBelow70:        rawStats.score_below_70    || 0,
       officialSourceFound: rawStats.official_source   || 0,
       externalSourceFound: rawStats.external_source   || 0,
       notFound:            rawStats.not_found         || 0,
@@ -413,6 +449,8 @@ router.post('/normalize/submit', requireAuth, async (req, res) => {
     res.json({ success: true, jobId, message: 'Normalization job submitted.' });
 
     (async () => {
+      const normController = new AbortController();
+      activeNormalizationJobs.set(jobId, normController);
       try {
         await jobService.updateJobStatus(jobId, 'processing', { started_at: new Date() });
         const { rows, originalHeaders } = await readExcelFromBase64(fileData, sheetIndex);
@@ -434,6 +472,7 @@ router.post('/normalize/submit', requireAuth, async (req, res) => {
           format,
           mapping,
           correlationId: `job-norm-${jobId}`,
+          signal: normController.signal,
           onProgress: async (p) => {
             await jobService.updateJobStatus(jobId, 'processing', {
               processed_rows: p.completed,
@@ -451,11 +490,25 @@ router.post('/normalize/submit', requireAuth, async (req, res) => {
           current_phase: 'formatting'
         });
       } catch (err) {
-        logger.error(`[JOB] Normalize ${jobId} failed: ${err.message}`);
-        await jobService.updateJobStatus(jobId, 'failed', {
-          error_message: err.message,
-          current_phase: 'failed'
-        });
+        if (err.__cancelled) {
+          const partial = err.partial || [];
+          if (partial.length > 0) {
+            await jobService.saveJobResultData(jobId, { rows: partial, rowCount: partial.length });
+          }
+          await jobService.updateJobStatus(jobId, 'cancelled', {
+            processed_rows: partial.length,
+            current_phase: 'cancelled'
+          });
+          logger.info(`[JOB] Normalize ${jobId} cancelled after ${partial.length} rows`);
+        } else {
+          logger.error(`[JOB] Normalize ${jobId} failed: ${err.message}`);
+          await jobService.updateJobStatus(jobId, 'failed', {
+            error_message: err.message,
+            current_phase: 'failed'
+          });
+        }
+      } finally {
+        activeNormalizationJobs.delete(jobId);
       }
     })();
   } catch (err) {
@@ -483,6 +536,13 @@ router.post('/:jobId/start-search', requireAuth, async (req, res) => {
     }
 
     const parsed = job.results_json; // JSONB → already parsed
+    if (parsed.truncated) {
+      return res.status(400).json({
+        error: `This job's normalized data (${parsed.rowCount} rows) exceeded the preview storage limit. Please re-submit for direct verification.`,
+        truncated: true,
+        rowCount: parsed.rowCount,
+      });
+    }
     const rows = parsed.rows || parsed;
 
     const rowsPerMin = 15;
@@ -550,6 +610,42 @@ router.post('/detect/submit', requireAuth, async (req, res) => {
 });
 
 /**
+ * POST /api/jobs/:jobId/cancel
+ */
+router.post('/:jobId/cancel', requireAuth, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = await jobService.getJob(jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    if (job.company_id !== req.user.companyId) return res.status(404).json({ error: 'Job not found' });
+    if (!['processing', 'pending'].includes(job.status)) {
+      return res.status(400).json({ error: `Job is ${job.status} — only processing or pending jobs can be cancelled` });
+    }
+    await jobService.cancelJob(jobId);
+
+    const normCtrl = activeNormalizationJobs.get(jobId);
+    const verifyCtrl = activeJobs.get(jobId);
+
+    if (normCtrl) {
+      normCtrl.abort();
+      logger.info(`[Cancel] Job ${jobId} — normalization AbortController fired`);
+    }
+    if (verifyCtrl) {
+      verifyCtrl.abort();
+      logger.info(`[Cancel] Job ${jobId} — verification AbortController fired`);
+    }
+    if (!normCtrl && !verifyCtrl) {
+      logger.info(`[Cancel] Job ${jobId} — no active controller (job may have just ended)`);
+    }
+
+    res.json({ success: true, message: 'Cancellation requested. Job will stop within a few seconds.' });
+  } catch (err) {
+    logger.error(`[JOB] Cancel error: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * DELETE /api/jobs/completed/all
  */
 router.delete('/completed/all', requireAuth, async (req, res) => {
@@ -586,15 +682,38 @@ router.delete('/:jobId', requireAuth, async (req, res) => {
 });
 
 /**
- * Initialize resume logic
+ * Initialize resume logic — called once at startup.
+ * Attempts to resume any verification jobs that were in-flight when the
+ * process last exited, skipping rows that are already verified.
+ * Jobs whose input rows are not recoverable are marked 'failed'.
  */
 async function initResumption() {
-  await jobService.resumeJobs(async (job) => {
-    logger.warn(`[JOB] Resumption of ${job.id} requires row data. Marking as failed for re-submit.`);
-    await jobService.updateJobStatus(job.id, 'failed', {
-      error_message: 'Job interrupted by server restart. Please re-submit.'
-    });
-  });
+  const { getResumableJobs } = require('../services/jobResumptionService');
+  let resumable;
+  try {
+    resumable = await getResumableJobs();
+  } catch (err) {
+    logger.error(`[RESUME] getResumableJobs failed: ${err.message}`);
+    return;
+  }
+
+  if (resumable.length === 0) return;
+  logger.info(`[RESUME] Resuming ${resumable.length} job(s) with concurrency limit 5`);
+
+  // Simple batched concurrency — avoids pulling in p-limit ESM package here.
+  for (let i = 0; i < resumable.length; i += 5) {
+    const batch = resumable.slice(i, i + 5);
+    await Promise.allSettled(
+      batch.map(async ({ jobId, rows, originalHeaders }) => {
+        logger.info(`[RESUME] Resuming job ${jobId} (${rows.length} total rows)`);
+        try {
+          await startBackgroundVerification(jobId, rows, null, originalHeaders);
+        } catch (err) {
+          logger.error(`[RESUME] Job ${jobId} resumption error: ${err.message}`);
+        }
+      })
+    );
+  }
 }
 
 module.exports = { router, initResumption };

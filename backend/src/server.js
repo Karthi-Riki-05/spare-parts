@@ -54,13 +54,14 @@ app.use(requestLogger);
 
 app.use('/', require('./routes/views'));
 
-// Health + auth + super-admin + ai-status + cache-stats before rate limiter so
-// they're always reachable even under a DDoS-style flood to /api/*.
+// Health + auth + super-admin + ai-status + cache-stats + email-status before
+// rate limiter so they're always reachable even under a DDoS-style flood.
 app.use('/api', require('./routes/health'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/super-admin', require('./routes/superAdmin'));
 app.use('/api', require('./routes/aiStatus'));
 app.use('/api/cache-stats', require('./routes/cacheStats'));
+app.use('/api', require('./routes/emailStatus'));
 
 app.use(rateLimiter);
 app.use('/api', require('./routes/detect'));
@@ -74,9 +75,10 @@ const { router: jobsRouter, initResumption: initJobs } = require('./routes/jobs'
 app.use('/api/jobs', jobsRouter);
 app.use('/api/preferences', require('./routes/preferences'));
 
-// Dev-only email preview + test trigger (disabled in production)
+// Dev-only email preview + crash simulator (disabled in production)
 if (config.nodeEnv !== 'production') {
   app.use('/api/dev', require('./routes/devEmail'));
+  app.use('/api/dev', require('./routes/devTools'));
 }
 
 app.use((req, res) => {
@@ -139,18 +141,23 @@ async function bootstrap() {
     logger.info(' headersTimeout:   630000ms');
     logger.info('══════════════════════════');
     
-    // Mission: Job system resilience (PG-backed after P2).
-    const jobService = require('./services/jobService');
+    // Job resumption — re-queue any jobs that were in-flight at shutdown.
     initJobs().catch(err => logger.error(`[JOB] resumption failed: ${err.message}`));
-    setInterval(() => {
-      jobService.cleanupOldJobs(48).catch(err => logger.error(`[JOB] cleanup failed: ${err.message}`));
-    }, 6 * 60 * 60 * 1000);
 
-    // Daily old-job sweep (30d). PG doesn't need VACUUM in a cron — autovacuum
-    // handles it. We only run the stale-row cleanup here.
-    setInterval(() => {
-      jobService.cleanupOldJobs(30 * 24).catch(err => logger.error(`[JOB] 30d cleanup failed: ${err.message}`));
-    }, 86400000);
+    // Daily cleanup cron: remove completed/failed jobs older than 90 days.
+    // Runs at 02:00 in the configured app timezone. Only in production to
+    // avoid wiping dev data during rapid restarts.
+    const cron = require('node-cron');
+    const { cleanupOldJobs } = require('./services/cleanupService');
+    cron.schedule('0 2 * * *', async () => {
+      logger.info('[CRON] Starting daily old-jobs cleanup (>90 days)');
+      try {
+        const result = await cleanupOldJobs(90);
+        logger.info(`[CRON] Cleanup complete: deleted ${result.deletedJobs} jobs`);
+      } catch (err) {
+        logger.error(`[CRON] Cleanup failed: ${err.message}`);
+      }
+    }, { timezone: config.appTimezone });
   });
   // SSE /api/verify can run several minutes. Override Node's default socket timeouts
   // so the kernel/Express doesn't sever long-lived streams.

@@ -13,8 +13,15 @@ const transporter = smtpEnabled
     })
   : null;
 
+// Loose check (backward compat): host is enough for the transporter to exist.
 function emailConfigured() {
   return !!transporter;
+}
+
+// Strict check: all three credentials required for a successful send.
+// Use this before any flow where email failure must be a hard error.
+function isEmailConfigured() {
+  return !!(config.smtpHost && config.smtpUser && config.smtpPass);
 }
 
 async function sendMail({ to, subject, html }) {
@@ -26,6 +33,24 @@ async function sendMail({ to, subject, html }) {
     html,
   });
   return { ok: true, id: info.messageId };
+}
+
+// Strict send: throws on any failure. Used for required emails (confirmation,
+// password reset) where silent failure creates broken account state.
+async function sendMailOrThrow({ to, subject, html, context }) {
+  if (!isEmailConfigured()) {
+    throw Object.assign(
+      new Error('Email service not configured — SMTP_HOST, SMTP_USER, SMTP_PASS required'),
+      { code: 'EMAIL_NOT_CONFIGURED' }
+    );
+  }
+  const info = await transporter.sendMail({
+    from: `Spare Parts Verifier <${config.notifyFromEmail}>`,
+    to,
+    subject,
+    html,
+  });
+  logger.info(`[EMAIL] Sent ${context} to ${to} (${info.messageId})`);
 }
 
 async function verifySmtp() {
@@ -87,8 +112,8 @@ function buildCompletionHtml(jobData, stats) {
 
     <div class="stats">
       <div class="stat-row"><span class="stat-label">Score ≥ 90 (Official)</span><span class="stat-value">${stats.scoreAbove90 || 0}</span></div>
-      <div class="stat-row"><span class="stat-label">Score 50–89 (Distributor)</span><span class="stat-value">${stats.score50to89 || 0}</span></div>
-      <div class="stat-row"><span class="stat-label">Score &lt; 50 (Partial / not found)</span><span class="stat-value">${stats.scoreBelow50 || 0}</span></div>
+      <div class="stat-row"><span class="stat-label">Score 70–89 (Distributor)</span><span class="stat-value">${stats.score70to89 || 0}</span></div>
+      <div class="stat-row"><span class="stat-label">Score &lt; 70 (Partial / not found)</span><span class="stat-value">${stats.scoreBelow70 || 0}</span></div>
       <div class="stat-row"><span class="stat-label">Web verified</span><span class="stat-value">${stats.webVerified || 0}</span></div>
       <div class="stat-row"><span class="stat-label">Official source found</span><span class="stat-value">${stats.officialSourceFound || 0}</span></div>
       <div class="stat-row"><span class="stat-label">External / distributor source</span><span class="stat-value">${stats.externalSourceFound || 0}</span></div>
@@ -253,8 +278,9 @@ async function sendErrorEmail(jobData, errorMessage) {
   });
 }
 
+// Throws EmailNotConfiguredError or SMTP error — callers must handle or rollback.
 async function sendConfirmationEmail(company, plainPassword, token) {
-  return trySend({
+  await sendMailOrThrow({
     to: company.email,
     subject: 'Confirm your Spare Parts Verifier account',
     html: buildConfirmationHtml(company, plainPassword, token),
@@ -271,8 +297,9 @@ async function sendWelcomeEmail(company) {
   });
 }
 
+// Throws EmailNotConfiguredError or SMTP error — callers should handle.
 async function sendPasswordResetEmail(company, token) {
-  return trySend({
+  await sendMailOrThrow({
     to: company.email,
     subject: 'Reset your Spare Parts Verifier password',
     html: buildPasswordResetHtml(company, token),
@@ -284,6 +311,7 @@ module.exports = {
   sendMail,
   verifySmtp,
   emailConfigured,
+  isEmailConfigured,
   sendJobCompletionEmail,
   sendErrorEmail,
   sendConfirmationEmail,

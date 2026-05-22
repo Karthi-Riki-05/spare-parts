@@ -4,6 +4,30 @@ const { normalizeRowsBatch, normalizeRow } = require('./openaiService');
 const { applyAllDeduplication } = require('./deduplicationService');
 const { handleErsPrefix } = require('../utils/ersHandler');
 
+// Race a promise against an abort signal. If the signal fires while the
+// promise is in-flight, rejects immediately with __cancelled=true so the
+// caller can return [] from the batch without waiting for the AI call to finish.
+function raceWithSignal(promise, signal) {
+  if (!signal) return promise;
+  let onAbort;
+  const abortPromise = new Promise((_, reject) => {
+    if (signal.aborted) {
+      const err = new Error('Batch aborted');
+      err.__cancelled = true;
+      return reject(err);
+    }
+    onAbort = () => {
+      const err = new Error('Batch aborted');
+      err.__cancelled = true;
+      reject(err);
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+  return Promise.race([promise, abortPromise]).finally(() => {
+    if (onAbort) signal.removeEventListener('abort', onAbort);
+  });
+}
+
 function extractVal(row, key) {
   const val = row[key];
   if (val === null || val === undefined) return '';
@@ -34,7 +58,16 @@ function normalizeFormatA(rows, mapping, format, offset = 0) {
       _originalFormat: format,
       rowIndex: offset + index,
     };
-    return handleErsPrefix(applyAllDeduplication(raw));
+    // Capture pre-dedup original text for language toggle feature
+    const _originalFields = {
+      description: raw.description,
+      manufacturer: raw.manufacturer,
+      itemNumber: raw.itemNumber,
+      typeDesignation: raw.typeDesignation,
+      supplementary: raw.supplementary,
+    };
+    const normalized = handleErsPrefix(applyAllDeduplication(raw));
+    return { ...normalized, _originalFields };
   });
 }
 
@@ -45,7 +78,15 @@ async function processNormalization(rows, options = {}) {
     offset = 0,
     correlationId = 'internal',
     onProgress = () => {},
+    signal = null,
   } = options;
+
+  function makeCancelError(partial) {
+    const err = new Error('Normalization cancelled');
+    err.__cancelled = true;
+    err.partial = partial || [];
+    return err;
+  }
 
   let normalized;
   const total = rows.length;
@@ -76,22 +117,32 @@ async function processNormalization(rows, options = {}) {
     }
     
     let completedCount = 0;
-    const batchResults = await Promise.all(batches.map((batch) => limit(async () => {
+    const batchResults = await Promise.allSettled(batches.map((batch) => limit(async () => {
+      // Check abort before starting — queued tasks are dropped immediately
+      if (signal?.aborted) return [];
+
       const nonEmpty = batch.filter(r => r.rawText);
       let results = [];
       if (nonEmpty.length > 0) {
         try {
-          results = await normalizeRowsBatch(nonEmpty.map(r => ({ text: r.rawText })), correlationId);
+          results = await raceWithSignal(
+            normalizeRowsBatch(nonEmpty.map(r => ({ text: r.rawText })), correlationId),
+            signal
+          );
         } catch (batchErr) {
-          // Batch failed — retry individual rows
+          // Abort mid-batch — abandon immediately, return nothing from this slot
+          if (batchErr.__cancelled || signal?.aborted) return [];
+          // Batch failed for real — retry individual rows
           logger.warn(`[NORMALIZE] Batch of ${nonEmpty.length} rows failed: ${batchErr.message}. Retrying individually...`);
           results = [];
           for (const item of nonEmpty) {
+            if (signal?.aborted) break;
             try {
-              const single = await normalizeRow(item.rawText, correlationId);
+              const single = await raceWithSignal(normalizeRow(item.rawText, correlationId), signal);
               results.push(single);
               logger.info(`[NORMALIZE] Row ${item.internalItemNumber || item.index} recovered individually`);
             } catch (rowErr) {
+              if (rowErr.__cancelled || signal?.aborted) break;
               results.push({
                 description: item.rawText || '',
                 manufacturer: '',
@@ -109,7 +160,7 @@ async function processNormalization(rows, options = {}) {
       const reconstructed = batch.map(r => {
         const nonEmptyIdx = nonEmpty.findIndex(ne => ne.index === r.index);
         if (nonEmptyIdx === -1) {
-          return { internalItemNumber: r.internalItemNumber, description: '', manufacturer: '', itemNumber: '', typeDesignation: '', supplementary: '', rowIndex: r.index };
+          return { internalItemNumber: r.internalItemNumber, description: '', manufacturer: '', itemNumber: '', typeDesignation: '', supplementary: '', rowIndex: r.index, _originalFields: { description: r.rawText || '', manufacturer: '', itemNumber: '', typeDesignation: '', supplementary: '' }, _svFields: { description: r.rawText || '', manufacturer: '', itemNumber: '', typeDesignation: '', supplementary: '' } };
         }
         const result = results[nonEmptyIdx] || {};
         return {
@@ -120,6 +171,10 @@ async function processNormalization(rows, options = {}) {
           typeDesignation: result.type_designation || '',
           supplementary: result.supplementary || '',
           rowIndex: r.index,
+          // Preserve raw Format B text as original so the language toggle shows the source column
+          _originalFields: { description: r.rawText || '', manufacturer: '', itemNumber: '', typeDesignation: '', supplementary: '' },
+          // SV = extracted fields (manufacturer/itemNumber) but description in original Swedish
+          _svFields: { description: result.sv_description || result.description || '', manufacturer: result.manufacturer || '', itemNumber: result.item_number || '', typeDesignation: result.type_designation || '', supplementary: result.supplementary || '' },
         };
       });
 
@@ -127,11 +182,27 @@ async function processNormalization(rows, options = {}) {
       onProgress({ completed: completedCount, total });
       return reconstructed;
     })));
-    
-    normalized = batchResults.flat().map(result => handleErsPrefix(applyAllDeduplication({
-      ...result,
-      _originalFormat: 'B',
-    })));
+
+    // Collect partial results from all settled batches (some may be empty due to abort check)
+    const flattenedB = batchResults
+      .filter(r => r.status === 'fulfilled')
+      .flatMap(r => r.value);
+
+    if (signal?.aborted) throw makeCancelError(
+      flattenedB.map(result => {
+        const _originalFields = result._originalFields;
+        const _svFields = result._svFields;
+        const deduped = handleErsPrefix(applyAllDeduplication({ ...result, _originalFormat: 'B' }));
+        return { ...deduped, _originalFields, _svFields };
+      })
+    );
+
+    normalized = flattenedB.map(result => {
+      const _originalFields = result._originalFields;
+      const _svFields = result._svFields;
+      const deduped = handleErsPrefix(applyAllDeduplication({ ...result, _originalFormat: 'B' }));
+      return { ...deduped, _originalFields, _svFields };
+    });
   } else {
     // Format C
     const BATCH_SIZE = config.batchSize || 5;
@@ -161,18 +232,26 @@ async function processNormalization(rows, options = {}) {
       }
       
       let completedAi = 0;
-      const batchResultSets = await Promise.all(batches.map((batch) => limit(async () => {
+      const batchResultSets = await Promise.allSettled(batches.map((batch) => limit(async () => {
+        if (signal?.aborted) return [];
         const keys = Object.keys(batch[0].row);
         const texts = batch.map(({ row }) => keys.map(k => extractVal(row, k)).filter(Boolean).join(' '));
-        const results = await normalizeRowsBatch(texts.map(text => ({ text })), correlationId);
-        
+        const results = await raceWithSignal(
+          normalizeRowsBatch(texts.map(text => ({ text })), correlationId),
+          signal
+        );
+
         const finalResults = batch.map(({ index }, i) => ({ index, ...results[i] }));
         completedAi += batch.length;
         onProgress({ completed: Math.round((completedAi / rowsNeedingAi.length) * total), total });
         return finalResults;
       })));
-      
-      batchResultSets.flat().forEach(r => { aiResults[r.index] = r; });
+
+      if (signal?.aborted) throw makeCancelError([]);
+      batchResultSets
+        .filter(r => r.status === 'fulfilled')
+        .flatMap(r => r.value)
+        .forEach(r => { aiResults[r.index] = r; });
     }
     
     const allResults = [...rowsWithoutAi, ...rowsNeedingAi].sort((a, b) => a.index - b.index);
@@ -180,13 +259,23 @@ async function processNormalization(rows, options = {}) {
       const keys = Object.keys(row);
       const internalItemNumber = extractVal(row, keys[0] || '');
       let raw;
+      // Original values from Excel before any AI processing
+      const origDesc = extractVal(row, keys[1] || '');
+      const origMfr  = extractVal(row, keys[2] || '');
+      const origItem = extractVal(row, keys[3] || '');
+      const origType = extractVal(row, keys[4] || '');
+      const origSupp = extractVal(row, keys[5] || '');
+      let _svFields = null;
       if (needsAi && aiResults[index]) {
         const result = aiResults[index];
         raw = { internalItemNumber, description: result.description, manufacturer: result.manufacturer, itemNumber: result.item_number, typeDesignation: result.type_designation, supplementary: result.supplementary, sparePartCategory: extractVal(row, keys[6] || ''), _originalFormat: format, rowIndex: index };
+        _svFields = { description: result.sv_description || result.description || '', manufacturer: result.manufacturer || '', itemNumber: result.item_number || '', typeDesignation: result.type_designation || '', supplementary: result.supplementary || '' };
       } else {
-        raw = { internalItemNumber, description: extractVal(row, keys[1] || ''), manufacturer: extractVal(row, keys[2] || ''), itemNumber: extractVal(row, keys[3] || ''), typeDesignation: extractVal(row, keys[4] || ''), supplementary: extractVal(row, keys[5] || ''), sparePartCategory: extractVal(row, keys[6] || ''), _originalFormat: format, rowIndex: index };
+        raw = { internalItemNumber, description: origDesc, manufacturer: origMfr, itemNumber: origItem, typeDesignation: origType, supplementary: origSupp, sparePartCategory: extractVal(row, keys[6] || ''), _originalFormat: format, rowIndex: index };
       }
-      return handleErsPrefix(applyAllDeduplication(raw));
+      const _originalFields = { description: origDesc, manufacturer: origMfr, itemNumber: origItem, typeDesignation: origType, supplementary: origSupp };
+      const deduped = handleErsPrefix(applyAllDeduplication(raw));
+      return { ...deduped, _originalFields, ...(_svFields ? { _svFields } : {}) };
     });
     onProgress({ completed: total, total });
   }

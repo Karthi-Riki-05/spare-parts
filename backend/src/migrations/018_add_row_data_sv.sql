@@ -1,0 +1,1 @@
+ALTER TABLE job_results ADD COLUMN IF NOT EXISTS row_data_sv JSONB;

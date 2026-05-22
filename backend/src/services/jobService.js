@@ -138,10 +138,10 @@ async function updateJobStatus(jobId, status, progressData = {}) {
       values.push(progressData.job_type);
     }
 
-    // Guard: never downgrade from a terminal state (completed/failed) back to processing.
-    // This prevents late-arriving onProgress callbacks from overwriting completion.
+    // Guard: never downgrade from a terminal state back to processing.
+    // Includes 'cancelled' so a late onProgress callback cannot resurrect a cancelled job.
     const terminalGuard = (status === 'processing')
-      ? ` AND status NOT IN ('completed', 'failed')`
+      ? ` AND status NOT IN ('completed', 'failed', 'cancelled')`
       : '';
 
     const result = await db.execute(
@@ -164,11 +164,18 @@ async function saveJobResults(jobId, results, stats) {
       // Insert one row per verified row; ON CONFLICT so repeated completes on
       // resume don't break the whole transaction.
       for (const row of results) {
+        // Extract and strip _originalFields/_svFields before storing row_data (keeps JSONB clean)
+        const originalFields = row._originalFields || null;
+        const svFields = row._svFields || null;
+        const { _originalFields: _drop1, _svFields: _drop2, ...rowData } = row;
         await client.query(
-          `INSERT INTO job_results (job_id, row_index, row_data, row_type)
-           VALUES ($1, $2, $3, 'verified')
-           ON CONFLICT (job_id, row_index, row_type) DO UPDATE SET row_data = EXCLUDED.row_data`,
-          [jobId, row.rowIndex, row]
+          `INSERT INTO job_results (job_id, row_index, row_data, original_row_data, row_data_sv, row_type)
+           VALUES ($1, $2, $3, $4, $5, 'verified')
+           ON CONFLICT (job_id, row_index, row_type) DO UPDATE SET
+             row_data = EXCLUDED.row_data,
+             original_row_data = COALESCE(EXCLUDED.original_row_data, job_results.original_row_data),
+             row_data_sv = COALESCE(EXCLUDED.row_data_sv, job_results.row_data_sv)`,
+          [jobId, row.rowIndex, rowData, originalFields, svFields]
         );
       }
       if (stats) {
@@ -177,9 +184,9 @@ async function saveJobResults(jobId, results, stats) {
              total_rows     = $2,
              web_verified   = $3,
              empty_cells    = $4,
-             score_above90  = $5,
-             score_50_to_89 = $6,
-             score_below_50 = $7,
+             score_90_100   = $5,
+             score_70_89    = $6,
+             score_below_70 = $7,
              official_source= $8,
              external_source= $9,
              not_found      = $10,
@@ -191,8 +198,8 @@ async function saveJobResults(jobId, results, stats) {
             stats.webVerified || 0,
             stats.emptyCells || 0,
             stats.scoreAbove90 || 0,
-            stats.score50to89 || 0,
-            stats.scoreBelow50 || 0,
+            stats.score70to89 || 0,
+            stats.scoreBelow70 || 0,
             stats.officialSourceFound || 0,
             stats.externalSourceFound || 0,
             stats.notFound || 0,
@@ -216,7 +223,7 @@ async function saveJobResults(jobId, results, stats) {
 async function getJobResults(jobId) {
   try {
     const rows = await db.getMany(
-      `SELECT row_index, row_data FROM job_results
+      `SELECT row_index, row_data, original_row_data, row_data_sv FROM job_results
        WHERE job_id = $1 AND row_type = 'verified'
        ORDER BY row_index ASC`,
       [jobId]
@@ -242,6 +249,8 @@ async function getJobResults(jobId) {
         supplementary_original: d.supplementaryOriginal,
         supplementary_type:     d.supplementaryType,
         url_validation_status:  d.urlValidationStatus,
+        original_fields:        r.original_row_data || null,
+        sv_fields:              r.row_data_sv || null,
       };
     });
   } catch (err) {
@@ -254,9 +263,9 @@ async function getJobStats(jobId) {
   try {
     const row = await db.getOne(
       `SELECT total_rows, web_verified, empty_cells,
-              score_above90    AS score_above_90,
-              score_50_to_89,
-              score_below_50,
+              score_90_100,
+              score_70_89,
+              score_below_70,
               official_source,
               external_source,
               not_found
@@ -277,9 +286,9 @@ async function updateJobStats(jobId, stats) {
          total_rows     = $2,
          web_verified   = $3,
          empty_cells    = $4,
-         score_above90  = $5,
-         score_50_to_89 = $6,
-         score_below_50 = $7,
+         score_90_100   = $5,
+         score_70_89    = $6,
+         score_below_70 = $7,
          official_source= $8,
          external_source= $9,
          not_found      = $10,
@@ -291,8 +300,8 @@ async function updateJobStats(jobId, stats) {
         stats.webVerified || 0,
         stats.emptyCells || 0,
         stats.scoreAbove90 || 0,
-        stats.score50to89 || 0,
-        stats.scoreBelow50 || 0,
+        stats.score70to89 || 0,
+        stats.scoreBelow70 || 0,
         stats.officialSourceFound || 0,
         stats.externalSourceFound || 0,
         stats.notFound || 0,
@@ -321,11 +330,18 @@ async function markExcelDownloaded(jobId) {
   }
 }
 
+const MAX_RESULTS_JSON_ROWS = 5000;
+
 async function saveJobResultData(jobId, resultsData) {
   try {
+    let payload = resultsData;
+    if (Array.isArray(resultsData?.rows) && resultsData.rows.length > MAX_RESULTS_JSON_ROWS) {
+      payload = { truncated: true, rowCount: resultsData.rows.length };
+      logger.warn(`[JOB] results_json for ${jobId} truncated (${resultsData.rows.length} rows > ${MAX_RESULTS_JSON_ROWS})`);
+    }
     await db.execute(
       'UPDATE verification_jobs SET results_json = $2, updated_at = NOW() WHERE job_id = $1',
-      [jobId, resultsData]
+      [jobId, payload]
     );
     return true;
   } catch (err) {
@@ -377,6 +393,30 @@ async function resumeJobs(workerCallback) {
   }
 }
 
+async function cancelJob(jobId) {
+  try {
+    await db.execute(
+      'UPDATE verification_jobs SET cancelled = TRUE, updated_at = NOW() WHERE job_id = $1',
+      [jobId]
+    );
+    logger.info(`[JOB] Cancellation flag set for ${jobId}`);
+    return true;
+  } catch (err) {
+    logger.error(`[JOB] Failed to set cancel flag for ${jobId}: ${err.message}`);
+    return false;
+  }
+}
+
+async function isJobCancelled(jobId) {
+  try {
+    const row = await db.getOne('SELECT cancelled FROM verification_jobs WHERE job_id = $1', [jobId]);
+    return !!(row?.cancelled);
+  } catch (err) {
+    logger.error(`[JOB] Failed to read cancel flag for ${jobId}: ${err.message}`);
+    return false;
+  }
+}
+
 async function cleanupOldJobs(hours = 48) {
   try {
     const res = await db.execute(
@@ -409,4 +449,6 @@ module.exports = {
   deleteJob,
   resumeJobs,
   cleanupOldJobs,
+  cancelJob,
+  isJobCancelled,
 };
